@@ -1,0 +1,61 @@
+{
+  "name": "@epoch32/signal",
+  "version": "0.1.0",
+  "description": "Micro-cell reactive primitive with non-allocating subscriber sets and atomic write transactions for fine-grained state tracking.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Epoch32/visage.git",
+    "directory": "packages/signal"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "MATH.md",
+    "SPEC.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target browser --minify-whitespace && tsc -p tsconfig.build.json",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "epoch32",
+    "signal",
+    "track-2",
+    "week-01",
+    "zero-dependency",
+    "edge-native"
+  ],
+  "epoch32": {
+    "track": 2,
+    "week": 1,
+    "milestone": 1,
+    "tier": "primitive",
+    "standard": "TC39 Signals Proposal / Fine-Grained FRP",
+    "status": "completed"
+  },
+  "author": "Epoch32",
+  "license": "MPL-2.0",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.2"
+  }
+}

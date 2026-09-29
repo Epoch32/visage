@@ -1,0 +1,19 @@
+{
+  "name": "visage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Post-Virtual-DOM Reactive Engine & Visage Platform — Track 2 of Epoch32",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "build": "bun run --filter '*' build",
+    "typecheck": "bun run --filter '*' typecheck"
+  },
+  "devDependencies": {
+    "@epoch32/prompt": "github:epoch32/prompt",
+    "@types/bun": "latest",
+    "typescript": "^5.7.2"
+  }
+}

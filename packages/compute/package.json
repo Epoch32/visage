@@ -1,0 +1,66 @@
+{
+  "name": "@epoch32/compute",
+  "version": "0.1.0",
+  "description": "Lazy memoized derivations with dynamic dependency-ring cleanup and glitch-free topological graph evaluation.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Epoch32/visage.git",
+    "directory": "packages/compute"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "MATH.md",
+    "SPEC.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target browser --minify-whitespace && tsc -p tsconfig.build.json",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "epoch32",
+    "compute",
+    "visage",
+    "track-2",
+    "week-02",
+    "zero-dependency",
+    "edge-native"
+  ],
+  "epoch32": {
+    "track": 2,
+    "week": 2,
+    "milestone": 1,
+    "tier": "primitive",
+    "standard": "Push-Pull Reactive Algorithm (MobX/Solid Lineage)",
+    "status": "completed"
+  },
+  "author": "Epoch32",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "@epoch32/signal": "workspace:*"
+  },
+  "devDependencies": {
+    "@epoch32/prompt": "github:epoch32/prompt",
+    "@types/bun": "latest",
+    "typescript": "^5.7.2"
+  }
+}
