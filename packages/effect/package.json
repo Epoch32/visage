@@ -1,0 +1,69 @@
+{
+  "name": "@epoch32/effect",
+  "version": "0.1.0",
+  "description": "Automatic lifecycle teardowns and microtask batch queue via queueMicrotask() preventing layout thrashing and cascade renders.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Epoch32/visage.git",
+    "directory": "packages/effect"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "MATH.md",
+    "SPEC.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target browser --minify-whitespace && tsc -p tsconfig.build.json",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "epoch32",
+    "effect",
+    "visage",
+    "track-2",
+    "week-03",
+    "scheduler",
+    "microtask",
+    "zero-dependency",
+    "edge-native"
+  ],
+  "epoch32": {
+    "track": 2,
+    "week": 3,
+    "milestone": 1,
+    "tier": "infrastructure",
+    "standard": "W3C Microtask Queuing & HTML Event Loop",
+    "status": "completed"
+  },
+  "author": "Epoch32",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "@epoch32/signal": "workspace:*",
+    "@epoch32/compute": "workspace:*"
+  },
+  "devDependencies": {
+    "@epoch32/prompt": "github:epoch32/prompt",
+    "@types/bun": "latest",
+    "typescript": "^5.7.2"
+  }
+}

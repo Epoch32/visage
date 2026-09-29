@@ -22,6 +22,19 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/effect": {
+      "name": "@epoch32/effect",
+      "version": "0.1.0",
+      "dependencies": {
+        "@epoch32/compute": "workspace:*",
+        "@epoch32/signal": "workspace:*",
+      },
+      "devDependencies": {
+        "@epoch32/prompt": "github:epoch32/prompt",
+        "@types/bun": "latest",
+        "typescript": "^5.7.2",
+      },
+    },
     "packages/signal": {
       "name": "@epoch32/signal",
       "version": "0.1.0",
@@ -33,6 +46,8 @@
   },
   "packages": {
     "@epoch32/compute": ["@epoch32/compute@workspace:packages/compute"],
+
+    "@epoch32/effect": ["@epoch32/effect@workspace:packages/effect"],
 
     "@epoch32/prompt": ["@epoch32/prompt@github:epoch32/prompt#77d7120", {}, "Epoch32-prompt-77d7120", "sha512-71JsbWyNGkhmyvBIjwfkr+J0iSdpSkWQL7i/xG3JMuWPjJbfygsL0BUW7R0w4LUk5+bCMX08JjU/Edfwr0Y+OA=="],
 
@@ -47,5 +62,9 @@
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
+
+    "@epoch32/compute/@epoch32/prompt": ["@epoch32/prompt@github:epoch32/prompt#77d7120", {}, "Epoch32-prompt-77d7120", "sha512-71JsbWyNGkhmyvBIjwfkr+J0iSdpSkWQL7i/xG3JMuWPjJbfygsL0BUW7R0w4LUk5+bCMX08JjU/Edfwr0Y+OA=="],
+
+    "@epoch32/effect/@epoch32/prompt": ["@epoch32/prompt@github:epoch32/prompt#77d7120", {}, "Epoch32-prompt-77d7120", "sha512-71JsbWyNGkhmyvBIjwfkr+J0iSdpSkWQL7i/xG3JMuWPjJbfygsL0BUW7R0w4LUk5+bCMX08JjU/Edfwr0Y+OA=="],
   }
 }
