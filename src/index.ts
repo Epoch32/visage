@@ -1,5 +1,18 @@
 // Reactive Primitives
 
+// In-Browser DevTools & Visual Inspector
+export {
+  connectDevTools,
+  DevToolsHub,
+  type DevToolsOptions,
+  type DevToolsTab,
+  devtoolsHub,
+  highlightElement,
+  type QueryRecord,
+  type RpcRecord,
+  type SignalRecord,
+  VisageDevTools
+} from "./devtools";
 // DOM & Mount Primitives
 export {
   type Child,
@@ -135,7 +148,6 @@ export {
   type SubscriptionHandle,
   subscription
 } from "./rpc";
-
 // Server-Side Rendering & Hydration
 export {
   hydrate,
@@ -172,12 +184,32 @@ export {
   useContext,
   type WritableSignal
 } from "./signals";
+// Scoped Styles & CSS Engine
+export {
+  type ClassValue,
+  createStyle,
+  css,
+  cx,
+  extractStyleTags,
+  getScopeId,
+  hashString,
+  hasReactiveClass,
+  normalizeClass,
+  type ScopeOptions,
+  Style,
+  type StyleClasses,
+  StyleManager,
+  type StyleProps,
+  scopeCSS,
+  scopeSelector,
+  styleManager,
+  useStyle
+} from "./style";
 // Template HTML Cloning & Tagged Template
 export {
   html,
   template
 } from "./template";
-
 // Virtual List & Grid Virtualization
 export {
   createVirtualizer,

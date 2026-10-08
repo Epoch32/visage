@@ -3,11 +3,25 @@ import type { ReadonlySignal } from "../signals";
 
 export type ReactiveProp<T> = T | ReadonlySignal<T> | (() => T);
 
+export type ClassValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | (() => any)
+  | ClassValue[]
+  | Record<string, any>;
+
+export type ClassProp = ReactiveProp<
+  string | number | boolean | undefined | null | ClassValue[] | Record<string, any>
+>;
+
 export type HTMLAttributes<T extends HTMLElement = HTMLElement> = {
   [K in keyof HTMLElementTagNameMap[keyof HTMLElementTagNameMap]]?: any;
 } & {
-  class?: ReactiveProp<string | undefined | null>;
-  className?: ReactiveProp<string | undefined | null>;
+  class?: ClassProp;
+  className?: ClassProp;
   id?: ReactiveProp<string | undefined | null>;
   title?: ReactiveProp<string | undefined | null>;
   tabIndex?: ReactiveProp<number | undefined | null>;

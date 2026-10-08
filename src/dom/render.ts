@@ -8,6 +8,7 @@ import {
   runInScope,
   Scope
 } from "../signals";
+import { hasReactiveClass, normalizeClass } from "../style/cx";
 
 export type ReactiveValue<T> = T | ReadonlySignal<T> | (() => T);
 export type Child =
@@ -78,6 +79,22 @@ export function setAttribute(el: HTMLElement | SVGElement, key: string, value: a
     return;
   }
 
+  // Reactive class / className with array or object support
+  if (key === "class" || key === "className") {
+    if (hasReactiveClass(value)) {
+      effect(() => {
+        const cls = normalizeClass(value);
+        if (cls) el.setAttribute("class", cls);
+        else el.removeAttribute("class");
+      });
+    } else {
+      const cls = normalizeClass(value);
+      if (cls) el.setAttribute("class", cls);
+      else el.removeAttribute("class");
+    }
+    return;
+  }
+
   // Reactive attributes
   if (isReactive(value)) {
     effect(() => {
@@ -108,7 +125,12 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
   }
 
   if (key === "className" || key === "class") {
-    el.setAttribute("class", String(value));
+    const cls = normalizeClass(value);
+    if (cls) {
+      el.setAttribute("class", cls);
+    } else {
+      el.removeAttribute("class");
+    }
   } else if (key === "style") {
     if (typeof value === "string") {
       el.setAttribute("style", value);

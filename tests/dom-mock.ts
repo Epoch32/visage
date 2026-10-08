@@ -11,6 +11,10 @@ export class MockNode {
   parentNode: MockNode | null = null;
   childNodes: MockNode[] = [];
 
+  get parentElement(): MockElement | null {
+    return this.parentNode instanceof MockElement ? this.parentNode : null;
+  }
+
   get ownerDocument(): any {
     return (globalThis as any).document;
   }
@@ -193,6 +197,33 @@ export class MockElement extends MockNode {
     return frag;
   }
 
+  get classList() {
+    const self = this;
+    return {
+      contains(cls: string): boolean {
+        const classAttr = self.getAttribute("class") || "";
+        return classAttr.split(/\s+/).filter(Boolean).includes(cls);
+      },
+      add(...classes: string[]) {
+        const current = new Set((self.getAttribute("class") || "").split(/\s+/).filter(Boolean));
+        for (const c of classes) current.add(c);
+        self.setAttribute("class", Array.from(current).join(" "));
+      },
+      remove(...classes: string[]) {
+        const current = new Set((self.getAttribute("class") || "").split(/\s+/).filter(Boolean));
+        for (const c of classes) current.delete(c);
+        self.setAttribute("class", Array.from(current).join(" "));
+      },
+      toggle(cls: string, force?: boolean): boolean {
+        const has = this.contains(cls);
+        const shouldHave = force !== undefined ? force : !has;
+        if (shouldHave) this.add(cls);
+        else this.remove(cls);
+        return shouldHave;
+      }
+    };
+  }
+
   setAttribute(name: string, value: string) {
     this.attributes.set(name, String(value));
   }
@@ -251,12 +282,21 @@ export class MockElement extends MockNode {
           matches.push(node);
         } else if (selector.startsWith("#") && node.getAttribute("id") === selector.slice(1)) {
           matches.push(node);
-        } else if (selector.startsWith("[") && selector.endsWith("]")) {
-          const attrMatch = selector.slice(1, -1).split("=");
-          if (attrMatch.length === 2) {
-            const attrKey = attrMatch[0]!;
-            const attrVal = attrMatch[1]!.replace(/^["']|["']$/g, "");
-            if (node.getAttribute(attrKey) === attrVal) {
+        } else if (selector.includes("[") && selector.endsWith("]")) {
+          const tagPart = selector.slice(0, selector.indexOf("["));
+          const attrPart = selector.slice(selector.indexOf("[") + 1, -1);
+          const tagMatches = !tagPart || node.tagName.toLowerCase() === tagPart.toLowerCase();
+
+          if (tagMatches) {
+            if (attrPart.includes("=")) {
+              const [attrKey, attrVal] = attrPart.split("=");
+              if (
+                attrKey &&
+                node.getAttribute(attrKey) === (attrVal?.replace(/^["']|["']$/g, "") ?? "")
+              ) {
+                matches.push(node);
+              }
+            } else if (node.attributes.has(attrPart)) {
               matches.push(node);
             }
           }
@@ -325,7 +365,11 @@ export function setupDOM() {
   const g = globalThis as any;
   if (!g.document) {
     const listeners = new Map<string, Set<any>>();
+    const head = new MockElement("head");
     const body = new MockElement("body");
+    const html = new MockElement("html");
+    html.appendChild(head);
+    html.appendChild(body);
 
     const location: any = {
       pathname: "/",
@@ -349,8 +393,9 @@ export function setupDOM() {
 
     const doc: any = {
       nodeType: MockNode.DOCUMENT_NODE,
+      head,
       body,
-      documentElement: body,
+      documentElement: html,
       activeElement: body,
       createElement: (tag: string) => new MockElement(tag),
       createElementNS: (_ns: string, tag: string) => new MockElement(tag),
@@ -400,3 +445,5 @@ export function setupDOM() {
     g.history = history;
   }
 }
+
+export const setupDom = setupDOM;

@@ -1,3 +1,5 @@
+import { createMutation } from "../query/create-mutation";
+import { createQuery } from "../query/create-query";
 import { RPCError } from "./error";
 import type {
   ClientOptions,
@@ -49,22 +51,38 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
               ...callOpts?.headers
             };
 
-            const res = await fetchFn(url, {
-              method: "GET",
-              headers,
-              signal: callOpts?.signal
+            const devtools =
+              typeof window !== "undefined" ? (window as any).__VISAGE_DEVTOOLS__ : null;
+            const logId = devtools?.logRpcCall({
+              id: `rpc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              path: fullPath,
+              type: "query",
+              input
             });
 
-            const body: RPCResponse = await res.json();
-            if ("error" in body) {
-              throw new RPCError({
-                code: body.error.code,
-                message: body.error.message,
-                issues: body.error.issues
+            try {
+              const res = await fetchFn(url, {
+                method: "GET",
+                headers,
+                signal: callOpts?.signal
               });
-            }
 
-            return body.result.data;
+              const body: RPCResponse = await res.json();
+              if ("error" in body) {
+                devtools?.updateRpcCall(logId, { status: "error", error: body.error });
+                throw new RPCError({
+                  code: body.error.code,
+                  message: body.error.message,
+                  issues: body.error.issues
+                });
+              }
+
+              devtools?.updateRpcCall(logId, { status: "success", response: body.result.data });
+              return body.result.data;
+            } catch (err) {
+              devtools?.updateRpcCall(logId, { status: "error", error: err });
+              throw err;
+            }
           };
         }
 
@@ -86,23 +104,39 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
               ...callOpts?.headers
             };
 
-            const res = await fetchFn(url, {
-              method: "POST",
-              headers,
-              body: JSON.stringify({ input }),
-              signal: callOpts?.signal
+            const devtools =
+              typeof window !== "undefined" ? (window as any).__VISAGE_DEVTOOLS__ : null;
+            const logId = devtools?.logRpcCall({
+              id: `rpc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              path: fullPath,
+              type: "mutation",
+              input
             });
 
-            const body: RPCResponse = await res.json();
-            if ("error" in body) {
-              throw new RPCError({
-                code: body.error.code,
-                message: body.error.message,
-                issues: body.error.issues
+            try {
+              const res = await fetchFn(url, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ input }),
+                signal: callOpts?.signal
               });
-            }
 
-            return body.result.data;
+              const body: RPCResponse = await res.json();
+              if ("error" in body) {
+                devtools?.updateRpcCall(logId, { status: "error", error: body.error });
+                throw new RPCError({
+                  code: body.error.code,
+                  message: body.error.message,
+                  issues: body.error.issues
+                });
+              }
+
+              devtools?.updateRpcCall(logId, { status: "success", response: body.result.data });
+              return body.result.data;
+            } catch (err) {
+              devtools?.updateRpcCall(logId, { status: "error", error: err });
+              throw err;
+            }
           };
         }
 
@@ -119,6 +153,14 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
             }
 
             const controller = new AbortController();
+            const devtools =
+              typeof window !== "undefined" ? (window as any).__VISAGE_DEVTOOLS__ : null;
+            const logId = devtools?.logRpcCall({
+              id: `rpc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              path: fullPath,
+              type: "subscription",
+              input
+            });
 
             (async () => {
               try {
@@ -156,11 +198,14 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
                       const jsonStr = trimmed.slice(5).trim();
                       try {
                         const parsed = JSON.parse(jsonStr);
+                        devtools?.logRpcEvent(logId, parsed);
                         callbacks.onData(parsed);
                       } catch (parseErr) {
+                        devtools?.updateRpcCall(logId, { status: "error", error: parseErr });
                         callbacks.onError?.(parseErr);
                       }
                     } else if (trimmed.startsWith("event: error")) {
+                      devtools?.updateRpcCall(logId, { status: "error" });
                       callbacks.onError?.(new Error("Server event stream error"));
                     }
                   }
@@ -184,9 +229,10 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
 
         if (prop === "queryKey") {
           return (input?: unknown) => {
+            const resolvedInput = typeof input === "function" ? (input as () => unknown)() : input;
             const key: unknown[] = [...path];
-            if (input !== undefined) {
-              key.push(input);
+            if (resolvedInput !== undefined) {
+              key.push(resolvedInput);
             }
             return key;
           };
@@ -194,18 +240,26 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
 
         if (prop === "queryOptions") {
           return (input?: unknown, extra?: Record<string, unknown>) => {
+            const resolvedInput = typeof input === "function" ? (input as () => unknown)() : input;
             const key: unknown[] = [...path];
-            if (input !== undefined) {
-              key.push(input);
+            if (resolvedInput !== undefined) {
+              key.push(resolvedInput);
             }
             return {
               queryKey: key,
               queryFn: ({ signal }: { signal: AbortSignal }) => {
                 const queryFn = createProxyPath(options, path).query;
-                return queryFn(input, { signal });
+                return queryFn(resolvedInput, { signal });
               },
               ...extra
             };
+          };
+        }
+
+        if (prop === "createQuery" || prop === "useQuery") {
+          return (input?: unknown, extra?: Record<string, unknown>) => {
+            const proxy = createProxyPath(options, path);
+            return createQuery(() => proxy.queryOptions(input, extra));
           };
         }
 
@@ -223,6 +277,13 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
               },
               ...extra
             };
+          };
+        }
+
+        if (prop === "createMutation" || prop === "useMutation") {
+          return (extra?: Record<string, unknown>) => {
+            const proxy = createProxyPath(options, path);
+            return createMutation(proxy.mutationOptions(extra));
           };
         }
 

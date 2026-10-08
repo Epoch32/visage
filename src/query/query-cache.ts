@@ -157,6 +157,7 @@ export class Query<TData = unknown, TError = any> {
     this.dataUpdatedAt.set(options?.updatedAt ?? Date.now());
 
     this.notifyObservers();
+    this.cache.notify({ type: "updated", query: this });
     return nextData;
   }
 
@@ -288,6 +289,22 @@ export class Query<TData = unknown, TError = any> {
 
 export class QueryCache {
   queries = new Map<string, Query<any, any>>();
+  private _subscribers = new Set<(event: { type: string; query?: Query<any, any> }) => void>();
+
+  subscribe(listener: (event: { type: string; query?: Query<any, any> }) => void): () => void {
+    this._subscribers.add(listener);
+    return () => this._subscribers.delete(listener);
+  }
+
+  notify(event: { type: string; query?: Query<any, any> }) {
+    for (const sub of this._subscribers) {
+      sub(event);
+    }
+  }
+
+  getAll(): Query<any, any>[] {
+    return Array.from(this.queries.values());
+  }
 
   build<TData, TError>(
     _client: QueryClient,
@@ -316,6 +333,7 @@ export class QueryCache {
 
   add(query: Query<any, any>) {
     this.queries.set(query.queryHash, query);
+    this.notify({ type: "added", query });
   }
 
   remove(query: Query<any, any>) {
@@ -323,6 +341,7 @@ export class QueryCache {
     if (existing) {
       existing.destroy();
       this.queries.delete(query.queryHash);
+      this.notify({ type: "removed", query: existing });
     }
   }
 
@@ -345,5 +364,6 @@ export class QueryCache {
       query.destroy();
     }
     this.queries.clear();
+    this.notify({ type: "cleared" });
   }
 }

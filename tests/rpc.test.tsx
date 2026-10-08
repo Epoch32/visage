@@ -298,7 +298,7 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
 
     const queryClient = new QueryClient();
 
-    // 1. createQuery integration
+    // 1. queryOptions + createQuery integration
     const query = createRoot(() =>
       createQuery(client.posts.getById.queryOptions({ id: 10 }), queryClient)
     );
@@ -309,7 +309,7 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(query.isSuccess()).toBe(true);
     expect(query.data()).toEqual({ id: 10, title: "Post #10", author: "Grace" });
 
-    // 2. createMutation integration
+    // 2. mutationOptions + createMutation integration
     const mutation = createRoot(() =>
       createMutation(client.posts.create.mutationOptions(), queryClient)
     );
@@ -321,6 +321,52 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
 
     expect(created.title).toBe("Visage Signal Post");
     expect(mutation.isSuccess()).toBe(true);
+  });
+
+  it("supports direct streamlined RPC client proxy methods (client.procedure.createQuery & client.procedure.createMutation)", async () => {
+    const handler = createFetchHandler({
+      router: appRouter,
+      endpoint: "/api/rpc"
+    });
+
+    const mockFetch = (url: string | URL | Request, init?: RequestInit) => {
+      const req = new Request(url, init);
+      return handler(req);
+    };
+
+    const client = createClient<AppRouter>({
+      baseUrl: "http://localhost/api/rpc",
+      fetch: mockFetch as any
+    });
+
+    // 1. Direct rpc.createQuery with static input
+    const query = createRoot(() => client.posts.getById.createQuery({ id: 25 }));
+    expect(query.isLoading()).toBe(true);
+    await new Promise((r) => setTimeout(r, 15));
+    expect(query.isSuccess()).toBe(true);
+    expect(query.data()).toEqual({ id: 25, title: "Post #25", author: "Grace" });
+
+    // 2. Direct rpc.useQuery alias
+    const queryAlias = createRoot(() => client.posts.getById.useQuery({ id: 30 }));
+    await new Promise((r) => setTimeout(r, 15));
+    expect(queryAlias.data()).toEqual({ id: 30, title: "Post #30", author: "Grace" });
+
+    // 3. Direct rpc.createMutation
+    const createPost = createRoot(() => client.posts.create.createMutation());
+    const res = await createPost.mutateAsync({
+      title: "Direct Mutation Post",
+      content: "No extra boilerplate needed"
+    });
+    expect(res.title).toBe("Direct Mutation Post");
+    expect(createPost.isSuccess()).toBe(true);
+
+    // 4. Direct rpc.useMutation alias
+    const usePost = createRoot(() => client.posts.create.useMutation());
+    const res2 = await usePost.mutateAsync({
+      title: "Direct useMutation Post",
+      content: "Works seamlessly"
+    });
+    expect(res2.title).toBe("Direct useMutation Post");
   });
 
   it("streams Server-Sent Events (SSE) via subscription", async () => {

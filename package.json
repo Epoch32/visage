@@ -46,6 +46,18 @@
       "types": "./src/rpc/index.ts",
       "import": "./src/rpc/index.ts"
     },
+    "./style": {
+      "types": "./src/style/index.ts",
+      "import": "./src/style/index.ts"
+    },
+    "./devtools": {
+      "types": "./src/devtools/index.ts",
+      "import": "./src/devtools/index.ts"
+    },
+    "./vite": {
+      "types": "./src/vite/index.ts",
+      "import": "./src/vite/index.ts"
+    },
     "./jsx-runtime": {
       "types": "./src/jsx-runtime/index.ts",
       "import": "./src/jsx-runtime/index.ts"
@@ -61,10 +73,14 @@
     "typecheck": "bun x tsc --noEmit",
     "check": "bun x @biomejs/biome check --write .",
     "lint": "bun x @biomejs/biome lint .",
-    "format": "bun x @biomejs/biome format --write ."
+    "format": "bun x @biomejs/biome format --write .",
+    "build": "bun build examples/survey/index.ts --outdir ./dist --minify",
+    "build:example": "bun build examples/survey/index.ts --outdir ./examples/survey/dist --minify",
+    "example:survey": "bun examples/survey/server.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
+    "csstype": "^3.2.3",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   },

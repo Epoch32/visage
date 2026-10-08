@@ -1,5 +1,10 @@
 import type { InferSchemaType, SchemaLike, ValidationIssue } from "../form/schema";
-import type { CreateQueryOptions, MutationOptions } from "../query/types";
+import type {
+  CreateQueryOptions,
+  MutationOptions,
+  MutationResult,
+  QueryResult
+} from "../query/types";
 
 export type RPCErrorCode =
   | "BAD_REQUEST"
@@ -216,6 +221,14 @@ export type ClientProcedure<P> =
   P extends Procedure<"query", infer TInput, infer TOutput, any>
     ? {
         query: ClientQueryMethod<P>;
+        createQuery: (
+          input?: TInput | (() => TInput),
+          extra?: Partial<CreateQueryOptions<TOutput, any, TOutput, any>>
+        ) => QueryResult<TOutput, any>;
+        useQuery: (
+          input?: TInput | (() => TInput),
+          extra?: Partial<CreateQueryOptions<TOutput, any, TOutput, any>>
+        ) => QueryResult<TOutput, any>;
         queryKey: (input?: TInput) => unknown[];
         queryOptions: (
           input?: TInput,
@@ -225,6 +238,12 @@ export type ClientProcedure<P> =
     : P extends Procedure<"mutation", infer TInput, infer TOutput, any>
       ? {
           mutate: ClientMutationMethod<P>;
+          createMutation: (
+            extra?: Partial<MutationOptions<TOutput, any, TInput, any>>
+          ) => MutationResult<TOutput, any, TInput, any>;
+          useMutation: (
+            extra?: Partial<MutationOptions<TOutput, any, TInput, any>>
+          ) => MutationResult<TOutput, any, TInput, any>;
           mutationKey: () => unknown[];
           mutationOptions: (
             extra?: Partial<MutationOptions<TOutput, any, TInput, any>>

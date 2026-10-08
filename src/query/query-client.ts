@@ -27,6 +27,10 @@ export class QueryClient {
     this.queryCache = config.queryCache ?? new QueryCache();
     this.mutationCache = config.mutationCache ?? new MutationCache();
     this.mount();
+
+    if (typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
+      (window as any).__VISAGE_DEVTOOLS__.attachQueryClient(this);
+    }
   }
 
   mount() {

@@ -199,10 +199,28 @@ export class Signal<T> {
   }
 }
 
+export interface SignalOptions<T> {
+  name?: string;
+  equals?: (a: T, b: T) => boolean;
+  internal?: boolean;
+}
+
+export interface ComputedOptions {
+  name?: string;
+  internal?: boolean;
+}
+
 /**
  * Factory for creating writable signals
  */
-export function signal<T>(initialValue: T, equals?: (a: T, b: T) => boolean): WritableSignal<T> {
+export function signal<T>(
+  initialValue: T,
+  optionsOrEquals?: ((a: T, b: T) => boolean) | SignalOptions<T>
+): WritableSignal<T> {
+  const equals = typeof optionsOrEquals === "function" ? optionsOrEquals : optionsOrEquals?.equals;
+  const isInternal = typeof optionsOrEquals === "object" ? optionsOrEquals?.internal : false;
+  const customName = typeof optionsOrEquals === "object" ? optionsOrEquals?.name : undefined;
+
   const s = new Signal(initialValue, equals);
 
   const accessor = ((...args: [value?: T]): T => {
@@ -223,6 +241,21 @@ export function signal<T>(initialValue: T, equals?: (a: T, b: T) => boolean): Wr
       set: (v: T) => s.set(v)
     }
   });
+
+  if (!isInternal && typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
+    const devtools = (window as any).__VISAGE_DEVTOOLS__;
+    const sigId = devtools.registerSignal({
+      name: customName,
+      type: "signal",
+      getValue: () => s.get(),
+      version: () => s.version
+    });
+    if (currentScope) {
+      currentScope.addCleanup(() => {
+        devtools.unregisterSignal(sigId);
+      });
+    }
+  }
 
   return accessor;
 }
@@ -358,7 +391,10 @@ export class Computed<T> {
 /**
  * Factory for creating computed signals
  */
-export function computed<T>(fn: () => T): ReadonlySignal<T> {
+export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySignal<T> {
+  const isInternal = options?.internal ?? false;
+  const customName = options?.name;
+
   const c = new Computed(fn);
 
   const accessor = ((): T => c.get()) as ReadonlySignal<T>;
@@ -368,6 +404,21 @@ export function computed<T>(fn: () => T): ReadonlySignal<T> {
     get: { value: () => c.get() },
     value: { get: () => c.get() }
   });
+
+  if (!isInternal && typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
+    const devtools = (window as any).__VISAGE_DEVTOOLS__;
+    const sigId = devtools.registerSignal({
+      name: customName,
+      type: "computed",
+      getValue: () => c.get(),
+      version: () => c.version
+    });
+    if (currentScope) {
+      currentScope.addCleanup(() => {
+        devtools.unregisterSignal(sigId);
+      });
+    }
+  }
 
   return accessor;
 }
