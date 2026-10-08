@@ -42,6 +42,10 @@
       "types": "./src/query/index.ts",
       "import": "./src/query/index.ts"
     },
+    "./rpc": {
+      "types": "./src/rpc/index.ts",
+      "import": "./src/rpc/index.ts"
+    },
     "./jsx-runtime": {
       "types": "./src/jsx-runtime/index.ts",
       "import": "./src/jsx-runtime/index.ts"

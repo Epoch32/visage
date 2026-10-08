@@ -84,9 +84,7 @@ export {
   type QueryState,
   type QueryStatus,
   type RefetchOptions,
-  type RetryDelayValue,
-  type RetryValue,
-  useQueryClient
+  type RetryDelayValue
 } from "./query";
 // Router Primitives
 export {
@@ -108,6 +106,35 @@ export {
   useParams,
   useSearchParams
 } from "./router";
+// Type-Safe Wire RPC & APIs
+export {
+  type ClientOptions,
+  type ClientRouter,
+  type CORSOptions,
+  createClient,
+  createFetchHandler,
+  createProcedure,
+  createRouter,
+  ERROR_CODE_TO_STATUS,
+  executeProcedure,
+  type FetchHandlerOptions,
+  type MiddlewareFn,
+  mutation,
+  type Procedure,
+  type ProcedureOptions,
+  type ProcedureRecord,
+  type ProcedureType,
+  query,
+  type Router as RPCRouter,
+  RouterImpl,
+  RPCError,
+  type RPCErrorCode,
+  type RPCResponse,
+  STATUS_TO_ERROR_CODE,
+  type SubscriptionCallbacks,
+  type SubscriptionHandle,
+  subscription
+} from "./rpc";
 
 // Server-Side Rendering & Hydration
 export {
