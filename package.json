@@ -1,0 +1,77 @@
+{
+  "name": "visage",
+  "version": "0.1.0",
+  "description": "Lightning-fast, zero-VDOM, fine-grained reactive UI library with full TypeScript support",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./signals": {
+      "types": "./src/signals/index.ts",
+      "import": "./src/signals/index.ts"
+    },
+    "./dom": {
+      "types": "./src/dom/index.ts",
+      "import": "./src/dom/index.ts"
+    },
+    "./router": {
+      "types": "./src/router/index.ts",
+      "import": "./src/router/index.ts"
+    },
+    "./template": {
+      "types": "./src/template/index.ts",
+      "import": "./src/template/index.ts"
+    },
+    "./server": {
+      "types": "./src/server/index.ts",
+      "import": "./src/server/index.ts"
+    },
+    "./form": {
+      "types": "./src/form/index.ts",
+      "import": "./src/form/index.ts"
+    },
+    "./virtual": {
+      "types": "./src/virtual/index.ts",
+      "import": "./src/virtual/index.ts"
+    },
+    "./jsx-runtime": {
+      "types": "./src/jsx-runtime/index.ts",
+      "import": "./src/jsx-runtime/index.ts"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./src/jsx-runtime/index.ts",
+      "import": "./src/jsx-runtime/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "bun test",
+    "test:vitest": "vitest run",
+    "typecheck": "bun x tsc --noEmit",
+    "check": "biome check --write .",
+    "lint": "biome lint .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "keywords": [
+    "reactive",
+    "signals",
+    "no-vdom",
+    "jsx",
+    "ssr",
+    "form",
+    "validation",
+    "router",
+    "template",
+    "typescript",
+    "ui"
+  ],
+  "license": "MIT"
+}

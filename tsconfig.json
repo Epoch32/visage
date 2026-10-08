@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "visage",
+    "paths": {
+      "visage": ["./src/index.ts"],
+      "visage/jsx-runtime": ["./src/jsx-runtime/index.ts"],
+      "visage/jsx-dev-runtime": ["./src/jsx-runtime/index.ts"],
+      "visage/router": ["./src/router/index.ts"],
+      "visage/template": ["./src/template/index.ts"],
+      "visage/server": ["./src/server/index.ts"],
+      "visage/form": ["./src/form/index.ts"],
+      "visage/virtual": ["./src/virtual/index.ts"],
+      "visage/*": ["./src/*"]
+    },
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
