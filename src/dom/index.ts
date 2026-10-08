@@ -5,6 +5,8 @@ export {
   type Resource,
   type ResourceActions,
   Suspense,
+  SuspenseContext,
+  type SuspenseContextValue,
   type SuspenseProps
 } from "./async";
 

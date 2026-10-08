@@ -22,6 +22,7 @@
       "visage/server": ["./src/server/index.ts"],
       "visage/form": ["./src/form/index.ts"],
       "visage/virtual": ["./src/virtual/index.ts"],
+      "visage/query": ["./src/query/index.ts"],
       "visage/*": ["./src/*"]
     },
     "skipLibCheck": true,

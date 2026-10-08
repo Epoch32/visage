@@ -1,5 +1,5 @@
-import { Scope, effect, getActiveScope, onCleanup, runInScope } from "../signals";
-import { type Child, type ReactiveValue, insertChild, resolveValue } from "./render";
+import { effect, getActiveScope, onCleanup, runInScope, Scope } from "../signals";
+import { type Child, insertChild, type ReactiveValue, resolveValue } from "./render";
 
 export interface ShowProps<T> {
   when: ReactiveValue<T | false | null | undefined>;

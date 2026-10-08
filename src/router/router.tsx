@@ -1,12 +1,12 @@
-import { type Child, Show, Suspense, createResource } from "../dom";
+import { type Child, createResource, Show, Suspense } from "../dom";
 import {
-  type ReadonlySignal,
-  type WritableSignal,
   computed,
   createContext,
   onCleanup,
+  type ReadonlySignal,
   signal,
-  useContext
+  useContext,
+  type WritableSignal
 } from "../signals";
 
 export interface LocationState {

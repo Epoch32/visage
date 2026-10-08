@@ -1,5 +1,5 @@
 import { type Child, insertChild } from "../dom/render";
-import { Scope, getActiveScope, runInScope } from "./signal";
+import { getActiveScope, runInScope, Scope } from "./signal";
 
 export interface Context<T> {
   id: symbol;

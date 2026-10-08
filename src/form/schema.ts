@@ -197,13 +197,14 @@ class BooleanSchema extends Schema<boolean> {
   }
 }
 
-export type InferSchemaType<S> = S extends Schema<infer T>
-  ? T
-  : S extends StandardSchemaV1<infer T>
+export type InferSchemaType<S> =
+  S extends Schema<infer T>
     ? T
-    : S extends (val: any) => ValidationResult<infer T>
+    : S extends StandardSchemaV1<infer T>
       ? T
-      : any;
+      : S extends (val: any) => ValidationResult<infer T>
+        ? T
+        : any;
 
 export type InferObjectShape<S extends Record<string, SchemaLike<any>>> = {
   [K in keyof S]: InferSchemaType<S[K]>;

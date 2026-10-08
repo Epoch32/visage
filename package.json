@@ -38,6 +38,10 @@
       "types": "./src/virtual/index.ts",
       "import": "./src/virtual/index.ts"
     },
+    "./query": {
+      "types": "./src/query/index.ts",
+      "import": "./src/query/index.ts"
+    },
     "./jsx-runtime": {
       "types": "./src/jsx-runtime/index.ts",
       "import": "./src/jsx-runtime/index.ts"
@@ -51,9 +55,9 @@
     "test": "bun test",
     "test:vitest": "vitest run",
     "typecheck": "bun x tsc --noEmit",
-    "check": "biome check --write .",
-    "lint": "biome lint .",
-    "format": "biome format --write ."
+    "check": "bun x @biomejs/biome check --write .",
+    "lint": "bun x @biomejs/biome lint .",
+    "format": "bun x @biomejs/biome format --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

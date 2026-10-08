@@ -1,4 +1,4 @@
-import { Signal, batch, isSignal } from "./signal";
+import { batch, isSignal, Signal } from "./signal";
 
 const STORE_RAW = Symbol("visage.store.raw");
 const STORE_SIGNALS = Symbol("visage.store.signals");

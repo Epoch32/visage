@@ -1,12 +1,12 @@
 import {
-  type ReadonlySignal,
-  Scope,
   createRoot,
   effect,
   getActiveScope,
   isSignal,
   onCleanup,
-  runInScope
+  type ReadonlySignal,
+  runInScope,
+  Scope
 } from "../signals";
 
 export type ReactiveValue<T> = T | ReadonlySignal<T> | (() => T);

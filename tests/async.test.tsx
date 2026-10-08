@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { ErrorBoundary, Suspense, createResource, render } from "../src";
+import { createResource, ErrorBoundary, render, Suspense } from "../src";
 import { signal } from "../src/signals";
 
 describe("Visage Async & Error Primitives", () => {

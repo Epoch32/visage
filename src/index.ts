@@ -45,6 +45,49 @@ export type {
   JSX,
   ReactiveProp
 } from "./jsx-runtime/jsx";
+// Query & Server State Cache
+export {
+  type CreateQueryOptions,
+  createInfiniteQuery,
+  createMutation,
+  createQuery,
+  type DefaultOptions,
+  type FetchStatus,
+  FocusManager,
+  focusManager,
+  hashKey,
+  type InfiniteData,
+  type InfiniteQueryOptions,
+  type InfiniteQueryResult,
+  type MutateOptions,
+  Mutation,
+  MutationCache,
+  type MutationFunction,
+  type MutationOptions,
+  type MutationResult,
+  type MutationStatus,
+  OnlineManager,
+  onlineManager,
+  Query,
+  QueryCache,
+  QueryClient,
+  type QueryClientConfig,
+  QueryClientContext,
+  QueryClientProvider,
+  type QueryFilters,
+  type QueryFunction,
+  type QueryFunctionContext,
+  type QueryKey,
+  type QueryObserver,
+  type QueryOptions,
+  type QueryResult,
+  type QueryState,
+  type QueryStatus,
+  type RefetchOptions,
+  type RetryDelayValue,
+  type RetryValue,
+  useQueryClient
+} from "./query";
 // Router Primitives
 export {
   Link,
@@ -111,11 +154,11 @@ export {
 // Virtual List & Grid Virtualization
 export {
   createVirtualizer,
+  VirtualGrid,
   type VirtualGridProps,
   type VirtualItem,
-  VirtualGrid,
-  VirtualList,
-  type VirtualListProps,
   type Virtualizer,
-  type VirtualizerOptions
+  type VirtualizerOptions,
+  VirtualList,
+  type VirtualListProps
 } from "./virtual";

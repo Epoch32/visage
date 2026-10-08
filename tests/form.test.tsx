@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { Show, createForm, render, v } from "../src";
+import { createForm, render, Show, v } from "../src";
 
 describe("Visage Reactive Forms & Validation", () => {
   let container: any;

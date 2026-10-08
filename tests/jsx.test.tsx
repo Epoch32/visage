@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { For, Show, render } from "../src";
+import { For, render, Show } from "../src";
 import { signal } from "../src/signals";
 
 describe("Visage JSX & Direct DOM", () => {

@@ -1,22 +1,22 @@
 import {
-  type ReadonlySignal,
-  Scope,
-  type WritableSignal,
   effect,
   getActiveScope,
   onCleanup,
+  type ReadonlySignal,
   runInScope,
-  signal
+  Scope,
+  signal,
+  type WritableSignal
 } from "../signals";
 import { createContext, useContext } from "../signals/context";
-import { type Child, type ReactiveValue, insertChild, resolveValue } from "./render";
+import { type Child, insertChild, type ReactiveValue, resolveValue } from "./render";
 
 // Suspense Context for tracking active async requests
 export interface SuspenseContextValue {
   registerPromise(p: Promise<any>): void;
 }
 
-const SuspenseContext = createContext<SuspenseContextValue | null>(null);
+export const SuspenseContext = createContext<SuspenseContextValue | null>(null);
 
 export interface ResourceActions<T> {
   mutate(value: T): void;

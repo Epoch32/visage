@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { VirtualList, createVirtualizer, render, signal } from "../src";
+import { createVirtualizer, render, signal, VirtualList } from "../src";
 
 describe("Visage Virtualization (visage/virtual)", () => {
   let container: any;
