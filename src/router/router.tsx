@@ -1,3 +1,4 @@
+/** @jsxImportSource visage */
 import { type Child, createResource, Show, Suspense } from "../dom";
 import {
   computed,

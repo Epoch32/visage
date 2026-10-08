@@ -1,3 +1,4 @@
+/** @jsxImportSource visage */
 import { For, Show } from "../dom";
 import { onCleanup, signal } from "../signals";
 import { Style } from "../style";

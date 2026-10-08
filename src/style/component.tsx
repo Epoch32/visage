@@ -1,3 +1,4 @@
+/** @jsxImportSource visage */
 import type { Child } from "../dom/render";
 import { effect, onCleanup } from "../signals";
 import { objectToCSS, type StyleDefinition } from "./create-style";
