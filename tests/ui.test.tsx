@@ -11,6 +11,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  createIcon,
   createToastManager,
   Dialog,
   DialogClose,
@@ -398,6 +399,43 @@ describe("Visage UI Component Primitives", () => {
       // Dismiss toast
       manager.dismiss(id);
       expect(manager.toasts().length).toBe(0);
+
+      unmount();
+    });
+  });
+
+  describe("createIcon", () => {
+    it("renders fine-grained reactive SVG icon with Lucide-style icon nodes", () => {
+      const CheckIcon = createIcon("Check", [
+        ["polyline", { points: "20 6 9 17 4 12" }]
+      ]);
+
+      const size = signal(16);
+      const color = signal("red");
+
+      const unmount = render(
+        () => <CheckIcon size={size} color={color} class="test-icon" />,
+        container
+      );
+
+      const svg = container.querySelector("svg") as SVGSVGElement;
+      expect(svg).not.toBeNull();
+      expect(svg.getAttribute("width")).toBe("16");
+      expect(svg.getAttribute("height")).toBe("16");
+      expect(svg.getAttribute("stroke")).toBe("red");
+      expect(svg.getAttribute("class")).toBe("test-icon");
+
+      const polyline = svg.querySelector("polyline");
+      expect(polyline).not.toBeNull();
+      expect(polyline?.getAttribute("points")).toBe("20 6 9 17 4 12");
+
+      // Update reactive props
+      size.set(28);
+      color.set("blue");
+
+      expect(svg.getAttribute("width")).toBe("28");
+      expect(svg.getAttribute("height")).toBe("28");
+      expect(svg.getAttribute("stroke")).toBe("blue");
 
       unmount();
     });

@@ -24,6 +24,11 @@ export {
   useDialogContext
 } from "./dialog";
 export {
+  createIcon,
+  type IconNode,
+  type IconProps
+} from "./icon";
+export {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

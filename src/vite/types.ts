@@ -47,6 +47,12 @@ export interface VisageVitePlugin {
   config?: (config: any, env: any) => any;
   configResolved?: (config: any) => void;
   configureServer?: (server: any) => void | Promise<void>;
+  resolveId?: (
+    source: string,
+    importer?: string,
+    options?: any
+  ) => Promise<string | null | undefined> | string | null | undefined;
+  load?: (id: string, options?: any) => Promise<string | null | undefined> | string | null | undefined;
   transform?: (
     code: string,
     id: string,

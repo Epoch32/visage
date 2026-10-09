@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createRouter, v } from "../src/rpc";
-import { visage } from "../src/vite";
+import { visage, visageLucide } from "../src/vite";
 
 describe("Visage Vite Plugin (visage/vite)", () => {
   it("generates the standard plugin pipeline with config, transform, and server hooks", () => {
@@ -139,5 +139,37 @@ describe("Visage Vite Plugin (visage/vite)", () => {
     expect(JSON.parse(responseBody)).toEqual({
       result: { data: { message: "Hello, Visage Developer!" } }
     });
+  });
+
+  it("translates lucide-react imports into native Visage icon modules via visageLucide()", () => {
+    const plugin = visageLucide({
+      aliases: ["lucide-react", "my-icons"],
+      defaultSize: 20
+    });
+
+    expect(plugin.name).toBe("visage:lucide");
+
+    // Test resolveId
+    const resolvedLucide = plugin.resolveId!("lucide-react");
+    expect(resolvedLucide).toBe("\0visage-lucide:lucide-react");
+
+    const resolvedSubpath = plugin.resolveId!("lucide-react/dist/esm/icons/arrow-right");
+    expect(resolvedSubpath).toBe("\0visage-lucide:lucide-react/dist/esm/icons/arrow-right");
+
+    const resolvedCustom = plugin.resolveId!("my-icons");
+    expect(resolvedCustom).toBe("\0visage-lucide:my-icons");
+
+    const unhandled = plugin.resolveId!("react");
+    expect(unhandled).toBeNull();
+
+    // Test load virtual module
+    const loadedRoot = plugin.load!("\0visage-lucide:lucide-react");
+    expect(loadedRoot).toContain('import { createIcon } from "visage/ui";');
+    expect(loadedRoot).toContain("const defaultSize = 20;");
+    expect(loadedRoot).toContain("const proxy = new Proxy");
+
+    const loadedSubpath = plugin.load!("\0visage-lucide:lucide-react/icons/arrow-right");
+    expect(loadedSubpath).toContain('import { createIcon } from "visage/ui";');
+    expect(loadedSubpath).toContain('createIcon("ArrowRight", iconData)');
   });
 });
