@@ -1,6 +1,6 @@
 /** @jsxImportSource visage */
 import { Portal } from "../dom/control-flow";
-import { type Child } from "../dom/render";
+import type { Child } from "../dom/render";
 import { onCleanup, type ReadonlySignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
 import { createControllableSignal, createId, onClickOutside } from "./utils";
@@ -150,9 +150,7 @@ export function DropdownMenuContent(props: DropdownMenuContentProps): Child {
     const el = ctx.contentRef.current;
     if (!el) return;
 
-    const items = Array.from(
-      el.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])')
-    );
+    const items = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])'));
     const active = document.activeElement as HTMLElement | null;
     const index = active ? items.indexOf(active) : -1;
 
@@ -286,5 +284,7 @@ export interface DropdownMenuSeparatorProps {
 
 export function DropdownMenuSeparator(props: DropdownMenuSeparatorProps): Child {
   const { as: Tag = "div", class: className, style, ...rest } = props;
-  return <Tag role="separator" aria-orientation="horizontal" class={className} style={style} {...rest} />;
+  return (
+    <Tag role="separator" aria-orientation="horizontal" class={className} style={style} {...rest} />
+  );
 }

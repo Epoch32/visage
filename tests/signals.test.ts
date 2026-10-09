@@ -204,4 +204,3 @@ describe("Visage Signals", () => {
     }
   });
 });
-

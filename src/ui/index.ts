@@ -24,11 +24,6 @@ export {
   useDialogContext
 } from "./dialog";
 export {
-  createIcon,
-  type IconNode,
-  type IconProps
-} from "./icon";
-export {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -39,6 +34,11 @@ export {
   DropdownMenuTrigger,
   useDropdownMenuContext
 } from "./dropdown-menu";
+export {
+  createIcon,
+  type IconNode,
+  type IconProps
+} from "./icon";
 export {
   Popover,
   PopoverClose,
@@ -64,6 +64,13 @@ export {
   TabsTrigger,
   useTabsContext
 } from "./tabs";
+export type {
+  ToastData,
+  ToastManager,
+  ToastOptions,
+  ToastProps,
+  ToastVariant
+} from "./toast";
 export {
   createToastManager,
   defaultToastManager,
@@ -77,13 +84,6 @@ export {
   type ToastViewportProps,
   toast,
   useToast
-} from "./toast";
-export type {
-  ToastData,
-  ToastManager,
-  ToastOptions,
-  ToastProps,
-  ToastVariant
 } from "./toast";
 export {
   Tooltip,

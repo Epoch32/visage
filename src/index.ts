@@ -212,17 +212,6 @@ export {
   html,
   template
 } from "./template";
-// Virtual List & Grid Virtualization
-export {
-  createVirtualizer,
-  VirtualGrid,
-  type VirtualGridProps,
-  type VirtualItem,
-  type Virtualizer,
-  type VirtualizerOptions,
-  VirtualList,
-  type VirtualListProps
-} from "./virtual";
 // Headless Accessible UI Component Primitives
 export {
   Accordion,
@@ -236,7 +225,6 @@ export {
   createControllableSignal,
   createId,
   createToastManager,
-  defaultToastManager,
   Dialog,
   DialogClose,
   DialogContent,
@@ -255,6 +243,7 @@ export {
   type DropdownMenuProps,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  defaultToastManager,
   onClickOutside,
   Popover,
   PopoverClose,
@@ -286,13 +275,13 @@ export {
   type ToastVariant,
   ToastViewport,
   type ToastViewportProps,
-  toast,
   Tooltip,
   TooltipContent,
   type TooltipContentProps,
   TooltipPortal,
   type TooltipProps,
   TooltipTrigger,
+  toast,
   trapFocus,
   useAccordionContext,
   useAccordionItemContext,
@@ -303,3 +292,14 @@ export {
   useToast,
   useTooltipContext
 } from "./ui";
+// Virtual List & Grid Virtualization
+export {
+  createVirtualizer,
+  VirtualGrid,
+  type VirtualGridProps,
+  type VirtualItem,
+  type Virtualizer,
+  type VirtualizerOptions,
+  VirtualList,
+  type VirtualListProps
+} from "./virtual";

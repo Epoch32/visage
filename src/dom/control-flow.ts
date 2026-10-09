@@ -277,9 +277,7 @@ export function Portal(props: PortalProps): Node {
     untrack(() => {
       runInScope(currentScope, () => {
         const childRes =
-          typeof props.children === "function"
-            ? (props.children as () => Child)()
-            : props.children;
+          typeof props.children === "function" ? (props.children as () => Child)() : props.children;
         const frag = document.createDocumentFragment();
         insertChild(frag, childRes);
         nodes = Array.from(frag.childNodes);
@@ -303,4 +301,3 @@ export function Portal(props: PortalProps): Node {
 
   return marker;
 }
-

@@ -173,4 +173,3 @@ describe("Visage JSX & Direct DOM", () => {
     unmount();
   });
 });
-

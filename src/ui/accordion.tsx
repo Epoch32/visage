@@ -1,7 +1,6 @@
 /** @jsxImportSource visage */
 import { Show } from "../dom/control-flow";
-import { type Child } from "../dom/render";
-import { type ReadonlySignal } from "../signals";
+import type { Child } from "../dom/render";
 import { createContext, useContext } from "../signals/context";
 import { createControllableSignal, createId } from "./utils";
 
@@ -51,17 +50,17 @@ export type AccordionProps = AccordionSingleProps | AccordionMultipleProps;
 
 export function Accordion(props: AccordionProps): Child {
   const isSingle = props.type === "single";
-  const collapsible = (props as AccordionSingleProps).collapsible ?? (isSingle ? false : true);
+  const collapsible = (props as AccordionSingleProps).collapsible ?? !isSingle;
 
   const [singleValue, setSingleValue] = createControllableSignal<string>({
     value: isSingle ? (props as AccordionSingleProps).value : undefined,
-    defaultValue: isSingle ? (props as AccordionSingleProps).defaultValue ?? "" : "",
+    defaultValue: isSingle ? ((props as AccordionSingleProps).defaultValue ?? "") : "",
     onChange: isSingle ? (props as AccordionSingleProps).onValueChange : undefined
   });
 
   const [multiValue, setMultiValue] = createControllableSignal<string[]>({
     value: !isSingle ? (props as AccordionMultipleProps).value : undefined,
-    defaultValue: !isSingle ? (props as AccordionMultipleProps).defaultValue ?? [] : [],
+    defaultValue: !isSingle ? ((props as AccordionMultipleProps).defaultValue ?? []) : [],
     onChange: !isSingle ? (props as AccordionMultipleProps).onValueChange : undefined
   });
 
@@ -145,15 +144,7 @@ export function AccordionItem(props: AccordionItemProps): Child {
   const accordion = useAccordionContext();
   const isOpen = () => accordion.isExpanded(props.value);
 
-  const {
-    value,
-    disabled,
-    as: Tag = "div",
-    children,
-    class: className,
-    style,
-    ...rest
-  } = props;
+  const { value, disabled, as: Tag = "div", children, class: className, style, ...rest } = props;
 
   return AccordionItemContext.Provider({
     value: ctx,
@@ -231,14 +222,7 @@ export function AccordionContent(props: AccordionContentProps): Child {
   const triggerId = `${item.itemId}-trigger`;
   const contentId = `${item.itemId}-content`;
 
-  const {
-    forceMount,
-    as: Tag = "div",
-    children,
-    class: className,
-    style,
-    ...rest
-  } = props;
+  const { forceMount, as: Tag = "div", children, class: className, style, ...rest } = props;
 
   if (forceMount) {
     return (

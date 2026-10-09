@@ -1,7 +1,7 @@
 /** @jsxImportSource visage */
-import { For, Show } from "../dom/control-flow";
-import { type Child } from "../dom/render";
-import { onCleanup, type ReadonlySignal, signal, type WritableSignal } from "../signals";
+import { For } from "../dom/control-flow";
+import type { Child } from "../dom/render";
+import { type ReadonlySignal, signal, type WritableSignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
 import { createId } from "./utils";
 
@@ -46,8 +46,7 @@ export function createToastManager(): ToastManager {
 
   const show = (options: ToastOptions | string): string => {
     const id = createId("toast");
-    const normalized: ToastOptions =
-      typeof options === "string" ? { title: options } : options;
+    const normalized: ToastOptions = typeof options === "string" ? { title: options } : options;
 
     const data: ToastData = {
       id,
@@ -133,11 +132,7 @@ export function ToastViewport(props: ToastViewportProps): Child {
   const { as: Tag = "section", children, class: className, style, ...rest } = props;
 
   const defaultRender = (t: ToastData) => (
-    <Toast
-      id={t.id}
-      variant={t.variant}
-      onDismiss={() => manager.dismiss(t.id)}
-    >
+    <Toast id={t.id} variant={t.variant} onDismiss={() => manager.dismiss(t.id)}>
       <div class="visage-toast-content">
         {t.title && <ToastTitle>{t.title}</ToastTitle>}
         {t.description && <ToastDescription>{t.description}</ToastDescription>}
@@ -214,7 +209,11 @@ export interface ToastTitleProps {
 
 export function ToastTitle(props: ToastTitleProps): Child {
   const { as: Tag = "div", children, class: className, style, ...rest } = props;
-  return <Tag class={className} style={style} {...rest}>{children}</Tag>;
+  return (
+    <Tag class={className} style={style} {...rest}>
+      {children}
+    </Tag>
+  );
 }
 
 export interface ToastDescriptionProps {
@@ -227,7 +226,11 @@ export interface ToastDescriptionProps {
 
 export function ToastDescription(props: ToastDescriptionProps): Child {
   const { as: Tag = "div", children, class: className, style, ...rest } = props;
-  return <Tag class={className} style={style} {...rest}>{children}</Tag>;
+  return (
+    <Tag class={className} style={style} {...rest}>
+      {children}
+    </Tag>
+  );
 }
 
 export interface ToastCloseProps {

@@ -36,10 +36,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  Toast,
-  ToastClose,
   ToastProvider,
-  ToastTitle,
   ToastViewport,
   Tooltip,
   TooltipContent,
@@ -406,9 +403,7 @@ describe("Visage UI Component Primitives", () => {
 
   describe("createIcon", () => {
     it("renders fine-grained reactive SVG icon with Lucide-style icon nodes", () => {
-      const CheckIcon = createIcon("Check", [
-        ["polyline", { points: "20 6 9 17 4 12" }]
-      ]);
+      const CheckIcon = createIcon("Check", [["polyline", { points: "20 6 9 17 4 12" }]]);
 
       const size = signal(16);
       const color = signal("red");

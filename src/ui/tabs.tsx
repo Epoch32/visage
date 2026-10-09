@@ -1,8 +1,8 @@
 /** @jsxImportSource visage */
 import { Show } from "../dom/control-flow";
-import { type Child } from "../dom/render";
+import type { Child } from "../dom/render";
+import type { ReadonlySignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
-import { type ReadonlySignal } from "../signals";
 import { createControllableSignal, createId } from "./utils";
 
 export interface TabsContextValue {
@@ -71,12 +71,7 @@ export function Tabs(props: TabsProps): Child {
   return TabsContext.Provider({
     value: ctx,
     children: () => (
-      <Tag
-        data-orientation={orientation}
-        class={className}
-        style={style}
-        {...rest}
-      >
+      <Tag data-orientation={orientation} class={className} style={style} {...rest}>
         {typeof children === "function" ? children() : children}
       </Tag>
     )
@@ -100,7 +95,7 @@ export function TabsList(props: TabsListProps): Child {
     if (e.defaultPrevented) return;
 
     const target = e.target as HTMLElement | null;
-    if (!target || target.getAttribute("role") !== "tab") return;
+    if (target?.getAttribute("role") !== "tab") return;
 
     const list = target.closest('[role="tablist"]');
     if (!list) return;
@@ -226,15 +221,7 @@ export function TabsContent(props: TabsContentProps): Child {
   const ctx = useTabsContext();
   const isSelected = () => ctx.value() === props.value;
 
-  const {
-    value,
-    forceMount,
-    as: Tag = "div",
-    children,
-    class: className,
-    style,
-    ...rest
-  } = props;
+  const { value, forceMount, as: Tag = "div", children, class: className, style, ...rest } = props;
 
   const tabId = `${ctx.baseId}-trigger-${value}`;
   const panelId = `${ctx.baseId}-panel-${value}`;

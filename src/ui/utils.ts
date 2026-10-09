@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal, type WritableSignal } from "../signals";
+import { computed, type ReadonlySignal, signal } from "../signals";
 
 let idCounter = 0;
 
@@ -86,7 +86,7 @@ export function onClickOutside(
     if (!target) return;
 
     const list = Array.isArray(elements) ? elements : [elements];
-    const isInside = list.some((el) => el && el.contains(target));
+    const isInside = list.some((el) => el?.contains(target));
 
     if (!isInside) {
       handler(event);

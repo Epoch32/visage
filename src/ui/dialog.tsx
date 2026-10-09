@@ -1,8 +1,8 @@
 /** @jsxImportSource visage */
 import { Portal } from "../dom/control-flow";
-import { type Child } from "../dom/render";
+import type { Child } from "../dom/render";
+import type { ReadonlySignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
-import { effect, onCleanup, type ReadonlySignal } from "../signals";
 import { createControllableSignal, createId, trapFocus } from "./utils";
 
 export interface DialogContextValue {

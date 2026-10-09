@@ -1,6 +1,6 @@
 /** @jsxImportSource visage */
 import { Portal, Show } from "../dom/control-flow";
-import { type Child } from "../dom/render";
+import type { Child } from "../dom/render";
 import { onCleanup, type ReadonlySignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
 import { createControllableSignal, createId } from "./utils";
@@ -170,14 +170,7 @@ export interface TooltipContentProps {
 export function TooltipContent(props: TooltipContentProps): Child {
   const ctx = useTooltipContext();
 
-  const {
-    forceMount,
-    as: Tag = "div",
-    children,
-    class: className,
-    style,
-    ...rest
-  } = props;
+  const { forceMount, as: Tag = "div", children, class: className, style, ...rest } = props;
 
   if (forceMount) {
     return (

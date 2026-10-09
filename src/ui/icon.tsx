@@ -1,5 +1,5 @@
 /** @jsxImportSource visage */
-import { type Child } from "../dom/render";
+import type { Child } from "../dom/render";
 
 export type IconNode = [string, Record<string, any>][];
 
@@ -19,15 +19,15 @@ export interface IconProps {
 export function createIcon(name: string, iconNode: IconNode) {
   const IconComponent = function Icon(props: IconProps = {}): Child {
     const size = () =>
-      typeof props.size === "function" ? (props.size as () => any)() : props.size ?? 24;
+      typeof props.size === "function" ? (props.size as () => any)() : (props.size ?? 24);
     const color = () =>
       typeof props.color === "function"
         ? (props.color as () => any)()
-        : props.color ?? "currentColor";
+        : (props.color ?? "currentColor");
     const strokeWidth = () =>
       typeof props.strokeWidth === "function"
         ? (props.strokeWidth as () => any)()
-        : props.strokeWidth ?? 2;
+        : (props.strokeWidth ?? 2);
 
     const {
       size: _s,
@@ -52,8 +52,11 @@ export function createIcon(name: string, iconNode: IconNode) {
         stroke-linejoin="round"
         class={className}
         style={style}
+        role="img"
+        aria-label={props["aria-label"] ?? name}
         {...rest}
       >
+        <title>{props.title ?? name}</title>
         {iconNode.map(([Tag, attrs]) => (
           <Tag {...attrs} />
         ))}

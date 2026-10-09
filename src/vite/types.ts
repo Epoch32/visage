@@ -52,7 +52,10 @@ export interface VisageVitePlugin {
     importer?: string,
     options?: any
   ) => Promise<string | null | undefined> | string | null | undefined;
-  load?: (id: string, options?: any) => Promise<string | null | undefined> | string | null | undefined;
+  load?: (
+    id: string,
+    options?: any
+  ) => Promise<string | null | undefined> | string | null | undefined;
   transform?: (
     code: string,
     id: string,

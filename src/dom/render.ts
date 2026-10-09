@@ -107,7 +107,11 @@ export function setAttribute(el: HTMLElement | SVGElement, key: string, value: a
 }
 
 function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
-  if (value === null || value === undefined || (value === false && !key.startsWith("aria-") && !key.startsWith("data-"))) {
+  if (
+    value === null ||
+    value === undefined ||
+    (value === false && !key.startsWith("aria-") && !key.startsWith("data-"))
+  ) {
     if (key === "className" || key === "class") {
       el.removeAttribute("class");
     } else if (key === "style" && typeof value === "string") {
