@@ -58,6 +58,10 @@
       "types": "./src/vite/index.ts",
       "import": "./src/vite/index.ts"
     },
+    "./ui": {
+      "types": "./src/ui/index.ts",
+      "import": "./src/ui/index.ts"
+    },
     "./jsx-runtime": {
       "types": "./src/jsx-runtime/index.ts",
       "import": "./src/jsx-runtime/index.ts"
@@ -67,6 +71,7 @@
       "import": "./src/jsx-runtime/index.ts"
     }
   },
+  "sideEffects": false,
   "scripts": {
     "test": "bun test",
     "test:vitest": "vitest run",

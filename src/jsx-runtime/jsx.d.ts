@@ -206,6 +206,7 @@ export namespace JSX {
 
   export interface IntrinsicAttributes {
     key?: any;
+    [key: string]: any;
   }
 
   export interface IntrinsicElements extends VisageIntrinsicElements {}
@@ -221,6 +222,7 @@ declare global {
 
     interface IntrinsicAttributes {
       key?: any;
+      [key: string]: any;
     }
 
     interface IntrinsicElements extends VisageIntrinsicElements {}

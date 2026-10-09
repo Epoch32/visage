@@ -107,7 +107,7 @@ export function setAttribute(el: HTMLElement | SVGElement, key: string, value: a
 }
 
 function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
-  if (value === null || value === undefined || value === false) {
+  if (value === null || value === undefined || (value === false && !key.startsWith("aria-") && !key.startsWith("data-"))) {
     if (key === "className" || key === "class") {
       el.removeAttribute("class");
     } else if (key === "style" && typeof value === "string") {
@@ -155,7 +155,9 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
       el.setAttribute(key, String(value));
     }
   } else {
-    if (value === true) {
+    if (key.startsWith("aria-") || key.startsWith("data-")) {
+      el.setAttribute(key, String(value));
+    } else if (value === true) {
       el.setAttribute(key, "");
     } else {
       el.setAttribute(key, String(value));

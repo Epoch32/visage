@@ -197,6 +197,14 @@ export class MockElement extends MockNode {
     return frag;
   }
 
+  get id(): string {
+    return this.getAttribute("id") ?? "";
+  }
+
+  set id(val: string) {
+    this.setAttribute("id", val);
+  }
+
   get classList() {
     const self = this;
     return {
@@ -263,6 +271,20 @@ export class MockElement extends MockNode {
 
   click() {
     this.dispatchEvent({ type: "click" });
+  }
+
+  focus() {
+    if (typeof document !== "undefined") {
+      (document as any).activeElement = this;
+    }
+    this.dispatchEvent({ type: "focus" });
+  }
+
+  blur() {
+    if (typeof document !== "undefined" && (document as any).activeElement === this) {
+      (document as any).activeElement = null;
+    }
+    this.dispatchEvent({ type: "blur" });
   }
 
   querySelector(selector: string): MockElement | null {

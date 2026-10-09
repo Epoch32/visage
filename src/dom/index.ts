@@ -13,6 +13,8 @@ export {
 export {
   For,
   type ForProps,
+  Portal,
+  type PortalProps,
   Show,
   type ShowProps
 } from "./control-flow";

@@ -1,5 +1,5 @@
 import { type Child, insertChild } from "../dom/render";
-import { getActiveScope, runInScope, Scope } from "./signal";
+import { getActiveScope, runInScope, Scope, untrack } from "./signal";
 
 export interface Context<T> {
   id: symbol;
@@ -35,15 +35,16 @@ export function createContext<T>(defaultValue?: T): Context<T | undefined> {
       scope.context.set(id, props.value);
 
       return runInScope(scope, () => {
+        const content =
+          typeof props.children === "function"
+            ? untrack(() => (props.children as (...args: any[]) => any)())
+            : props.children;
         if (typeof document !== "undefined") {
           const frag = document.createDocumentFragment();
-          insertChild(frag, props.children);
+          insertChild(frag, content);
           return frag;
         }
-        if (typeof props.children === "function") {
-          return (props.children as (...args: any[]) => any)();
-        }
-        return props.children;
+        return content;
       });
     }
   };

@@ -11,10 +11,18 @@ declare module "bun:test" {
     toEqual(expected: any): void;
     toContain(expected: any): void;
     toBeNull(): void;
+    toBeDefined(): void;
+    toBeUndefined(): void;
+    toBeTruthy(): void;
+    toBeFalsy(): void;
+    toThrow(expected?: any): void;
     not: {
       toBe(expected: any): void;
       toEqual(expected: any): void;
+      toContain(expected: any): void;
       toBeNull(): void;
+      toBeDefined(): void;
+      toThrow(expected?: any): void;
     };
   };
 }

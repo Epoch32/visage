@@ -59,6 +59,9 @@ export class Scope {
     this.parent = parent;
     if (parent && !parent.isDisposed) {
       parent.cleanups.push(() => this.dispose());
+      if (parent.context) {
+        this.context = new Map(parent.context);
+      }
     }
   }
 
