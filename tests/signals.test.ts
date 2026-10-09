@@ -181,4 +181,27 @@ describe("Visage Signals", () => {
 
     expect(receivedTheme).toBe("dark");
   });
+
+  it("detects cyclic signal updates and halts infinite loops with circuit breaker", () => {
+    const count = signal(0);
+    let warned = false;
+    const origWarn = console.warn;
+    console.warn = (...args: any[]) => {
+      if (args[0]?.includes("Cyclic update detected")) {
+        warned = true;
+      }
+    };
+
+    try {
+      expect(() => {
+        effect(() => {
+          count.set(count() + 1);
+        });
+      }).toThrow("Maximum update depth exceeded");
+      expect(warned).toBe(true);
+    } finally {
+      console.warn = origWarn;
+    }
+  });
 });
+

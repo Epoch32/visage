@@ -166,6 +166,17 @@ export class Signal<T> {
     if (this._equals(this._value, newValue)) {
       return;
     }
+
+    if (currentSubscriber !== null && this._subscribers.has(currentSubscriber)) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          `[Visage Reactivity] Cyclic update detected: An active subscriber modified a signal that it depends on. ` +
+          `To read a signal inside an effect/computed without creating a circular dependency, wrap the read in untrack():\n` +
+          `  untrack(() => signal())`
+        );
+      }
+    }
+
     this._value = newValue;
     this.version++;
     batch(() => {
@@ -527,11 +538,22 @@ export class Effect {
   }
 }
 
+const MAX_FLUSH_COUNT = 100;
+
 function flushEffects() {
   if (isFlushing || batchDepth > 0) return;
   isFlushing = true;
+  let iterations = 0;
   try {
     while (pendingEffects.size > 0) {
+      if (++iterations > MAX_FLUSH_COUNT) {
+        pendingEffects.clear();
+        throw new Error(
+          `[Visage Reactivity] Maximum update depth exceeded (${MAX_FLUSH_COUNT} cycles). ` +
+          `An effect continuously triggered state mutations (infinite loop detected). ` +
+          `Ensure effects that modify signals do not unconditionally depend on them, or use untrack() to read state.`
+        );
+      }
       const effectsToRun = Array.from(pendingEffects);
       pendingEffects.clear();
 

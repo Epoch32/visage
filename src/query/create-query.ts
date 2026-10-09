@@ -67,9 +67,10 @@ export function createQuery<
 
     const targetQuery = queryClient.queryCache.build<TData, TError>(queryClient, mergedOpts);
 
-    if (currentQuery() !== targetQuery || !activeObserver) {
-      if (currentQuery() && activeObserver) {
-        currentQuery()!.removeObserver(activeObserver);
+    if (untrack(currentQuery) !== targetQuery || !activeObserver) {
+      const prevQ = untrack(currentQuery);
+      if (prevQ && activeObserver) {
+        prevQ.removeObserver(activeObserver);
       }
 
       const observer: QueryObserver<TData, TError> = {
@@ -101,14 +102,16 @@ export function createQuery<
     }
 
     if (isEnabled) {
-      if (targetQuery.isStale(mergedOpts.staleTime) && targetQuery.fetchStatus() === "idle") {
-        const fetchPromise = targetQuery.fetch(mergedOpts);
-        fetchPromise.catch(() => {});
-        const suspense = useContext(SuspenseContext);
-        if (suspense) {
-          suspense.registerPromise(fetchPromise);
+      untrack(() => {
+        if (targetQuery.isStale(mergedOpts.staleTime) && targetQuery.fetchStatus() === "idle") {
+          const fetchPromise = targetQuery.fetch(mergedOpts);
+          fetchPromise.catch(() => {});
+          const suspense = useContext(SuspenseContext);
+          if (suspense) {
+            suspense.registerPromise(fetchPromise);
+          }
         }
-      }
+      });
     }
   });
 
