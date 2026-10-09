@@ -240,6 +240,20 @@ export const devtoolsStyles = `
     box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
     background: #131d35;
   }
+  .visage-graph-node.is-dependency {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 1px #38bdf8, 0 2px 8px rgba(56, 189, 248, 0.25);
+    background: #082f49;
+  }
+  .visage-graph-node.is-dependent {
+    border-color: #c084fc;
+    box-shadow: 0 0 0 1px #c084fc, 0 2px 8px rgba(192, 132, 252, 0.25);
+    background: #3b0764;
+  }
+  .visage-graph-node.is-dimmed {
+    opacity: 0.3;
+    filter: grayscale(0.5);
+  }
   .visage-graph-node-title {
     font-weight: 600;
     font-size: 12px;
@@ -269,5 +283,31 @@ export const devtoolsStyles = `
   .visage-graph-pulse.computed {
     background: #a855f7;
     box-shadow: 0 0 8px #a855f7;
+  }
+  .visage-graph-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #1e293b;
+    color: #cbd5e1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid #334155;
+    transition: all 0.15s ease;
+  }
+  .visage-graph-pill:hover {
+    background: #334155;
+    color: #fff;
+    border-color: #38bdf8;
+  }
+  .visage-graph-pill.source {
+    border-color: #0369a1;
+    color: #7dd3fc;
+  }
+  .visage-graph-pill.target {
+    border-color: #7e22ce;
+    color: #d8b4fe;
   }
 `;

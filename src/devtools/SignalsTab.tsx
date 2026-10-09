@@ -46,16 +46,21 @@ export function SignalsTab(props: SignalsTabProps) {
                   class={() => `visage-devtools-item ${sig.type} ${isSelected() ? "selected" : ""}`}
                   onClick={() => props.selectedId.set(sig.id)}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span
                       style={{
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        padding: "1px 4px",
+                        borderRadius: "3px",
+                        background: sig.type === "computed" ? "#3b0764" : "#082f49",
                         color: sig.type === "computed" ? "#c084fc" : "#38bdf8",
-                        fontWeight: 600
+                        border: `1px solid ${sig.type === "computed" ? "#581c87" : "#0369a1"}`
                       }}
                     >
-                      {sig.type === "computed" ? "ƒ" : "●"}
+                      {sig.type === "computed" ? "CMP" : "SIG"}
                     </span>
-                    <span style={{ fontWeight: 500 }}>{sig.name}</span>
+                    <span style={{ fontWeight: 500, color: "#f1f5f9" }}>{sig.name}</span>
                   </div>
                   <span class="visage-devtools-badge">v{() => sig.version()}</span>
                 </div>

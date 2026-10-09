@@ -66,8 +66,20 @@ export function VisageDevTools(props: DevToolsOptions = {}) {
               onClick={() => hub.toggle()}
               aria-label="Open Visage DevTools"
             >
-              <span style={{ fontSize: "16px" }}>⚡</span>
-              <span>Visage DevTools</span>
+              <svg
+                aria-hidden="true"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              <span>DevTools</span>
             </button>
           </Tooltip>
         ) : (
@@ -75,9 +87,28 @@ export function VisageDevTools(props: DevToolsOptions = {}) {
             {/* Header with Navigation Tabs */}
             <div class="visage-devtools-header">
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "16px", color: "#38bdf8" }}>⚡</span>
-                <strong style={{ fontSize: "13px", letterSpacing: "0.02em" }}>
-                  VISAGE DEVTOOLS
+                <svg
+                  aria-hidden="true"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#38bdf8"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+                <strong
+                  style={{
+                    fontSize: "12px",
+                    letterSpacing: "0.04em",
+                    color: "#f8fafc",
+                    fontWeight: 700
+                  }}
+                >
+                  VISAGE
                 </strong>
               </div>
 
@@ -126,7 +157,7 @@ export function VisageDevTools(props: DevToolsOptions = {}) {
                     value: "rpc",
                     label: () => (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <span>RPC & Streams</span>
+                        <span>RPC</span>
                         <span class="visage-devtools-badge">{() => hub.rpcLogs().length}</span>
                       </span>
                     )
@@ -146,7 +177,7 @@ export function VisageDevTools(props: DevToolsOptions = {}) {
                   onClick={() => hub.isOpen.set(false)}
                   title="Close DevTools (Shift+Alt+V)"
                 >
-                  ✕ Close
+                  Close
                 </button>
               </div>
             </div>

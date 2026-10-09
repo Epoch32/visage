@@ -1,7 +1,10 @@
 export {
+  type Component,
   createResource,
   ErrorBoundary,
   type ErrorBoundaryProps,
+  type LazyComponent,
+  lazy,
   type Resource,
   type ResourceActions,
   Suspense,

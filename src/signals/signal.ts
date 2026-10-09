@@ -266,8 +266,14 @@ export function signal<T>(
       name: customName,
       type: "signal",
       getValue: () => s.get(),
-      version: () => s.version
+      version: () => s.version,
+      subscribersCount: () => (s as any)._subscribers?.size ?? 0,
+      dependents: () =>
+        Array.from((s as any)._subscribers ?? [])
+          .map((sub: any) => sub._devId)
+          .filter(Boolean)
     });
+    (s as any)._devId = sigId;
     if (currentScope) {
       currentScope.addCleanup(() => {
         devtools.unregisterSignal(sigId);
@@ -447,8 +453,18 @@ export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySig
       name: customName,
       type: "computed",
       getValue: () => c.get(),
-      version: () => c.version
+      version: () => c.version,
+      subscribersCount: () => (c as any)._subscribers?.size ?? 0,
+      dependencies: () =>
+        Array.from(c.sources ?? [])
+          .map((src: any) => (src as any)._devId)
+          .filter(Boolean),
+      dependents: () =>
+        Array.from((c as any)._subscribers ?? [])
+          .map((sub: any) => sub._devId)
+          .filter(Boolean)
     });
+    (c as any)._devId = sigId;
     if (currentScope) {
       currentScope.addCleanup(() => {
         devtools.unregisterSignal(sigId);

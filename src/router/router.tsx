@@ -1,5 +1,4 @@
-/** @jsxImportSource visage */
-import { type Child, createResource, Show, Suspense } from "../dom";
+import { type Child, Show } from "../dom";
 import {
   computed,
   createContext,
@@ -350,31 +349,4 @@ export function useSearchParams(): [
   return [params, setSearchParams];
 }
 
-/**
- * Code-splitting lazy component loader wrapped in Suspense
- */
-export function lazy<T extends (props: any) => Child>(
-  loader: () => Promise<{ default: T }>
-): (props: any) => Child {
-  let loadedComponent: T | null = null;
-
-  return (props: any) => {
-    if (loadedComponent) {
-      return loadedComponent(props);
-    }
-
-    const resource = createResource(async () => {
-      const mod = await loader();
-      loadedComponent = mod.default;
-      return mod.default;
-    });
-
-    return Suspense({
-      fallback: document.createTextNode("Loading..."),
-      children: () => {
-        const Comp = resource();
-        return Comp ? Comp(props) : null;
-      }
-    });
-  };
-}
+export { lazy } from "../dom";

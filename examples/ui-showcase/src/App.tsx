@@ -16,6 +16,7 @@ import {
   Trash2
 } from "lucide-react";
 import { createSignal } from "visage";
+import { VisageDevTools } from "visage/devtools";
 import { Accordion, Dialog, DropdownMenu, Switch, Tabs, Toast, Tooltip, toast } from "visage/ui";
 
 export function App() {
@@ -399,6 +400,7 @@ export function App() {
               </section>
             </main>
 
+            <VisageDevTools initialOpen={false} />
             <Toast.Viewport class="toast-viewport" />
           </>
         )}

@@ -1,6 +1,7 @@
 /** @jsxImportSource visage */
 import { Building2, ChevronDown, Globe2, Lock, ShieldCheck } from "lucide-react";
 import { createSignal } from "visage";
+import { VisageDevTools } from "visage/devtools";
 import { DropdownMenu, Tabs, Toast, toast } from "visage/ui";
 import { BrandPanel } from "./BrandPanel";
 import { LoginForm } from "./LoginForm";
@@ -126,6 +127,9 @@ export function App() {
             complianceOpen={complianceOpen}
             onComplianceOpenChange={setComplianceOpen}
           />
+
+          {/* In-Browser DevTools */}
+          <VisageDevTools initialOpen={false} />
 
           <Toast.Viewport class="toast-viewport" />
         </div>

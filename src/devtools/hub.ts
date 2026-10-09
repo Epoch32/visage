@@ -41,6 +41,9 @@ export class DevToolsHub {
     type?: "signal" | "computed";
     getValue: () => any;
     version: () => number;
+    dependencies?: () => string[];
+    dependents?: () => string[];
+    subscribersCount?: () => number;
   }): string {
     const id = options.id ?? `sig_${++this._signalCounter}`;
     const name = options.name ?? id;
@@ -52,6 +55,9 @@ export class DevToolsHub {
       type,
       getValue: options.getValue,
       version: options.version,
+      dependencies: options.dependencies,
+      dependents: options.dependents,
+      subscribersCount: options.subscribersCount,
       lastUpdatedAt: Date.now()
     };
 
@@ -64,6 +70,23 @@ export class DevToolsHub {
     if (this._signalsMap.delete(id)) {
       this.refreshSignals();
     }
+  }
+
+  clearSignals() {
+    this._signalsMap.clear();
+    this._signalCounter = 0;
+    this.refreshSignals();
+  }
+
+  clearQueries() {
+    this._queriesMap.clear();
+    this.queriesList.set([]);
+  }
+
+  clearAll() {
+    this.clearSignals();
+    this.clearQueries();
+    this.clearLogs();
   }
 
   private refreshSignals() {

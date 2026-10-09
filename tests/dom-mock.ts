@@ -318,11 +318,12 @@ export class MockElement extends MockNode {
 
     const traverse = (node: MockNode) => {
       if (node instanceof MockElement) {
-        if (
-          selector.startsWith(".") &&
-          node.getAttribute("class")?.split(/\s+/).includes(selector.slice(1))
-        ) {
-          matches.push(node);
+        if (selector.startsWith(".")) {
+          const reqClasses = selector.split(".").filter(Boolean);
+          const nodeClasses = node.getAttribute("class")?.split(/\s+/).filter(Boolean) ?? [];
+          if (reqClasses.every((cls) => nodeClasses.includes(cls))) {
+            matches.push(node);
+          }
         } else if (selector.startsWith("#") && node.getAttribute("id") === selector.slice(1)) {
           matches.push(node);
         } else if (selector.includes("[") && selector.endsWith("]")) {

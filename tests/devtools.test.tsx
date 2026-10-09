@@ -12,11 +12,11 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
     setupDom();
     container = document.createElement("div");
     document.body.appendChild(container);
-    devtoolsHub.clearLogs();
+    devtoolsHub.clearAll();
   });
 
   it("registers and tracks reactive signals and computed values", () => {
-    const count = signal(42);
+    const count = signal(42, { internal: true });
     const sigId = devtoolsHub.registerSignal({
       name: "counterSignal",
       type: "signal",
@@ -96,6 +96,7 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
   });
 
   it("selects list items on click and renders details pane reactively", () => {
+    devtoolsHub.clearAll();
     const sigId = devtoolsHub.registerSignal({
       id: "sig_custom_1",
       name: "themePreference",
@@ -109,12 +110,15 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
       container
     );
 
-    const itemRow = container.querySelector(".visage-devtools-item") as HTMLElement;
-    expect(itemRow).not.toBeNull();
-    expect(itemRow.textContent).toContain("themePreference");
+    const itemRows = Array.from(
+      container.querySelectorAll(".visage-devtools-item")
+    ) as HTMLElement[];
+    const itemRow = itemRows.find((el) => el.textContent?.includes("themePreference"));
+    expect(itemRow).toBeDefined();
+    expect(itemRow?.textContent).toContain("themePreference");
 
     // Click item row to inspect
-    itemRow.click();
+    itemRow?.click();
 
     const detailBox = container.querySelector(".visage-devtools-main");
     expect(detailBox).not.toBeNull();
@@ -125,13 +129,24 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
     devtoolsHub.unregisterSignal(sigId);
   });
 
-  it("renders the Live DAG Graph Tab with reactive nodes", () => {
-    const sigId = devtoolsHub.registerSignal({
-      id: "sig_graph_1",
-      name: "graphSource",
+  it("renders the Live DAG Graph Tab with reactive nodes and dependency linkages", () => {
+    devtoolsHub.clearAll();
+    const sourceId = devtoolsHub.registerSignal({
+      id: "sig_source_1",
+      name: "itemPrice",
       type: "signal",
       getValue: () => 100,
-      version: () => 1
+      version: () => 1,
+      dependents: () => ["sig_computed_1"]
+    });
+
+    const computedId = devtoolsHub.registerSignal({
+      id: "sig_computed_1",
+      name: "taxAmount",
+      type: "computed",
+      getValue: () => 20,
+      version: () => 1,
+      dependencies: () => ["sig_source_1"]
     });
 
     const unmount = render(
@@ -142,15 +157,20 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
     const graphContainer = container.querySelector(".visage-graph-container");
     expect(graphContainer).not.toBeNull();
 
-    const node = container.querySelector(".visage-graph-node") as HTMLElement;
-    expect(node).not.toBeNull();
-    expect(node.textContent).toContain("graphSource");
+    const nodes = container.querySelectorAll(".visage-graph-node");
+    expect(nodes.length).toBe(2);
 
-    node.click();
+    // Click computed node to inspect its upstream inputs
+    (nodes[1] as HTMLElement).click();
     const inspector = container.querySelector(".visage-devtools-json");
-    expect(inspector?.textContent).toContain("100");
+    expect(inspector?.textContent).toContain("20");
+
+    const pill = container.querySelector(".visage-graph-pill.source") as HTMLElement;
+    expect(pill).not.toBeNull();
+    expect(pill.textContent).toContain("itemPrice");
 
     unmount();
-    devtoolsHub.unregisterSignal(sigId);
+    devtoolsHub.unregisterSignal(sourceId);
+    devtoolsHub.unregisterSignal(computedId);
   });
 });

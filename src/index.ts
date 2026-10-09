@@ -16,6 +16,7 @@ export {
 // DOM & Mount Primitives
 export {
   type Child,
+  type Component,
   createResource,
   ErrorBoundary,
   type ErrorBoundaryProps,
@@ -23,6 +24,8 @@ export {
   type ForProps,
   insertChild,
   isReactive,
+  type LazyComponent,
+  lazy,
   Portal,
   type PortalProps,
   type ReactiveValue,
@@ -106,7 +109,6 @@ export {
   Link,
   type LinkProps,
   type LocationState,
-  lazy,
   type MatchedRoute,
   Route,
   type RouteDefinition,

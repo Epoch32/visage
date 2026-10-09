@@ -19,8 +19,10 @@ export function DomTab(props: DomTabProps) {
           }}
         >
           <div>
-            <h3 style={{ margin: "0 0 6px 0", color: "#f8fafc", fontSize: "18px" }}>
-              ⚡ Real-Time DOM Mutation Highlighter
+            <h3
+              style={{ margin: "0 0 6px 0", color: "#f8fafc", fontSize: "16px", fontWeight: 700 }}
+            >
+              Real-Time DOM Mutation Highlighter
             </h3>
             <p style={{ margin: 0, color: "#94a3b8", fontSize: "13px", lineHeight: 1.5 }}>
               Visage uses zero Virtual DOM and fine-grained reactivity. Only exact text nodes and
@@ -30,12 +32,13 @@ export function DomTab(props: DomTabProps) {
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span
               style={{
-                fontSize: "12px",
-                fontWeight: 600,
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
                 color: () => (props.hub.highlightDOM() ? "#10b981" : "#64748b")
               }}
             >
-              {() => (props.hub.highlightDOM() ? "HIGHLIGHT ON" : "HIGHLIGHT OFF")}
+              {() => (props.hub.highlightDOM() ? "ENABLED" : "DISABLED")}
             </span>
             <Switch
               checked={props.hub.highlightDOM}
@@ -53,8 +56,8 @@ export function DomTab(props: DomTabProps) {
             marginBottom: "20px"
           }}
         >
-          <h4 style={{ margin: "0 0 10px 0", color: "#38bdf8", fontSize: "14px" }}>
-            How to use DOM Highlighting:
+          <h4 style={{ margin: "0 0 10px 0", color: "#38bdf8", fontSize: "13px", fontWeight: 600 }}>
+            Usage Instructions:
           </h4>
           <ul
             style={{
@@ -68,8 +71,8 @@ export function DomTab(props: DomTabProps) {
             <li>Toggle the switch above to enable visual flashing outlines across your app.</li>
             <li>Interact with buttons, form inputs, tabs, and modals in your application.</li>
             <li>
-              Notice that <strong>only the exact updated node flashes green</strong> without
-              re-rendering the whole component or tree!
+              Notice that <strong>only the exact updated node flashes</strong> without re-rendering
+              the whole component or tree.
             </li>
           </ul>
         </div>
@@ -83,12 +86,21 @@ export function DomTab(props: DomTabProps) {
               padding: "14px"
             }}
           >
-            <div style={{ fontWeight: 700, color: "#ef4444", marginBottom: "6px" }}>
-              ❌ Traditional VDOM Frameworks
+            <div
+              style={{
+                fontWeight: 700,
+                color: "#f87171",
+                marginBottom: "6px",
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em"
+              }}
+            >
+              Virtual DOM Model
             </div>
             <p style={{ margin: 0, color: "#94a3b8", fontSize: "12px", lineHeight: 1.5 }}>
               State changes re-run entire component functions, allocate temporary Virtual DOM nodes,
-              and diff large trees.
+              and diff tree structures.
             </p>
           </div>
           <div
@@ -99,12 +111,21 @@ export function DomTab(props: DomTabProps) {
               padding: "14px"
             }}
           >
-            <div style={{ fontWeight: 700, color: "#10b981", marginBottom: "6px" }}>
-              ✅ Visage Push-Pull Signals
+            <div
+              style={{
+                fontWeight: 700,
+                color: "#34d399",
+                marginBottom: "6px",
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em"
+              }}
+            >
+              Visage Reactive Engine
             </div>
             <p style={{ margin: 0, color: "#94a3b8", fontSize: "12px", lineHeight: 1.5 }}>
               Component functions execute once during mounting. Signals push direct in-place
-              mutations in microsecond times.
+              mutations at native DOM speed.
             </p>
           </div>
         </div>

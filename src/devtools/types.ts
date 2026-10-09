@@ -6,7 +6,8 @@ export interface SignalRecord {
   type: "signal" | "computed";
   getValue: () => any;
   version: () => number;
-  dependencies?: string[];
+  dependencies?: () => string[];
+  dependents?: () => string[];
   subscribersCount?: () => number;
   lastUpdatedAt: number;
 }
