@@ -23,8 +23,8 @@ if (import.meta.hot) {
   import.meta.hot.accept((newMod) => {
     if (newMod) {
       // Re-trigger reactive components without wiping signal stores
-      if (typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
-        (window as any).__VISAGE_DEVTOOLS__.refresh?.();
+      if (typeof window !== "undefined" && window.__VISAGE_DEVTOOLS__) {
+        window.__VISAGE_DEVTOOLS__.refresh?.();
       }
     }
   });
@@ -32,7 +32,7 @@ if (import.meta.hot) {
 `;
 
   return {
-    code: `${code}\n${hmrFooter}`,
+    code: `${code}\n;${hmrFooter}`,
     map: null
   };
 }
