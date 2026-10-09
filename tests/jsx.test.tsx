@@ -117,4 +117,60 @@ describe("Visage JSX & Direct DOM", () => {
 
     unmount();
   });
+
+  it("preserves item event listeners and updates reactive classes in <For>", () => {
+    const tabs = [
+      { id: "bun", label: "bun" },
+      { id: "pnpm", label: "pnpm" },
+      { id: "npm", label: "npm" }
+    ];
+    const activeTab = signal("bun");
+
+    const unmount = render(
+      () => (
+        <div>
+          <For each={() => tabs}>
+            {(tab) => (
+              <button
+                id={`tab-${tab.id}`}
+                type="button"
+                onClick={() => activeTab.set(tab.id)}
+                class={() => (activeTab() === tab.id ? "tab-active" : "tab-inactive")}
+              >
+                {tab.label}
+              </button>
+            )}
+          </For>
+        </div>
+      ),
+      container
+    );
+
+    const btnBun = container.querySelector("#tab-bun")!;
+    const btnPnpm = container.querySelector("#tab-pnpm")!;
+    const btnNpm = container.querySelector("#tab-npm")!;
+
+    expect(btnBun.getAttribute("class")).toBe("tab-active");
+    expect(btnPnpm.getAttribute("class")).toBe("tab-inactive");
+
+    // Click pnpm (forward)
+    btnPnpm.click();
+    expect(activeTab()).toBe("pnpm");
+    expect(btnBun.getAttribute("class")).toBe("tab-inactive");
+    expect(btnPnpm.getAttribute("class")).toBe("tab-active");
+
+    // Click npm (forward)
+    btnNpm.click();
+    expect(activeTab()).toBe("npm");
+    expect(btnNpm.getAttribute("class")).toBe("tab-active");
+
+    // Click bun (backward)
+    btnBun.click();
+    expect(activeTab()).toBe("bun");
+    expect(btnBun.getAttribute("class")).toBe("tab-active");
+    expect(btnNpm.getAttribute("class")).toBe("tab-inactive");
+
+    unmount();
+  });
 });
+

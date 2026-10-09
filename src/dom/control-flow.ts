@@ -1,4 +1,4 @@
-import { effect, getActiveScope, onCleanup, runInScope, Scope } from "../signals";
+import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "../signals";
 import { type Child, insertChild, type ReactiveValue, resolveValue } from "./render";
 
 export interface ShowProps<T> {
@@ -37,20 +37,24 @@ export function Show<T>(props: ShowProps<T>): Node {
 
     if (condition) {
       currentScope = new Scope(getActiveScope());
-      runInScope(currentScope, () => {
-        const childRes =
-          typeof props.children === "function" && props.children.length > 0
-            ? (props.children as (item: () => T) => Child)(() => resolveValue(props.when) as T)
-            : typeof props.children === "function"
-              ? (props.children as () => Child)()
-              : props.children;
+      untrack(() => {
+        runInScope(currentScope, () => {
+          const childRes =
+            typeof props.children === "function" && props.children.length > 0
+              ? (props.children as (item: () => T) => Child)(() => resolveValue(props.when) as T)
+              : typeof props.children === "function"
+                ? (props.children as () => Child)()
+                : props.children;
 
-        insertChild(frag, childRes);
+          insertChild(frag, childRes);
+        });
       });
     } else if (props.fallback !== undefined) {
       currentScope = new Scope(getActiveScope());
-      runInScope(currentScope, () => {
-        insertChild(frag, props.fallback);
+      untrack(() => {
+        runInScope(currentScope, () => {
+          insertChild(frag, props.fallback);
+        });
       });
     }
 
@@ -116,15 +120,17 @@ export function For<T>(props: ForProps<T>): Node {
       // Render fallback
       if (props.fallback !== undefined && fallbackNodes.length === 0 && parent) {
         fallbackScope = new Scope(getActiveScope());
-        runInScope(fallbackScope, () => {
-          const frag = document.createDocumentFragment();
-          insertChild(frag, props.fallback);
-          fallbackNodes = Array.from(frag.childNodes);
-          if (marker.parentNode) {
-            marker.parentNode.insertBefore(frag, marker);
-          } else if (!isMounted) {
-            initialFrag.appendChild(frag);
-          }
+        untrack(() => {
+          runInScope(fallbackScope, () => {
+            const frag = document.createDocumentFragment();
+            insertChild(frag, props.fallback);
+            fallbackNodes = Array.from(frag.childNodes);
+            if (marker.parentNode) {
+              marker.parentNode.insertBefore(frag, marker);
+            } else if (!isMounted) {
+              initialFrag.appendChild(frag);
+            }
+          });
         });
       }
       return;
@@ -174,11 +180,13 @@ export function For<T>(props: ForProps<T>): Node {
         const itemScope = new Scope(getActiveScope());
         let itemNodes: Node[] = [];
 
-        runInScope(itemScope, () => {
-          const frag = document.createDocumentFragment();
-          const child = props.children(item, indexSignal);
-          insertChild(frag, child);
-          itemNodes = Array.from(frag.childNodes);
+        untrack(() => {
+          runInScope(itemScope, () => {
+            const frag = document.createDocumentFragment();
+            const child = props.children(item, indexSignal);
+            insertChild(frag, child);
+            itemNodes = Array.from(frag.childNodes);
+          });
         });
 
         newItems.push({
