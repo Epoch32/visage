@@ -19,6 +19,7 @@ let currentSubscriber: Subscriber | null = null;
 let currentScope: Scope | null = null;
 let batchDepth = 0;
 const pendingEffects: Set<Effect> = new Set();
+const warnedCyclicSubscribers: WeakSet<Subscriber> = new WeakSet();
 let isFlushing = false;
 
 export const SIGNAL_BRAND = Symbol("visage.signal");
@@ -168,12 +169,15 @@ export class Signal<T> {
     }
 
     if (currentSubscriber !== null && this._subscribers.has(currentSubscriber)) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn(
-          `[Visage Reactivity] Cyclic update detected: An active subscriber modified a signal that it depends on. ` +
-          `To read a signal inside an effect/computed without creating a circular dependency, wrap the read in untrack():\n` +
-          `  untrack(() => signal())`
-        );
+      if (!warnedCyclicSubscribers.has(currentSubscriber)) {
+        warnedCyclicSubscribers.add(currentSubscriber);
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            `[Visage Reactivity] Cyclic update detected: An active subscriber modified a signal that it depends on. ` +
+            `To read a signal inside an effect/computed without creating a circular dependency, wrap the read in untrack():\n` +
+            `  untrack(() => signal())`
+          );
+        }
       }
     }
 
