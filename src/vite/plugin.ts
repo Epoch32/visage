@@ -34,7 +34,7 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
           jsxDev: command === "serve"
         },
         optimizeDeps: {
-          include: [
+          exclude: [
             "visage",
             "visage/signals",
             "visage/dom",
