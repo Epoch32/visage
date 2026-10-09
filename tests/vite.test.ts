@@ -19,9 +19,9 @@ describe("Visage Vite Plugin (visage/vite)", () => {
     expect(configPlugin?.config).not.toBeNull();
 
     const config = configPlugin!.config!({}, { command: "serve", mode: "development" });
-    expect(config.esbuild?.jsx).toBe("automatic");
-    expect(config.esbuild?.jsxImportSource).toBe("visage");
-    expect(config.esbuild?.jsxDev).toBe(true);
+    expect(config.oxc?.jsx?.runtime).toBe("automatic");
+    expect(config.oxc?.jsx?.importSource).toBe("visage");
+    expect(config.oxc?.jsx?.development).toBe(true);
     expect(config.optimizeDeps?.exclude).toContain("visage");
     expect(config.optimizeDeps?.exclude).toContain("visage/signals");
     expect(config.optimizeDeps?.exclude).toContain("visage/dom");
