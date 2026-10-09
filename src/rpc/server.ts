@@ -89,6 +89,45 @@ function resolveProcedureFromPath(
   });
 }
 
+export function matchesRulePattern(
+  pattern: string,
+  urlPath: string,
+  procedurePath: string
+): boolean {
+  if (pattern === "*") return true;
+
+  const cleanUrl = urlPath.replace(/^\/+|\/+$/g, "");
+  const cleanPattern = pattern.replace(/^\/+|\/+$/g, "");
+  const cleanProc = procedurePath.replace(/^\/+|\/+$/g, "");
+
+  if (
+    cleanUrl === cleanPattern ||
+    cleanProc === cleanPattern ||
+    cleanProc === cleanPattern.replace(/\//g, ".")
+  ) {
+    return true;
+  }
+
+  if (cleanPattern.endsWith("*")) {
+    const prefix = cleanPattern.slice(0, -1);
+    if (cleanUrl.startsWith(prefix) || cleanProc.startsWith(prefix)) {
+      return true;
+    }
+    const dotPrefix = prefix.replace(/\//g, ".");
+    if (cleanProc.startsWith(dotPrefix)) {
+      return true;
+    }
+  }
+
+  try {
+    const regexStr = cleanPattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+    const regex = new RegExp(`^${regexStr}$`);
+    return regex.test(cleanUrl) || regex.test(cleanProc);
+  } catch {
+    return false;
+  }
+}
+
 export function createFetchHandler<TRouter extends Router<any, any>, TContext = any>(
   options: FetchHandlerOptions<TRouter, TContext>
 ): (request: Request, ...extra: any[]) => Promise<Response> {
@@ -98,7 +137,8 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     createContext,
     onError,
     cors = true,
-    securityHeaders = true
+    securityHeaders = true,
+    rules
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -129,6 +169,8 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     }
     pathname = pathname.replace(/^\/+|\/+$/g, "");
 
+    const procedurePath = pathname || url.searchParams.get("procedure") || "";
+
     let ctx: TContext = {} as TContext;
     try {
       if (createContext) {
@@ -158,6 +200,119 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           headers: baseHeaders
         }
       );
+    }
+
+    // Evaluate declarative pattern rules
+    const rulesList: Array<{ match: string } & import("./types").RouteRule> = [];
+    if (rules) {
+      if (Array.isArray(rules)) {
+        rulesList.push(...rules);
+      } else {
+        for (const [match, rule] of Object.entries(rules)) {
+          rulesList.push({ match, ...rule });
+        }
+      }
+    }
+
+    const matchingRules = rulesList.filter((r) =>
+      matchesRulePattern(r.match, url.pathname, procedurePath)
+    );
+
+    // Enforce required headers, query parameters, and custom guards from rules
+    for (const rule of matchingRules) {
+      if (rule.requireHeaders) {
+        for (const headerName of rule.requireHeaders) {
+          if (!request.headers.get(headerName)) {
+            const error = new RPCError({
+              code: "UNAUTHORIZED",
+              message: `Missing required header '${headerName}' for rule '${rule.match}'`
+            });
+            onError?.({ error, path: procedurePath, req: request });
+            baseHeaders.set("Content-Type", "application/json");
+            return new Response(
+              JSON.stringify({
+                error: {
+                  code: error.code,
+                  message: error.message
+                }
+              }),
+              {
+                status: 401,
+                headers: baseHeaders
+              }
+            );
+          }
+        }
+      }
+
+      if (rule.requireParams) {
+        for (const paramName of rule.requireParams) {
+          if (!url.searchParams.has(paramName)) {
+            const error = new RPCError({
+              code: "BAD_REQUEST",
+              message: `Missing required query parameter '${paramName}' for rule '${rule.match}'`
+            });
+            onError?.({ error, path: procedurePath, req: request });
+            baseHeaders.set("Content-Type", "application/json");
+            return new Response(
+              JSON.stringify({
+                error: {
+                  code: error.code,
+                  message: error.message
+                }
+              }),
+              {
+                status: 400,
+                headers: baseHeaders
+              }
+            );
+          }
+        }
+      }
+
+      if (rule.guard) {
+        try {
+          const guardResult = await rule.guard({ req: request, ctx, path: procedurePath });
+          if (guardResult === false) {
+            throw new RPCError({
+              code: "UNAUTHORIZED",
+              message: `Access denied by route rule guard for '${rule.match}'`
+            });
+          }
+        } catch (err: any) {
+          const error =
+            err instanceof RPCError
+              ? err
+              : new RPCError({
+                  code: "UNAUTHORIZED",
+                  message: err.message ?? "Unauthorized",
+                  cause: err
+                });
+          onError?.({ error, path: procedurePath, req: request });
+          baseHeaders.set("Content-Type", "application/json");
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: error.code,
+                message: error.message
+              }
+            }),
+            {
+              status: error.status,
+              headers: baseHeaders
+            }
+          );
+        }
+      }
+
+      // Inject custom response headers defined by matching rule
+      if (rule.headers) {
+        const resHeaders =
+          typeof rule.headers === "function" ? await rule.headers(request, ctx) : rule.headers;
+        for (const [k, v] of Object.entries(resHeaders)) {
+          baseHeaders.set(k, v);
+        }
+      }
     }
 
     // Check for batch execution in POST body
@@ -228,8 +383,6 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
         );
       }
     }
-
-    const procedurePath = pathname || url.searchParams.get("procedure") || "";
 
     try {
       const procedure = resolveProcedureFromPath(router, procedurePath);

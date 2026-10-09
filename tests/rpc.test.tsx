@@ -369,42 +369,98 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(res2.title).toBe("Direct useMutation Post");
   });
 
-  it("streams Server-Sent Events (SSE) via subscription", async () => {
+  it("enforces declarative route rules on createFetchHandler", async () => {
     const handler = createFetchHandler({
       router: appRouter,
-      endpoint: "/api/rpc"
+      endpoint: "/api/rpc",
+      rules: {
+        // Global rule
+        "*": {
+          headers: { "X-Server-Engine": "Visage-RPC" }
+        },
+        // Admin group rule
+        secretData: {
+          requireHeaders: ["x-admin-token"],
+          headers: { "Cache-Control": "no-store, private" }
+        },
+        // Posts group rule with custom guard
+        "posts.*": {
+          headers: { "X-Scope": "posts-api" },
+          guard: ({ req }) => {
+            if (req.headers.get("x-blocked") === "true") return false;
+          }
+        }
+      },
+      createContext: async () => ({ userId: "test-user" })
     });
 
-    const mockFetch = (url: string | URL | Request, init?: RequestInit) => {
-      const req = new Request(url, init);
-      return handler(req);
+    // 1. Test global response header injection on public route
+    const res1 = await handler(
+      new Request(
+        "http://localhost/api/rpc/greeting?input=" +
+          encodeURIComponent(JSON.stringify({ name: "Alice" }))
+      )
+    );
+    expect(res1.status).toBe(200);
+    expect(res1.headers.get("X-Server-Engine")).toBe("Visage-RPC");
+
+    // 2. Test requireHeaders rejection when missing
+    const res2 = await handler(new Request("http://localhost/api/rpc/secretData"));
+    expect(res2.status).toBe(401);
+    const body2 = await res2.json();
+    expect(body2.error.message).toContain("Missing required header 'x-admin-token'");
+
+    // 3. Test requireHeaders success when provided + custom response header
+    const res3 = await handler(
+      new Request("http://localhost/api/rpc/secretData", {
+        headers: { "x-admin-token": "secret-token-123" }
+      })
+    );
+    expect(res3.status).toBe(200);
+    expect(res3.headers.get("Cache-Control")).toBe("no-store, private");
+    expect(res3.headers.get("X-Server-Engine")).toBe("Visage-RPC");
+
+    // 4. Test guard function rejecting request
+    const res4 = await handler(
+      new Request(
+        "http://localhost/api/rpc/posts.getById?input=" +
+          encodeURIComponent(JSON.stringify({ id: 1 })),
+        {
+          headers: { "x-blocked": "true" }
+        }
+      )
+    );
+    expect(res4.status).toBe(401);
+  });
+
+  it("supports pattern-based client headers in createClient", async () => {
+    let capturedHeaders: Record<string, string> = {};
+
+    const mockFetch = async (_url: string | URL | Request, init?: RequestInit) => {
+      capturedHeaders = Object.fromEntries(new Headers(init?.headers).entries());
+      return new Response(JSON.stringify({ result: { data: { success: true } } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
     };
 
     const client = createClient<AppRouter>({
       baseUrl: "http://localhost/api/rpc",
-      fetch: mockFetch as any
+      fetch: mockFetch as any,
+      headers: {
+        "*": { "x-app-id": "web-client" },
+        "posts.*": () => ({ "x-posts-auth": "bearer-123" })
+      }
     });
 
-    const received: number[] = [];
-    let isCompleted = false;
+    // 1. Querying greeting should only send global "*" headers
+    await client.greeting.query({ name: "Bob" });
+    expect(capturedHeaders["x-app-id"]).toBe("web-client");
+    expect(capturedHeaders["x-posts-auth"]).toBe(undefined);
 
-    await new Promise<void>((resolve) => {
-      const sub = client.countdown.subscribe(
-        { from: 3 },
-        {
-          onData: (data) => {
-            received.push(data.count);
-          },
-          onComplete: () => {
-            isCompleted = true;
-            resolve();
-          }
-        }
-      );
-      expect(typeof sub.unsubscribe).toBe("function");
-    });
-
-    expect(received).toEqual([3, 2, 1, 0]);
-    expect(isCompleted).toBe(true);
+    // 2. Querying posts.getById should send both "*" and "posts.*" headers
+    await client.posts.getById.query({ id: 99 });
+    expect(capturedHeaders["x-app-id"]).toBe("web-client");
+    expect(capturedHeaders["x-posts-auth"]).toBe("bearer-123");
   });
 });

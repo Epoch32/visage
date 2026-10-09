@@ -1,6 +1,7 @@
 import { createMutation } from "../query/create-mutation";
 import { createQuery } from "../query/create-query";
 import { RPCError } from "./error";
+import { matchesRulePattern } from "./server";
 import type {
   ClientOptions,
   ClientRouter,
@@ -13,13 +14,29 @@ import type {
 async function resolveHeaders(
   headers?:
     | Record<string, string>
-    | (() => Promise<Record<string, string>> | Record<string, string>)
+    | Record<string, any>
+    | (() => Promise<Record<string, string>> | Record<string, string>),
+  fullPath = ""
 ): Promise<Record<string, string>> {
   if (!headers) return {};
   if (typeof headers === "function") {
     return await headers();
   }
-  return headers;
+
+  const result: Record<string, string> = {};
+  for (const [key, val] of Object.entries(headers)) {
+    if (typeof val === "object" || typeof val === "function") {
+      if (matchesRulePattern(key, fullPath, fullPath)) {
+        const resolved = typeof val === "function" ? await val() : val;
+        if (resolved && typeof resolved === "object") {
+          Object.assign(result, resolved);
+        }
+      }
+    } else if (typeof val === "string") {
+      result[key] = val;
+    }
+  }
+  return result;
 }
 
 function createProxyPath(options: ClientOptions, path: string[] = []): any {
@@ -44,7 +61,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
               url += `${url.includes("?") ? "&" : "?"}input=${encodeURIComponent(serialized)}`;
             }
 
-            const dynamicHeaders = await resolveHeaders(options.headers);
+            const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
             const headers = {
               Accept: "application/json",
               ...dynamicHeaders,
@@ -96,7 +113,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
             const fullPath = path.join(".");
             const url = `${baseUrl}/${fullPath}`;
 
-            const dynamicHeaders = await resolveHeaders(options.headers);
+            const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
             const headers = {
               "Content-Type": "application/json",
               Accept: "application/json",
@@ -164,7 +181,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
 
             (async () => {
               try {
-                const dynamicHeaders = await resolveHeaders(options.headers);
+                const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
                 const headers = {
                   Accept: "text/event-stream",
                   ...dynamicHeaders

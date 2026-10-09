@@ -148,6 +148,39 @@ export interface CORSOptions {
   maxAge?: number;
 }
 
+export type DynamicHeadersFn = (
+  req: Request,
+  ctx: any
+) => Promise<Record<string, string>> | Record<string, string>;
+
+export type HeadersConfig = Record<string, string> | DynamicHeadersFn;
+
+export interface RouteRule {
+  /**
+   * Response headers to attach to all matching requests.
+   */
+  headers?: HeadersConfig;
+
+  /**
+   * Required request headers. If any are missing, automatically rejects with HTTP 401 Unauthorized.
+   */
+  requireHeaders?: string[];
+
+  /**
+   * Required query parameters. If missing on GET requests, rejects with HTTP 400 Bad Request.
+   */
+  requireParams?: string[];
+
+  /**
+   * Custom guard function for matching requests. Return false or throw RPCError to reject.
+   */
+  guard?: (opts: {
+    req: Request;
+    ctx: any;
+    path: string;
+  }) => Promise<boolean | void> | boolean | void;
+}
+
 export interface FetchHandlerOptions<
   TRouter extends Router<any, any> = Router<any, any>,
   TContext = any
@@ -158,13 +191,24 @@ export interface FetchHandlerOptions<
   onError?: (opts: { error: any; path?: string; req: Request }) => void;
   cors?: boolean | CORSOptions;
   securityHeaders?: boolean | Record<string, string>;
+
+  /**
+   * Declarative pattern rules matching URL paths or procedure names (e.g. "*", "/api/*", "admin.*").
+   * Supports wildcard matching with '*'.
+   */
+  rules?: Record<string, RouteRule> | Array<{ match: string } & RouteRule>;
 }
+
+export type ClientHeadersRule =
+  | Record<string, string>
+  | (() => Promise<Record<string, string>> | Record<string, string>);
 
 export interface ClientOptions {
   baseUrl: string;
   fetch?: typeof fetch;
   headers?:
     | Record<string, string>
+    | Record<string, ClientHeadersRule>
     | (() => Promise<Record<string, string>> | Record<string, string>);
 }
 
