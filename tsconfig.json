@@ -24,10 +24,14 @@
       "visage/virtual": ["./src/virtual/index.ts"],
       "visage/query": ["./src/query/index.ts"],
       "visage/rpc": ["./src/rpc/index.ts"],
+      "visage/style": ["./src/style/index.ts"],
+      "visage/devtools": ["./src/devtools/index.ts"],
+      "visage/ui": ["./src/ui/index.ts"],
+      "visage/vite": ["./src/vite/index.ts"],
       "visage/*": ["./src/*"]
     },
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "tests/**/*", "examples/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }

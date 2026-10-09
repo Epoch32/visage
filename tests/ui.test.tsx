@@ -435,4 +435,175 @@ describe("Visage UI Component Primitives", () => {
       unmount();
     });
   });
+
+  describe("Ergonomic Shorthand Components", () => {
+    it("renders Tooltip shorthand", () => {
+      const unmount = render(
+        () => (
+          <Tooltip content="Tooltip text" portalled={false} openDelay={0} closeDelay={0}>
+            <button type="button">Hover Me</button>
+          </Tooltip>
+        ),
+        container
+      );
+
+      const button = container.querySelector("button")!;
+      expect(button).not.toBeNull();
+      expect(button.textContent).toBe("Hover Me");
+      expect(button.getAttribute("aria-describedby")).toContain("tooltip-");
+
+      // Hover
+      button.dispatchEvent(new Event("mouseenter"));
+      const tooltipEl = container.querySelector('[role="tooltip"]');
+      expect(tooltipEl).not.toBeNull();
+      expect(tooltipEl?.textContent).toBe("Tooltip text");
+
+      unmount();
+    });
+
+    it("renders Tabs shorthand with items array", () => {
+      const unmount = render(
+        () => (
+          <Tabs
+            defaultValue="tab1"
+            items={[
+              { value: "tab1", label: "Tab 1", content: "Content 1" },
+              { value: "tab2", label: "Tab 2", content: "Content 2" }
+            ]}
+          />
+        ),
+        container
+      );
+
+      const tabs = container.querySelectorAll('[role="tab"]');
+      expect(tabs.length).toBe(2);
+      expect(tabs[0]?.textContent).toBe("Tab 1");
+
+      const panel = container.querySelector('[role="tabpanel"]')!;
+      expect(panel.textContent).toBe("Content 1");
+
+      (tabs[1] as HTMLButtonElement).click();
+      const updatedPanel = container.querySelector('[role="tabpanel"]')!;
+      expect(updatedPanel.textContent).toBe("Content 2");
+
+      unmount();
+    });
+
+    it("renders Accordion shorthand with items array", () => {
+      const unmount = render(
+        () => (
+          <Accordion
+            type="single"
+            collapsible
+            defaultValue="item1"
+            items={[
+              { value: "item1", trigger: "Header 1", content: "Body 1" },
+              { value: "item2", trigger: "Header 2", content: "Body 2" }
+            ]}
+          />
+        ),
+        container
+      );
+
+      const triggers = container.querySelectorAll("[data-state]");
+      expect(triggers.length > 0).toBe(true);
+
+      const openContent = container.querySelector('[data-state="open"]');
+      expect(openContent).not.toBeNull();
+
+      unmount();
+    });
+
+    it("renders Dialog shorthand with trigger, title, and footer", () => {
+      const unmount = render(
+        () => (
+          <Dialog
+            trigger={<button type="button">Open Modal</button>}
+            title="Modal Title"
+            description="Modal Description"
+            footer={<button type="button">Save</button>}
+            portalled={false}
+          >
+            <p>Modal Body</p>
+          </Dialog>
+        ),
+        container
+      );
+
+      const openBtn = container.querySelector("button")!;
+      expect(openBtn.textContent).toBe("Open Modal");
+
+      openBtn.click();
+      const dialog = container.querySelector('[role="dialog"]')!;
+      expect(dialog).not.toBeNull();
+      expect(dialog.textContent).toContain("Modal Title");
+      expect(dialog.textContent).toContain("Modal Description");
+      expect(dialog.textContent).toContain("Modal Body");
+      expect(dialog.textContent).toContain("Save");
+
+      unmount();
+    });
+
+    it("renders DropdownMenu shorthand with items array", () => {
+      let clicked = false;
+      const unmount = render(
+        () => (
+          <DropdownMenu
+            trigger={<button type="button">Menu</button>}
+            portalled={false}
+            items={[
+              {
+                label: "Option 1",
+                onSelect: () => {
+                  clicked = true;
+                }
+              },
+              { separator: true },
+              { label: "Option 2" }
+            ]}
+          />
+        ),
+        container
+      );
+
+      const trigger = container.querySelector("button")!;
+      trigger.click();
+
+      const menu = container.querySelector('[role="menu"]')!;
+      expect(menu).not.toBeNull();
+
+      const items = container.querySelectorAll('[role="menuitem"]');
+      expect(items.length).toBe(2);
+
+      (items[0] as HTMLElement).click();
+      expect(clicked).toBe(true);
+
+      unmount();
+    });
+
+    it("renders Switch shorthand with auto thumb", () => {
+      const checked = signal(false);
+      const unmount = render(
+        () => (
+          <Switch
+            checked={checked}
+            onCheckedChange={(val) => checked.set(val)}
+            thumbClass="my-thumb"
+          />
+        ),
+        container
+      );
+
+      const switchBtn = container.querySelector('[role="switch"]')!;
+      expect(switchBtn).not.toBeNull();
+      expect(switchBtn.querySelector(".my-thumb")).not.toBeNull();
+      expect(switchBtn.getAttribute("aria-checked")).toBe("false");
+
+      (switchBtn as HTMLButtonElement).click();
+      expect(checked()).toBe(true);
+      expect(switchBtn.getAttribute("aria-checked")).toBe("true");
+
+      unmount();
+    });
+  });
 });

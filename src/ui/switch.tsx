@@ -10,6 +10,8 @@ export interface SwitchProps {
   required?: boolean;
   name?: string;
   value?: string;
+  thumbClass?: any;
+  thumbStyle?: any;
   as?: string;
   class?: any;
   style?: any;
@@ -19,7 +21,7 @@ export interface SwitchProps {
   [key: string]: any;
 }
 
-export function Switch(props: SwitchProps): Child {
+export function SwitchRoot(props: SwitchProps): Child {
   const [checked, setChecked] = createControllableSignal<boolean>({
     value: props.checked,
     defaultValue: props.defaultChecked ?? false,
@@ -58,6 +60,8 @@ export function Switch(props: SwitchProps): Child {
     required,
     name,
     value,
+    thumbClass,
+    thumbStyle,
     as: Tag = "button",
     children,
     onClick,
@@ -80,7 +84,15 @@ export function Switch(props: SwitchProps): Child {
       onKeyDown={handleKeyDown}
       {...rest}
     >
-      {children}
+      {children !== undefined ? (
+        typeof children === "function" ? (
+          children()
+        ) : (
+          children
+        )
+      ) : (
+        <SwitchThumb class={thumbClass} style={thumbStyle} />
+      )}
     </Tag>
   );
 }
@@ -96,3 +108,8 @@ export function SwitchThumb(props: SwitchThumbProps): Child {
   const { as: Tag = "span", class: className, style, ...rest } = props;
   return <Tag class={className} style={style} {...rest} />;
 }
+
+export const Switch = Object.assign(SwitchRoot, {
+  Root: SwitchRoot,
+  Thumb: SwitchThumb
+});

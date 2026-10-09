@@ -279,6 +279,24 @@ export function signal<T>(
 }
 
 /**
+ * Tuple-based signal constructor [get, set] (Solid / Signals convention)
+ */
+export function createSignal<T>(
+  initialValue: T,
+  optionsOrEquals?: ((a: T, b: T) => boolean) | SignalOptions<T>
+): [ReadonlySignal<T>, (value: T | ((prev: T) => T)) => void] {
+  const s = signal(initialValue, optionsOrEquals);
+  const setter = (value: T | ((prev: T) => T)) => {
+    if (typeof value === "function") {
+      s.update(value as (prev: T) => T);
+    } else {
+      s.set(value);
+    }
+  };
+  return [s, setter];
+}
+
+/**
  * Computed / Derived reactive state (Lazy, Glitch-Free, Memoized)
  */
 export class Computed<T> {

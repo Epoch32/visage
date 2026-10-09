@@ -11,6 +11,7 @@ export {
   type ComputedOptions,
   computed,
   createRoot,
+  createSignal,
   type Dependency,
   Effect,
   effect,

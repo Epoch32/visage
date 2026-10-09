@@ -15,22 +15,23 @@ export interface PopoverContextValue {
 
 export const PopoverContext = createContext<PopoverContextValue | null>(null);
 
-export function usePopoverContext(): PopoverContextValue {
-  const ctx = useContext(PopoverContext);
-  if (!ctx) {
-    throw new Error("Popover compound components must be rendered within a <Popover />");
-  }
-  return ctx;
+export function usePopoverContext(): PopoverContextValue | null {
+  return useContext(PopoverContext);
 }
 
 export interface PopoverProps {
   open?: () => boolean | undefined;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  children: Child | (() => Child);
+  trigger?: Child | (() => Child);
+  content?: Child | (() => Child);
+  triggerClass?: any;
+  contentClass?: any;
+  portalled?: boolean;
+  children?: Child | (() => Child);
 }
 
-export function Popover(props: PopoverProps): Child {
+export function PopoverRoot(props: PopoverProps): Child {
   const [open, setOpen] = createControllableSignal<boolean>({
     value: props.open,
     defaultValue: props.defaultOpen ?? false,
@@ -49,6 +50,25 @@ export function Popover(props: PopoverProps): Child {
     contentId
   };
 
+  if (props.trigger !== undefined || props.content !== undefined) {
+    return PopoverContext.Provider({
+      value: ctx,
+      children: () => (
+        <>
+          {props.trigger ? (
+            <PopoverTrigger as="span" class={props.triggerClass}>
+              {typeof props.trigger === "function" ? props.trigger() : props.trigger}
+            </PopoverTrigger>
+          ) : null}
+          <PopoverContent portalled={props.portalled} class={props.contentClass}>
+            {typeof props.content === "function" ? props.content() : props.content}
+            {typeof props.children === "function" ? props.children() : props.children}
+          </PopoverContent>
+        </>
+      )
+    });
+  }
+
   return PopoverContext.Provider({
     value: ctx,
     children: props.children
@@ -65,11 +85,11 @@ export interface PopoverTriggerProps {
 }
 
 export function PopoverTrigger(props: PopoverTriggerProps): Child {
-  const ctx = usePopoverContext();
+  const ctx = useContext(PopoverContext);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && ctx) {
       ctx.setOpen(!ctx.open());
     }
   };
@@ -79,13 +99,13 @@ export function PopoverTrigger(props: PopoverTriggerProps): Child {
   return (
     <Tag
       ref={(el: HTMLElement | null) => {
-        ctx.triggerRef.current = el;
+        if (ctx) ctx.triggerRef.current = el;
       }}
       type={Tag === "button" ? "button" : undefined}
       aria-haspopup="dialog"
-      aria-expanded={() => ctx.open()}
-      aria-controls={ctx.contentId}
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      aria-expanded={() => ctx?.open() ?? false}
+      aria-controls={ctx?.contentId}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
       style={style}
       onClick={handleClick}
@@ -107,6 +127,8 @@ export function PopoverPortal(props: PopoverPortalProps): Child {
 
 export interface PopoverContentProps {
   as?: string;
+  portalled?: boolean;
+  mount?: HTMLElement | null;
   class?: any;
   style?: any;
   onKeyDown?: (e: KeyboardEvent) => void;
@@ -115,46 +137,73 @@ export interface PopoverContentProps {
 }
 
 export function PopoverContent(props: PopoverContentProps): Child {
-  const ctx = usePopoverContext();
+  const ctx = useContext(PopoverContext);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
     if (e.defaultPrevented) return;
 
-    if (e.key === "Escape") {
+    if (e.key === "Escape" && ctx) {
       ctx.setOpen(false);
       ctx.triggerRef.current?.focus();
       e.stopPropagation();
     }
   };
 
-  const { as: Tag = "div", children, onKeyDown, class: className, style, ...rest } = props;
+  const handleClick = (e: MouseEvent) => {
+    if (props.onClick) props.onClick(e);
+    if (e.defaultPrevented) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("[data-popover-close]")) {
+      ctx?.setOpen(false);
+    }
+  };
 
-  return (
+  const {
+    as: Tag = "div",
+    children,
+    onKeyDown,
+    onClick: _onClick,
+    class: className,
+    style,
+    portalled = true,
+    mount,
+    ...rest
+  } = props;
+
+  const content = (
     <Tag
       ref={(el: HTMLElement | null) => {
-        ctx.contentRef.current = el;
-        if (el) {
-          const cleanup = onClickOutside([ctx.triggerRef.current, el], () => {
-            if (ctx.open()) {
-              ctx.setOpen(false);
-            }
-          });
-          onCleanup(cleanup);
+        if (ctx) {
+          ctx.contentRef.current = el;
+          if (el) {
+            const cleanup = onClickOutside([ctx.triggerRef.current, el], () => {
+              if (ctx.open()) {
+                ctx.setOpen(false);
+              }
+            });
+            onCleanup(cleanup);
+          }
         }
       }}
-      id={ctx.contentId}
+      id={ctx?.contentId}
       role="dialog"
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
-      style={style}
+      style={() => ({
+        display: ctx?.open() ? undefined : "none",
+        ...style
+      })}
       onKeyDown={handleKeyDown}
+      onClick={handleClick}
       tabIndex={-1}
       {...rest}
     >
       {children}
     </Tag>
   );
+
+  return portalled ? <Portal mount={mount}>{content}</Portal> : content;
 }
 
 export interface PopoverCloseProps {
@@ -167,11 +216,11 @@ export interface PopoverCloseProps {
 }
 
 export function PopoverClose(props: PopoverCloseProps): Child {
-  const ctx = usePopoverContext();
+  const ctx = useContext(PopoverContext);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && ctx) {
       ctx.setOpen(false);
     }
   };
@@ -181,6 +230,7 @@ export function PopoverClose(props: PopoverCloseProps): Child {
   return (
     <Tag
       type={Tag === "button" ? "button" : undefined}
+      data-popover-close=""
       class={className}
       style={style}
       onClick={handleClick}
@@ -190,3 +240,11 @@ export function PopoverClose(props: PopoverCloseProps): Child {
     </Tag>
   );
 }
+
+export const Popover = Object.assign(PopoverRoot, {
+  Root: PopoverRoot,
+  Trigger: PopoverTrigger,
+  Portal: PopoverPortal,
+  Content: PopoverContent,
+  Close: PopoverClose
+});

@@ -25,6 +25,7 @@ export interface ToastOptions {
 }
 
 export interface ToastManager {
+  (options: ToastOptions | string): string;
   toasts: ReadonlySignal<ToastData[]>;
   show: (options: ToastOptions | string) => string;
   success: (title: string, options?: Omit<ToastOptions, "title" | "variant">) => string;
@@ -84,16 +85,20 @@ export function createToastManager(): ToastManager {
     toasts.set([]);
   };
 
-  return {
-    toasts,
-    show,
-    success,
-    error,
-    warning,
-    info,
-    dismiss,
-    clear
-  };
+  const fn = function toast(options: ToastOptions | string): string {
+    return show(options);
+  } as ToastManager;
+
+  fn.toasts = toasts;
+  fn.show = show;
+  fn.success = success;
+  fn.error = error;
+  fn.warning = warning;
+  fn.info = info;
+  fn.dismiss = dismiss;
+  fn.clear = clear;
+
+  return fn;
 }
 
 export const defaultToastManager = createToastManager();
@@ -132,12 +137,19 @@ export function ToastViewport(props: ToastViewportProps): Child {
   const { as: Tag = "section", children, class: className, style, ...rest } = props;
 
   const defaultRender = (t: ToastData) => (
-    <Toast id={t.id} variant={t.variant} onDismiss={() => manager.dismiss(t.id)}>
+    <Toast
+      id={t.id}
+      variant={t.variant}
+      class={`visage-toast toast toast-${t.variant ?? "default"}`}
+      onDismiss={() => manager.dismiss(t.id)}
+    >
       <div class="visage-toast-content">
-        {t.title && <ToastTitle>{t.title}</ToastTitle>}
-        {t.description && <ToastDescription>{t.description}</ToastDescription>}
+        {t.title && <ToastTitle class="visage-toast-title">{t.title}</ToastTitle>}
+        {t.description && (
+          <ToastDescription class="visage-toast-description">{t.description}</ToastDescription>
+        )}
       </div>
-      <ToastClose onClick={() => manager.dismiss(t.id)} />
+      <ToastClose class="visage-toast-close" onClick={() => manager.dismiss(t.id)} />
     </Toast>
   );
 
@@ -168,7 +180,7 @@ export interface ToastProps {
   [key: string]: any;
 }
 
-export function Toast(props: ToastProps): Child {
+export function ToastRoot(props: ToastProps): Child {
   const {
     id,
     variant = "default",
@@ -258,3 +270,12 @@ export function ToastClose(props: ToastCloseProps): Child {
     </Tag>
   );
 }
+
+export const Toast = Object.assign(ToastRoot, {
+  Root: ToastRoot,
+  Provider: ToastProvider,
+  Viewport: ToastViewport,
+  Title: ToastTitle,
+  Description: ToastDescription,
+  Close: ToastClose
+});

@@ -16,12 +16,8 @@ export interface TooltipContextValue {
 
 export const TooltipContext = createContext<TooltipContextValue | null>(null);
 
-export function useTooltipContext(): TooltipContextValue {
-  const ctx = useContext(TooltipContext);
-  if (!ctx) {
-    throw new Error("Tooltip compound components must be rendered within a <Tooltip />");
-  }
-  return ctx;
+export function useTooltipContext(): TooltipContextValue | null {
+  return useContext(TooltipContext);
 }
 
 export interface TooltipProps {
@@ -30,10 +26,17 @@ export interface TooltipProps {
   onOpenChange?: (open: boolean) => void;
   openDelay?: number;
   closeDelay?: number;
-  children: Child | (() => Child);
+  content?: Child | (() => Child);
+  side?: "top" | "bottom" | "left" | "right";
+  triggerClass?: any;
+  triggerAs?: string;
+  contentClass?: any;
+  contentStyle?: any;
+  portalled?: boolean;
+  children?: Child | (() => Child);
 }
 
-export function Tooltip(props: TooltipProps): Child {
+export function TooltipRoot(props: TooltipProps): Child {
   const [open, setOpen] = createControllableSignal<boolean>({
     value: props.open,
     defaultValue: props.defaultOpen ?? false,
@@ -46,11 +49,46 @@ export function Tooltip(props: TooltipProps): Child {
   const ctx: TooltipContextValue = {
     open,
     setOpen,
-    openDelay: props.openDelay ?? 200,
+    openDelay: props.openDelay ?? 150,
     closeDelay: props.closeDelay ?? 100,
     tooltipId,
     triggerRef
   };
+
+  if (props.content !== undefined) {
+    return TooltipContext.Provider({
+      value: ctx,
+      children: () => (
+        <span
+          class="visage-tooltip-root"
+          style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
+        >
+          <TooltipTrigger
+            as={props.triggerAs ?? "button"}
+            class={props.triggerClass}
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              cursor: "help"
+            }}
+          >
+            {typeof props.children === "function" ? props.children() : props.children}
+          </TooltipTrigger>
+          <TooltipContent
+            side={props.side}
+            class={props.contentClass}
+            style={props.contentStyle}
+            portalled={props.portalled ?? false}
+          >
+            {typeof props.content === "function" ? props.content() : props.content}
+          </TooltipContent>
+        </span>
+      )
+    });
+  }
 
   return TooltipContext.Provider({
     value: ctx,
@@ -71,7 +109,7 @@ export interface TooltipTriggerProps {
 }
 
 export function TooltipTrigger(props: TooltipTriggerProps): Child {
-  const ctx = useTooltipContext();
+  const ctx = useContext(TooltipContext);
   let openTimer: any = null;
   let closeTimer: any = null;
 
@@ -85,6 +123,7 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
   const handleMouseEnter = (e: MouseEvent) => {
     if (props.onMouseEnter) props.onMouseEnter(e);
     clearTimers();
+    if (!ctx) return;
     if (ctx.openDelay > 0) {
       openTimer = setTimeout(() => ctx.setOpen(true), ctx.openDelay);
     } else {
@@ -95,6 +134,7 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
   const handleMouseLeave = (e: MouseEvent) => {
     if (props.onMouseLeave) props.onMouseLeave(e);
     clearTimers();
+    if (!ctx) return;
     if (ctx.closeDelay > 0) {
       closeTimer = setTimeout(() => ctx.setOpen(false), ctx.closeDelay);
     } else {
@@ -105,13 +145,13 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
   const handleFocus = (e: FocusEvent) => {
     if (props.onFocus) props.onFocus(e);
     clearTimers();
-    ctx.setOpen(true);
+    ctx?.setOpen(true);
   };
 
   const handleBlur = (e: FocusEvent) => {
     if (props.onBlur) props.onBlur(e);
     clearTimers();
-    ctx.setOpen(false);
+    ctx?.setOpen(false);
   };
 
   onCleanup(clearTimers);
@@ -131,13 +171,14 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
   return (
     <Tag
       ref={(el: HTMLElement | null) => {
-        ctx.triggerRef.current = el;
+        if (ctx) ctx.triggerRef.current = el;
       }}
       type={Tag === "button" ? "button" : undefined}
-      aria-describedby={ctx.tooltipId}
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      tabIndex={Tag === "button" ? undefined : 0}
+      aria-describedby={ctx?.tooltipId}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
-      style={style}
+      style={{ display: "inline-flex", alignItems: "center", ...style }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onFocus={handleFocus}
@@ -160,6 +201,8 @@ export function TooltipPortal(props: TooltipPortalProps): Child {
 
 export interface TooltipContentProps {
   forceMount?: boolean;
+  portalled?: boolean;
+  mount?: HTMLElement | null;
   as?: string;
   class?: any;
   style?: any;
@@ -168,30 +211,36 @@ export interface TooltipContentProps {
 }
 
 export function TooltipContent(props: TooltipContentProps): Child {
-  const ctx = useTooltipContext();
+  const ctx = useContext(TooltipContext);
+  const isOpen = () => (ctx ? ctx.open() : false);
 
-  const { forceMount, as: Tag = "div", children, class: className, style, ...rest } = props;
+  const {
+    forceMount,
+    as: Tag = "div",
+    children,
+    class: className,
+    style,
+    portalled = true,
+    mount,
+    ...rest
+  } = props;
 
-  if (forceMount) {
-    return (
+  const content = forceMount ? (
+    <Tag
+      id={ctx?.tooltipId}
+      role="tooltip"
+      data-state={() => (isOpen() ? "open" : "closed")}
+      hidden={() => !isOpen()}
+      class={className}
+      style={style}
+      {...rest}
+    >
+      {children}
+    </Tag>
+  ) : (
+    <Show when={isOpen}>
       <Tag
-        id={ctx.tooltipId}
-        role="tooltip"
-        data-state={() => (ctx.open() ? "open" : "closed")}
-        hidden={() => !ctx.open()}
-        class={className}
-        style={style}
-        {...rest}
-      >
-        {children}
-      </Tag>
-    );
-  }
-
-  return (
-    <Show when={ctx.open}>
-      <Tag
-        id={ctx.tooltipId}
+        id={ctx?.tooltipId}
         role="tooltip"
         data-state="open"
         class={className}
@@ -202,4 +251,13 @@ export function TooltipContent(props: TooltipContentProps): Child {
       </Tag>
     </Show>
   );
+
+  return portalled ? <Portal mount={mount}>{content}</Portal> : content;
 }
+
+export const Tooltip = Object.assign(TooltipRoot, {
+  Root: TooltipRoot,
+  Trigger: TooltipTrigger,
+  Portal: TooltipPortal,
+  Content: TooltipContent
+});

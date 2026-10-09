@@ -166,6 +166,7 @@ export {
   computed,
   createContext,
   createRoot,
+  createSignal,
   createStore,
   type Dependency,
   Effect,

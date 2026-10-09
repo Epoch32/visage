@@ -15,12 +15,16 @@ export interface TabsContextValue {
 
 export const TabsContext = createContext<TabsContextValue | null>(null);
 
-export function useTabsContext(): TabsContextValue {
-  const ctx = useContext(TabsContext);
-  if (!ctx) {
-    throw new Error("Tabs compound components must be rendered within a <Tabs />");
-  }
-  return ctx;
+export function useTabsContext(): TabsContextValue | null {
+  return useContext(TabsContext);
+}
+
+export interface TabItem {
+  value: string;
+  label: Child | (() => Child);
+  icon?: Child | (() => Child);
+  content?: Child | (() => Child);
+  disabled?: boolean | (() => boolean);
 }
 
 export interface TabsProps {
@@ -29,17 +33,22 @@ export interface TabsProps {
   onValueChange?: (value: string) => void;
   orientation?: "horizontal" | "vertical";
   activationMode?: "automatic" | "manual";
+  items?: TabItem[];
+  listClass?: any;
+  triggerClass?: any;
+  contentClass?: any;
   class?: any;
   style?: any;
   as?: string;
-  children: Child | (() => Child);
+  children?: Child | (() => Child);
   [key: string]: any;
 }
 
-export function Tabs(props: TabsProps): Child {
+export function TabsRoot(props: TabsProps): Child {
   const [value, setValue] = createControllableSignal<string>({
     value: props.value,
-    defaultValue: props.defaultValue ?? "",
+    defaultValue:
+      props.defaultValue ?? (props.items && props.items.length > 0 ? props.items[0]?.value : ""),
     onChange: props.onValueChange
   });
 
@@ -62,6 +71,10 @@ export function Tabs(props: TabsProps): Child {
     onValueChange: _ovc,
     orientation: _ori,
     activationMode: _am,
+    items,
+    listClass,
+    triggerClass,
+    contentClass,
     children,
     class: className,
     style,
@@ -72,6 +85,27 @@ export function Tabs(props: TabsProps): Child {
     value: ctx,
     children: () => (
       <Tag data-orientation={orientation} class={className} style={style} {...rest}>
+        {items ? (
+          <>
+            <TabsList class={listClass}>
+              {items.map((item) => (
+                <TabsTrigger value={item.value} disabled={item.disabled} class={triggerClass}>
+                  {item.icon ? (
+                    <span class="tab-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                      {typeof item.icon === "function" ? item.icon() : item.icon}
+                    </span>
+                  ) : null}
+                  {typeof item.label === "function" ? item.label() : item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {items.map((item) => (
+              <TabsContent value={item.value} class={contentClass}>
+                {typeof item.content === "function" ? item.content() : item.content}
+              </TabsContent>
+            ))}
+          </>
+        ) : null}
         {typeof children === "function" ? children() : children}
       </Tag>
     )
@@ -88,7 +122,7 @@ export interface TabsListProps {
 }
 
 export function TabsList(props: TabsListProps): Child {
-  const ctx = useTabsContext();
+  const ctx = useContext(TabsContext);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
@@ -105,7 +139,7 @@ export function TabsList(props: TabsListProps): Child {
     if (index === -1) return;
 
     let nextIndex = index;
-    const isHorizontal = ctx.orientation === "horizontal";
+    const isHorizontal = (ctx?.orientation ?? "horizontal") === "horizontal";
 
     const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
     const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
@@ -127,7 +161,7 @@ export function TabsList(props: TabsListProps): Child {
     if (nextIndex !== index) {
       const nextTab = tabs[nextIndex]!;
       nextTab.focus();
-      if (ctx.activationMode === "automatic") {
+      if (ctx?.activationMode === "automatic") {
         const val = nextTab.getAttribute("data-value");
         if (val) ctx.setValue(val);
       }
@@ -139,7 +173,7 @@ export function TabsList(props: TabsListProps): Child {
   return (
     <Tag
       role="tablist"
-      aria-orientation={ctx.orientation}
+      aria-orientation={ctx?.orientation ?? "horizontal"}
       class={className}
       style={style}
       onKeyDown={handleKeyDown}
@@ -162,12 +196,12 @@ export interface TabsTriggerProps {
 }
 
 export function TabsTrigger(props: TabsTriggerProps): Child {
-  const ctx = useTabsContext();
-  const isSelected = () => ctx.value() === props.value;
+  const ctx = useContext(TabsContext);
+  const isSelected = () => (ctx ? ctx.value() === props.value : false);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && ctx) {
       ctx.setValue(props.value);
     }
   };
@@ -183,16 +217,13 @@ export function TabsTrigger(props: TabsTriggerProps): Child {
     ...rest
   } = props;
 
-  const tabId = `${ctx.baseId}-trigger-${value}`;
-  const panelId = `${ctx.baseId}-panel-${value}`;
-
   return (
     <Tag
-      id={tabId}
+      id={ctx ? `${ctx.baseId}-trigger-${value}` : undefined}
       type={Tag === "button" ? "button" : undefined}
       role="tab"
       aria-selected={isSelected}
-      aria-controls={panelId}
+      aria-controls={ctx ? `${ctx.baseId}-panel-${value}` : undefined}
       data-state={() => (isSelected() ? "active" : "inactive")}
       data-value={value}
       tabIndex={() => (isSelected() ? 0 : -1)}
@@ -218,20 +249,17 @@ export interface TabsContentProps {
 }
 
 export function TabsContent(props: TabsContentProps): Child {
-  const ctx = useTabsContext();
-  const isSelected = () => ctx.value() === props.value;
+  const ctx = useContext(TabsContext);
+  const isSelected = () => (ctx ? ctx.value() === props.value : false);
 
   const { value, forceMount, as: Tag = "div", children, class: className, style, ...rest } = props;
-
-  const tabId = `${ctx.baseId}-trigger-${value}`;
-  const panelId = `${ctx.baseId}-panel-${value}`;
 
   if (forceMount) {
     return (
       <Tag
-        id={panelId}
+        id={ctx ? `${ctx.baseId}-panel-${value}` : undefined}
         role="tabpanel"
-        aria-labelledby={tabId}
+        aria-labelledby={ctx ? `${ctx.baseId}-trigger-${value}` : undefined}
         data-state={() => (isSelected() ? "active" : "inactive")}
         hidden={() => !isSelected()}
         tabIndex={0}
@@ -247,9 +275,9 @@ export function TabsContent(props: TabsContentProps): Child {
   return (
     <Show when={isSelected}>
       <Tag
-        id={panelId}
+        id={ctx ? `${ctx.baseId}-panel-${value}` : undefined}
         role="tabpanel"
-        aria-labelledby={tabId}
+        aria-labelledby={ctx ? `${ctx.baseId}-trigger-${value}` : undefined}
         data-state="active"
         tabIndex={0}
         class={className}
@@ -261,3 +289,10 @@ export function TabsContent(props: TabsContentProps): Child {
     </Show>
   );
 }
+
+export const Tabs = Object.assign(TabsRoot, {
+  Root: TabsRoot,
+  List: TabsList,
+  Trigger: TabsTrigger,
+  Content: TabsContent
+});

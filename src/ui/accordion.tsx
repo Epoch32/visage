@@ -13,42 +13,47 @@ export interface AccordionContextValue {
 
 export const AccordionContext = createContext<AccordionContextValue | null>(null);
 
-export function useAccordionContext(): AccordionContextValue {
-  const ctx = useContext(AccordionContext);
-  if (!ctx) {
-    throw new Error("Accordion compound components must be rendered within an <Accordion />");
-  }
-  return ctx;
+export function useAccordionContext(): AccordionContextValue | null {
+  return useContext(AccordionContext);
 }
 
-export interface AccordionSingleProps {
+export interface AccordionItemData {
+  value: string;
+  trigger: Child | (() => Child);
+  content: Child | (() => Child);
+  disabled?: boolean | (() => boolean);
+}
+
+export interface AccordionBaseProps {
+  items?: AccordionItemData[];
+  itemClass?: any;
+  triggerClass?: any;
+  contentClass?: any;
+  as?: string;
+  class?: any;
+  style?: any;
+  children?: Child | (() => Child);
+  [key: string]: any;
+}
+
+export interface AccordionSingleProps extends AccordionBaseProps {
   type: "single";
   value?: () => string | undefined;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   collapsible?: boolean;
-  as?: string;
-  class?: any;
-  style?: any;
-  children: Child | (() => Child);
-  [key: string]: any;
 }
 
-export interface AccordionMultipleProps {
+export interface AccordionMultipleProps extends AccordionBaseProps {
   type: "multiple";
   value?: () => string[] | undefined;
   defaultValue?: string[];
   onValueChange?: (value: string[]) => void;
-  as?: string;
-  class?: any;
-  style?: any;
-  children: Child | (() => Child);
-  [key: string]: any;
 }
 
 export type AccordionProps = AccordionSingleProps | AccordionMultipleProps;
 
-export function Accordion(props: AccordionProps): Child {
+export function AccordionRoot(props: AccordionProps): Child {
   const isSingle = props.type === "single";
   const collapsible = (props as AccordionSingleProps).collapsible ?? !isSingle;
 
@@ -97,12 +102,38 @@ export function Accordion(props: AccordionProps): Child {
     collapsible
   };
 
-  const { as: Tag = "div", children, class: className, style, ...rest } = props;
+  const {
+    as: Tag = "div",
+    items,
+    itemClass,
+    triggerClass,
+    contentClass,
+    children,
+    class: className,
+    style,
+    ...rest
+  } = props;
 
   return AccordionContext.Provider({
     value: ctx,
     children: () => (
       <Tag class={className} style={style} {...rest}>
+        {items
+          ? items.map((item) => (
+              <AccordionItem value={item.value} disabled={item.disabled} class={itemClass}>
+                {() => (
+                  <>
+                    <AccordionTrigger class={triggerClass}>
+                      {typeof item.trigger === "function" ? item.trigger() : item.trigger}
+                    </AccordionTrigger>
+                    <AccordionContent class={contentClass}>
+                      {typeof item.content === "function" ? item.content() : item.content}
+                    </AccordionContent>
+                  </>
+                )}
+              </AccordionItem>
+            ))
+          : null}
         {typeof children === "function" ? children() : children}
       </Tag>
     )
@@ -116,12 +147,8 @@ export interface AccordionItemContextValue {
 
 export const AccordionItemContext = createContext<AccordionItemContextValue | null>(null);
 
-export function useAccordionItemContext(): AccordionItemContextValue {
-  const ctx = useContext(AccordionItemContext);
-  if (!ctx) {
-    throw new Error("AccordionItem subcomponents must be rendered within an <AccordionItem />");
-  }
-  return ctx;
+export function useAccordionItemContext(): AccordionItemContextValue | null {
+  return useContext(AccordionItemContext);
 }
 
 export interface AccordionItemProps {
@@ -141,8 +168,8 @@ export function AccordionItem(props: AccordionItemProps): Child {
     itemId
   };
 
-  const accordion = useAccordionContext();
-  const isOpen = () => accordion.isExpanded(props.value);
+  const accordion = useContext(AccordionContext);
+  const isOpen = () => (accordion ? accordion.isExpanded(props.value) : false);
 
   const { value, disabled, as: Tag = "div", children, class: className, style, ...rest } = props;
 
@@ -172,28 +199,25 @@ export interface AccordionTriggerProps {
 }
 
 export function AccordionTrigger(props: AccordionTriggerProps): Child {
-  const accordion = useAccordionContext();
-  const item = useAccordionItemContext();
-  const isOpen = () => accordion.isExpanded(item.value);
+  const accordion = useContext(AccordionContext);
+  const item = useContext(AccordionItemContext);
+  const isOpen = () => (accordion && item ? accordion.isExpanded(item.value) : false);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && accordion && item) {
       accordion.toggleItem(item.value);
     }
   };
-
-  const triggerId = `${item.itemId}-trigger`;
-  const contentId = `${item.itemId}-content`;
 
   const { as: Tag = "button", children, onClick, class: className, style, ...rest } = props;
 
   return (
     <Tag
-      id={triggerId}
+      id={item ? `${item.itemId}-trigger` : undefined}
       type={Tag === "button" ? "button" : undefined}
       aria-expanded={isOpen}
-      aria-controls={contentId}
+      aria-controls={item ? `${item.itemId}-content` : undefined}
       data-state={() => (isOpen() ? "open" : "closed")}
       class={className}
       style={style}
@@ -215,21 +239,18 @@ export interface AccordionContentProps {
 }
 
 export function AccordionContent(props: AccordionContentProps): Child {
-  const accordion = useAccordionContext();
-  const item = useAccordionItemContext();
-  const isOpen = () => accordion.isExpanded(item.value);
-
-  const triggerId = `${item.itemId}-trigger`;
-  const contentId = `${item.itemId}-content`;
+  const accordion = useContext(AccordionContext);
+  const item = useContext(AccordionItemContext);
+  const isOpen = () => (accordion && item ? accordion.isExpanded(item.value) : false);
 
   const { forceMount, as: Tag = "div", children, class: className, style, ...rest } = props;
 
   if (forceMount) {
     return (
       <Tag
-        id={contentId}
+        id={item ? `${item.itemId}-content` : undefined}
         role="region"
-        aria-labelledby={triggerId}
+        aria-labelledby={item ? `${item.itemId}-trigger` : undefined}
         data-state={() => (isOpen() ? "open" : "closed")}
         hidden={() => !isOpen()}
         class={className}
@@ -244,9 +265,9 @@ export function AccordionContent(props: AccordionContentProps): Child {
   return (
     <Show when={isOpen}>
       <Tag
-        id={contentId}
+        id={item ? `${item.itemId}-content` : undefined}
         role="region"
-        aria-labelledby={triggerId}
+        aria-labelledby={item ? `${item.itemId}-trigger` : undefined}
         data-state="open"
         class={className}
         style={style}
@@ -257,3 +278,10 @@ export function AccordionContent(props: AccordionContentProps): Child {
     </Show>
   );
 }
+
+export const Accordion = Object.assign(AccordionRoot, {
+  Root: AccordionRoot,
+  Item: AccordionItem,
+  Trigger: AccordionTrigger,
+  Content: AccordionContent
+});

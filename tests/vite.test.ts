@@ -143,33 +143,42 @@ describe("Visage Vite Plugin (visage/vite)", () => {
 
   it("translates lucide-react imports into native Visage icon modules via visageLucide()", () => {
     const plugin = visageLucide({
-      aliases: ["lucide-react", "my-icons"],
-      defaultSize: 20
+      aliases: ["lucide-react", "my-icons"]
     });
 
     expect(plugin.name).toBe("visage:lucide");
 
-    // Test resolveId
-    const resolvedLucide = plugin.resolveId!("lucide-react");
-    expect(resolvedLucide).toBe("\0visage-lucide:lucide-react");
+    const sampleCode = `
+import { Check, ArrowRight as NextArrow, Trash2 } from "lucide-react";
+import { Heart } from "my-icons";
 
-    const resolvedSubpath = plugin.resolveId!("lucide-react/dist/esm/icons/arrow-right");
-    expect(resolvedSubpath).toBe("\0visage-lucide:lucide-react/dist/esm/icons/arrow-right");
+export function Component() {
+  return <div><Check /></div>;
+}
+    `.trim();
 
-    const resolvedCustom = plugin.resolveId!("my-icons");
-    expect(resolvedCustom).toBe("\0visage-lucide:my-icons");
+    const result: any = plugin.transform!(sampleCode, "/app/src/Button.tsx");
+    expect(result).not.toBeNull();
+    expect(result.code).toContain('import { createIcon as __visageCreateIcon } from "visage/ui";');
+    expect(result.code).toContain(
+      'import { Check as __icon_node_Check, ArrowRight as __icon_node_ArrowRight, Trash2 as __icon_node_Trash2 } from "lucide";'
+    );
+    expect(result.code).toContain('import { Heart as __icon_node_Heart } from "lucide";');
+    expect(result.code).toContain(
+      'const Check = /* @__PURE__ */ __visageCreateIcon("Check", __icon_node_Check);'
+    );
+    expect(result.code).toContain(
+      'const NextArrow = /* @__PURE__ */ __visageCreateIcon("ArrowRight", __icon_node_ArrowRight);'
+    );
+    expect(result.code).toContain(
+      'const Trash2 = /* @__PURE__ */ __visageCreateIcon("Trash2", __icon_node_Trash2);'
+    );
+    expect(result.code).toContain(
+      'const Heart = /* @__PURE__ */ __visageCreateIcon("Heart", __icon_node_Heart);'
+    );
 
-    const unhandled = plugin.resolveId!("react");
-    expect(unhandled).toBeNull();
-
-    // Test load virtual module
-    const loadedRoot = plugin.load!("\0visage-lucide:lucide-react");
-    expect(loadedRoot).toContain('import { createIcon } from "visage/ui";');
-    expect(loadedRoot).toContain("const defaultSize = 20;");
-    expect(loadedRoot).toContain("const proxy = new Proxy");
-
-    const loadedSubpath = plugin.load!("\0visage-lucide:lucide-react/icons/arrow-right");
-    expect(loadedSubpath).toContain('import { createIcon } from "visage/ui";');
-    expect(loadedSubpath).toContain('createIcon("ArrowRight", iconData)');
+    // Unrelated code should not transform
+    const noMatch = plugin.transform!("console.log('hello');", "/app/src/index.ts");
+    expect(noMatch).toBeNull();
   });
 });

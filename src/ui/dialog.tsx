@@ -17,20 +17,28 @@ export const DialogContext = createContext<DialogContextValue | null>(null);
 
 export function useDialogContext(): DialogContextValue {
   const ctx = useContext(DialogContext);
-  if (!ctx) {
-    throw new Error("Dialog compound components must be rendered within a <Dialog />");
-  }
-  return ctx;
+  return ctx!;
 }
 
 export interface DialogProps {
   open?: () => boolean | undefined;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  children: Child | (() => Child);
+  trigger?: Child | (() => Child);
+  title?: Child | (() => Child);
+  description?: Child | (() => Child);
+  footer?: Child | (() => Child);
+  triggerClass?: any;
+  overlayClass?: any;
+  contentClass?: any;
+  titleClass?: any;
+  descriptionClass?: any;
+  footerClass?: any;
+  portalled?: boolean;
+  children?: Child | (() => Child);
 }
 
-export function Dialog(props: DialogProps): Child {
+export function DialogRoot(props: DialogProps): Child {
   const [open, setOpen] = createControllableSignal<boolean>({
     value: props.open,
     defaultValue: props.defaultOpen ?? false,
@@ -49,6 +57,40 @@ export function Dialog(props: DialogProps): Child {
     contentRef
   };
 
+  if (props.trigger !== undefined || props.title !== undefined || props.description !== undefined) {
+    return DialogContext.Provider({
+      value: ctx,
+      children: () => (
+        <>
+          {props.trigger ? (
+            <DialogTrigger as="span" class={props.triggerClass}>
+              {typeof props.trigger === "function" ? props.trigger() : props.trigger}
+            </DialogTrigger>
+          ) : null}
+          <DialogOverlay class={props.overlayClass} portalled={props.portalled} />
+          <DialogContent portalled={props.portalled} class={props.contentClass}>
+            {props.title ? (
+              <DialogTitle class={props.titleClass}>
+                {typeof props.title === "function" ? props.title() : props.title}
+              </DialogTitle>
+            ) : null}
+            {props.description ? (
+              <DialogDescription class={props.descriptionClass}>
+                {typeof props.description === "function" ? props.description() : props.description}
+              </DialogDescription>
+            ) : null}
+            {typeof props.children === "function" ? props.children() : props.children}
+            {props.footer ? (
+              <div class={props.footerClass}>
+                {typeof props.footer === "function" ? props.footer() : props.footer}
+              </div>
+            ) : null}
+          </DialogContent>
+        </>
+      )
+    });
+  }
+
   return DialogContext.Provider({
     value: ctx,
     children: props.children
@@ -65,11 +107,11 @@ export interface DialogTriggerProps {
 }
 
 export function DialogTrigger(props: DialogTriggerProps): Child {
-  const ctx = useDialogContext();
+  const ctx = useContext(DialogContext);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && ctx) {
       ctx.setOpen(true);
     }
   };
@@ -80,8 +122,8 @@ export function DialogTrigger(props: DialogTriggerProps): Child {
     <Tag
       type={Tag === "button" ? "button" : undefined}
       aria-haspopup="dialog"
-      aria-expanded={() => ctx.open()}
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      aria-expanded={() => ctx?.open() ?? false}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
       style={style}
       onClick={handleClick}
@@ -103,6 +145,8 @@ export function DialogPortal(props: DialogPortalProps): Child {
 
 export interface DialogOverlayProps {
   as?: string;
+  portalled?: boolean;
+  mount?: HTMLElement | null;
   class?: any;
   style?: any;
   onClick?: (e: MouseEvent) => void;
@@ -111,22 +155,34 @@ export interface DialogOverlayProps {
 }
 
 export function DialogOverlay(props: DialogOverlayProps): Child {
-  const ctx = useDialogContext();
+  const ctx = useContext(DialogContext);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && ctx) {
       ctx.setOpen(false);
     }
   };
 
-  const { as: Tag = "div", children, onClick, class: className, style, ...rest } = props;
+  const {
+    as: Tag = "div",
+    children,
+    onClick,
+    class: className,
+    style,
+    portalled = true,
+    mount,
+    ...rest
+  } = props;
 
-  return (
+  const overlay = (
     <Tag
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
+      style={() => ({
+        display: ctx?.open() ? undefined : "none",
+        ...style
+      })}
       class={className}
-      style={style}
       onClick={handleClick}
       aria-hidden="true"
       {...rest}
@@ -134,10 +190,14 @@ export function DialogOverlay(props: DialogOverlayProps): Child {
       {children}
     </Tag>
   );
+
+  return portalled ? <Portal mount={mount}>{overlay}</Portal> : overlay;
 }
 
 export interface DialogContentProps {
   as?: string;
+  portalled?: boolean;
+  mount?: HTMLElement | null;
   class?: any;
   style?: any;
   onKeyDown?: (e: KeyboardEvent) => void;
@@ -146,49 +206,76 @@ export interface DialogContentProps {
 }
 
 export function DialogContent(props: DialogContentProps): Child {
-  const ctx = useDialogContext();
+  const ctx = useContext(DialogContext);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
     if (e.defaultPrevented) return;
 
     if (e.key === "Escape") {
-      ctx.setOpen(false);
+      ctx?.setOpen(false);
       e.stopPropagation();
-    } else if (e.key === "Tab" && ctx.contentRef.current) {
+    } else if (e.key === "Tab" && ctx?.contentRef.current) {
       trapFocus(ctx.contentRef.current, e);
     }
   };
 
-  const { as: Tag = "div", children, onKeyDown, class: className, style, ...rest } = props;
+  const handleClick = (e: MouseEvent) => {
+    if (props.onClick) props.onClick(e);
+    if (e.defaultPrevented) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("[data-dialog-close]")) {
+      ctx?.setOpen(false);
+    }
+  };
 
-  return (
+  const {
+    as: Tag = "div",
+    children,
+    onKeyDown,
+    onClick: _onClick,
+    class: className,
+    style,
+    portalled = true,
+    mount,
+    ...rest
+  } = props;
+
+  const content = (
     <Tag
       ref={(el: HTMLElement | null) => {
-        ctx.contentRef.current = el;
-        if (el && ctx.open()) {
-          const focusable = el.querySelector<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          );
-          if (focusable) {
-            setTimeout(() => focusable.focus(), 0);
+        if (ctx) {
+          ctx.contentRef.current = el;
+          if (el && ctx.open()) {
+            const focusable = el.querySelector<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            if (focusable) {
+              setTimeout(() => focusable.focus(), 0);
+            }
           }
         }
       }}
       role="dialog"
       aria-modal="true"
-      aria-labelledby={ctx.titleId}
-      aria-describedby={ctx.descriptionId}
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      aria-labelledby={ctx?.titleId}
+      aria-describedby={ctx?.descriptionId}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
+      style={() => ({
+        display: ctx?.open() ? undefined : "none",
+        ...style
+      })}
       class={className}
-      style={style}
       onKeyDown={handleKeyDown}
+      onClick={handleClick}
       tabIndex={-1}
       {...rest}
     >
       {children}
     </Tag>
   );
+
+  return portalled ? <Portal mount={mount}>{content}</Portal> : content;
 }
 
 export interface DialogTitleProps {
@@ -200,11 +287,11 @@ export interface DialogTitleProps {
 }
 
 export function DialogTitle(props: DialogTitleProps): Child {
-  const ctx = useDialogContext();
+  const ctx = useContext(DialogContext);
   const { as: Tag = "h2", children, class: className, style, ...rest } = props;
 
   return (
-    <Tag id={ctx.titleId} class={className} style={style} {...rest}>
+    <Tag id={ctx?.titleId} class={className} style={style} {...rest}>
       {children}
     </Tag>
   );
@@ -219,11 +306,11 @@ export interface DialogDescriptionProps {
 }
 
 export function DialogDescription(props: DialogDescriptionProps): Child {
-  const ctx = useDialogContext();
+  const ctx = useContext(DialogContext);
   const { as: Tag = "p", children, class: className, style, ...rest } = props;
 
   return (
-    <Tag id={ctx.descriptionId} class={className} style={style} {...rest}>
+    <Tag id={ctx?.descriptionId} class={className} style={style} {...rest}>
       {children}
     </Tag>
   );
@@ -239,11 +326,11 @@ export interface DialogCloseProps {
 }
 
 export function DialogClose(props: DialogCloseProps): Child {
-  const ctx = useDialogContext();
+  const ctx = useContext(DialogContext);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && ctx) {
       ctx.setOpen(false);
     }
   };
@@ -253,6 +340,7 @@ export function DialogClose(props: DialogCloseProps): Child {
   return (
     <Tag
       type={Tag === "button" ? "button" : undefined}
+      data-dialog-close=""
       class={className}
       style={style}
       onClick={handleClick}
@@ -262,3 +350,14 @@ export function DialogClose(props: DialogCloseProps): Child {
     </Tag>
   );
 }
+
+export const Dialog = Object.assign(DialogRoot, {
+  Root: DialogRoot,
+  Trigger: DialogTrigger,
+  Portal: DialogPortal,
+  Overlay: DialogOverlay,
+  Content: DialogContent,
+  Title: DialogTitle,
+  Description: DialogDescription,
+  Close: DialogClose
+});

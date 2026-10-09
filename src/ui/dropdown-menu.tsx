@@ -15,22 +15,35 @@ export interface DropdownMenuContextValue {
 
 export const DropdownMenuContext = createContext<DropdownMenuContextValue | null>(null);
 
-export function useDropdownMenuContext(): DropdownMenuContextValue {
-  const ctx = useContext(DropdownMenuContext);
-  if (!ctx) {
-    throw new Error("DropdownMenu compound components must be rendered within a <DropdownMenu />");
-  }
-  return ctx;
+export function useDropdownMenuContext(): DropdownMenuContextValue | null {
+  return useContext(DropdownMenuContext);
+}
+
+export interface DropdownMenuItemData {
+  label?: Child | (() => Child);
+  icon?: Child | (() => Child);
+  disabled?: boolean | (() => boolean);
+  danger?: boolean;
+  separator?: boolean;
+  onSelect?: (e: Event) => void;
+  class?: any;
 }
 
 export interface DropdownMenuProps {
   open?: () => boolean | undefined;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  children: Child | (() => Child);
+  trigger?: Child | (() => Child);
+  items?: DropdownMenuItemData[];
+  triggerClass?: any;
+  contentClass?: any;
+  itemClass?: any;
+  separatorClass?: any;
+  portalled?: boolean;
+  children?: Child | (() => Child);
 }
 
-export function DropdownMenu(props: DropdownMenuProps): Child {
+export function DropdownMenuRoot(props: DropdownMenuProps): Child {
   const [open, setOpen] = createControllableSignal<boolean>({
     value: props.open,
     defaultValue: props.defaultOpen ?? false,
@@ -49,6 +62,54 @@ export function DropdownMenu(props: DropdownMenuProps): Child {
     menuId
   };
 
+  if (props.trigger !== undefined || props.items !== undefined) {
+    return DropdownMenuContext.Provider({
+      value: ctx,
+      children: () => (
+        <div class="visage-dropdown-root" style={{ position: "relative", display: "inline-block" }}>
+          {props.trigger ? (
+            <DropdownMenuTrigger as="span" class={props.triggerClass}>
+              {typeof props.trigger === "function" ? props.trigger() : props.trigger}
+            </DropdownMenuTrigger>
+          ) : null}
+          <DropdownMenuContent portalled={props.portalled ?? false} class={props.contentClass}>
+            {props.items
+              ? props.items.map((item) => {
+                  if (item.separator) {
+                    return <DropdownMenuSeparator class={item.class ?? props.separatorClass} />;
+                  }
+                  return (
+                    <DropdownMenuItem
+                      disabled={item.disabled}
+                      onSelect={item.onSelect}
+                      class={[props.itemClass, item.class, item.danger ? "danger" : ""]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {item.icon ? (
+                        <span
+                          class="dropdown-item-icon"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            marginRight: "8px"
+                          }}
+                        >
+                          {typeof item.icon === "function" ? item.icon() : item.icon}
+                        </span>
+                      ) : null}
+                      {typeof item.label === "function" ? item.label() : item.label}
+                    </DropdownMenuItem>
+                  );
+                })
+              : null}
+            {typeof props.children === "function" ? props.children() : props.children}
+          </DropdownMenuContent>
+        </div>
+      )
+    });
+  }
+
   return DropdownMenuContext.Provider({
     value: ctx,
     children: props.children
@@ -66,11 +127,11 @@ export interface DropdownMenuTriggerProps {
 }
 
 export function DropdownMenuTrigger(props: DropdownMenuTriggerProps): Child {
-  const ctx = useDropdownMenuContext();
+  const ctx = useContext(DropdownMenuContext);
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (!e.defaultPrevented) {
+    if (!e.defaultPrevented && ctx) {
       ctx.setOpen(!ctx.open());
     }
   };
@@ -80,14 +141,16 @@ export function DropdownMenuTrigger(props: DropdownMenuTriggerProps): Child {
     if (e.defaultPrevented) return;
 
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
-      ctx.setOpen(true);
-      e.preventDefault();
-      setTimeout(() => {
-        const firstItem = ctx.contentRef.current?.querySelector<HTMLElement>(
-          '[role="menuitem"]:not([disabled])'
-        );
-        firstItem?.focus();
-      }, 0);
+      if (ctx) {
+        ctx.setOpen(true);
+        e.preventDefault();
+        setTimeout(() => {
+          const firstItem = ctx.contentRef.current?.querySelector<HTMLElement>(
+            '[role="menuitem"]:not([disabled])'
+          );
+          firstItem?.focus();
+        }, 0);
+      }
     }
   };
 
@@ -104,13 +167,13 @@ export function DropdownMenuTrigger(props: DropdownMenuTriggerProps): Child {
   return (
     <Tag
       ref={(el: HTMLElement | null) => {
-        ctx.triggerRef.current = el;
+        if (ctx) ctx.triggerRef.current = el;
       }}
       type={Tag === "button" ? "button" : undefined}
       aria-haspopup="menu"
-      aria-expanded={() => ctx.open()}
-      aria-controls={ctx.menuId}
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      aria-expanded={() => ctx?.open() ?? false}
+      aria-controls={ctx?.menuId}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
       style={style}
       onClick={handleClick}
@@ -133,6 +196,8 @@ export function DropdownMenuPortal(props: DropdownMenuPortalProps): Child {
 
 export interface DropdownMenuContentProps {
   as?: string;
+  portalled?: boolean;
+  mount?: HTMLElement | null;
   class?: any;
   style?: any;
   onKeyDown?: (e: KeyboardEvent) => void;
@@ -141,13 +206,13 @@ export interface DropdownMenuContentProps {
 }
 
 export function DropdownMenuContent(props: DropdownMenuContentProps): Child {
-  const ctx = useDropdownMenuContext();
+  const ctx = useContext(DropdownMenuContext);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
     if (e.defaultPrevented) return;
 
-    const el = ctx.contentRef.current;
+    const el = ctx?.contentRef.current;
     if (!el) return;
 
     const items = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])'));
@@ -169,35 +234,51 @@ export function DropdownMenuContent(props: DropdownMenuContentProps): Child {
       items[items.length - 1]?.focus();
       e.preventDefault();
     } else if (e.key === "Escape") {
-      ctx.setOpen(false);
-      ctx.triggerRef.current?.focus();
+      if (ctx) {
+        ctx.setOpen(false);
+        ctx.triggerRef.current?.focus();
+      }
       e.preventDefault();
     } else if (e.key === "Tab") {
-      ctx.setOpen(false);
+      if (ctx) ctx.setOpen(false);
     }
   };
 
-  const { as: Tag = "div", children, onKeyDown, class: className, style, ...rest } = props;
+  const {
+    as: Tag = "div",
+    children,
+    onKeyDown,
+    class: className,
+    style,
+    portalled = true,
+    mount,
+    ...rest
+  } = props;
 
-  return (
+  const content = (
     <Tag
       ref={(el: HTMLElement | null) => {
-        ctx.contentRef.current = el;
-        if (el) {
-          const cleanup = onClickOutside([ctx.triggerRef.current, el], () => {
-            if (ctx.open()) {
-              ctx.setOpen(false);
-            }
-          });
-          onCleanup(cleanup);
+        if (ctx) {
+          ctx.contentRef.current = el;
+          if (el) {
+            const cleanup = onClickOutside([ctx.triggerRef.current, el], () => {
+              if (ctx.open()) {
+                ctx.setOpen(false);
+              }
+            });
+            onCleanup(cleanup);
+          }
         }
       }}
-      id={ctx.menuId}
+      id={ctx?.menuId}
       role="menu"
       aria-orientation="vertical"
-      data-state={() => (ctx.open() ? "open" : "closed")}
+      data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
-      style={style}
+      style={() => ({
+        display: ctx?.open() ? undefined : "none",
+        ...style
+      })}
       onKeyDown={handleKeyDown}
       tabIndex={-1}
       {...rest}
@@ -205,6 +286,8 @@ export function DropdownMenuContent(props: DropdownMenuContentProps): Child {
       {children}
     </Tag>
   );
+
+  return portalled ? <Portal mount={mount}>{content}</Portal> : content;
 }
 
 export interface DropdownMenuItemProps {
@@ -221,13 +304,13 @@ export interface DropdownMenuItemProps {
 }
 
 export function DropdownMenuItem(props: DropdownMenuItemProps): Child {
-  const ctx = useDropdownMenuContext();
+  const ctx = useContext(DropdownMenuContext);
   const closeOnSelect = props.closeOnSelect ?? true;
 
   const handleSelect = (e: Event) => {
     if (props.disabled) return;
     if (props.onSelect) props.onSelect(e);
-    if (!e.defaultPrevented && closeOnSelect) {
+    if (!e.defaultPrevented && closeOnSelect && ctx) {
       ctx.setOpen(false);
       ctx.triggerRef.current?.focus();
     }
@@ -288,3 +371,12 @@ export function DropdownMenuSeparator(props: DropdownMenuSeparatorProps): Child 
     <Tag role="separator" aria-orientation="horizontal" class={className} style={style} {...rest} />
   );
 }
+
+export const DropdownMenu = Object.assign(DropdownMenuRoot, {
+  Root: DropdownMenuRoot,
+  Trigger: DropdownMenuTrigger,
+  Portal: DropdownMenuPortal,
+  Content: DropdownMenuContent,
+  Item: DropdownMenuItem,
+  Separator: DropdownMenuSeparator
+});
