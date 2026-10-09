@@ -77,18 +77,19 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
 
     const trigger = container.querySelector(".visage-devtools-trigger") as HTMLButtonElement;
     expect(trigger).not.toBeNull();
-    expect(container.querySelector(".visage-devtools-panel")).toBeNull();
+    expect(container.querySelector(".visage-devtools-drawer")).toBeNull();
 
     // Toggle open
     trigger.click();
     expect(devtoolsHub.isOpen()).toBe(true);
 
-    const panel = container.querySelector(".visage-devtools-panel");
-    expect(panel).not.toBeNull();
+    const drawer = container.querySelector(".visage-devtools-drawer");
+    expect(drawer).not.toBeNull();
 
-    // Switch tabs
-    const queryTabBtn = container.querySelectorAll(".tab-btn")[1] as HTMLButtonElement;
-    queryTabBtn.click();
+    // Switch tabs using TabsTrigger
+    const tabTriggers = container.querySelectorAll('[role="tab"]');
+    expect(tabTriggers.length > 1).toBe(true);
+    (tabTriggers[2] as HTMLButtonElement).click();
     expect(devtoolsHub.activeTab()).toBe("query");
 
     unmount();
@@ -108,40 +109,48 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
       container
     );
 
-    const itemRow = container.querySelector(".item-row") as HTMLButtonElement;
+    const itemRow = container.querySelector(".visage-devtools-item") as HTMLElement;
     expect(itemRow).not.toBeNull();
     expect(itemRow.textContent).toContain("themePreference");
 
     // Click item row to inspect
     itemRow.click();
 
-    const detailContent = container.querySelector(".detail-content");
-    expect(detailContent).not.toBeNull();
-    expect(detailContent?.textContent).toContain("themePreference");
-    expect(detailContent?.textContent).toContain('"dark"');
+    const detailBox = container.querySelector(".visage-devtools-main");
+    expect(detailBox).not.toBeNull();
+    expect(detailBox?.textContent).toContain("themePreference");
+    expect(detailBox?.textContent).toContain('"dark"');
 
     unmount();
     devtoolsHub.unregisterSignal(sigId);
   });
 
-  it("toggles Highlight DOM button and reacts to mutation highlighting", () => {
+  it("renders the Live DAG Graph Tab with reactive nodes", () => {
+    const sigId = devtoolsHub.registerSignal({
+      id: "sig_graph_1",
+      name: "graphSource",
+      type: "signal",
+      getValue: () => 100,
+      version: () => 1
+    });
+
     const unmount = render(
-      () => <VisageDevTools initialOpen={true} highlightDOM={false} />,
+      () => <VisageDevTools initialOpen={true} initialTab="graph" />,
       container
     );
 
-    const highlightBtn = container.querySelector(".btn-toggle-highlight") as HTMLButtonElement;
-    expect(highlightBtn).not.toBeNull();
-    expect(devtoolsHub.highlightDOM()).toBe(false);
+    const graphContainer = container.querySelector(".visage-graph-container");
+    expect(graphContainer).not.toBeNull();
 
-    highlightBtn.click();
-    expect(devtoolsHub.highlightDOM()).toBe(true);
-    expect(highlightBtn.classList.contains("active")).toBe(true);
+    const node = container.querySelector(".visage-graph-node") as HTMLElement;
+    expect(node).not.toBeNull();
+    expect(node.textContent).toContain("graphSource");
 
-    highlightBtn.click();
-    expect(devtoolsHub.highlightDOM()).toBe(false);
-    expect(highlightBtn.classList.contains("active")).toBe(false);
+    node.click();
+    const inspector = container.querySelector(".visage-devtools-json");
+    expect(inspector?.textContent).toContain("100");
 
     unmount();
+    devtoolsHub.unregisterSignal(sigId);
   });
 });

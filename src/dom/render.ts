@@ -193,53 +193,57 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
 
   if (isReactive(child)) {
     // Fine-grained reactive binding
-    let currentMarker: Node = document.createTextNode("");
-    parent.insertBefore(currentMarker, before);
+    const marker = document.createTextNode("");
+    parent.insertBefore(marker, before);
 
     let childScope: Scope | null = null;
+    let currentNodes: Node[] = [];
 
     effect(() => {
+      const resolved = resolveValue(child as ReactiveValue<any>);
+
+      // Ultra-fast path: mutate existing single text node without recreating DOM
+      if (
+        (typeof resolved === "string" || typeof resolved === "number") &&
+        currentNodes.length === 1 &&
+        currentNodes[0]!.nodeType === Node.TEXT_NODE
+      ) {
+        (currentNodes[0] as Text).data = String(resolved);
+        return;
+      }
+
       if (childScope) {
         childScope.dispose();
       }
       childScope = new Scope(getActiveScope());
 
       runInScope(childScope, () => {
-        const resolved = resolveValue(child as ReactiveValue<any>);
+        // Clean up previous rendered nodes from DOM
+        for (const node of currentNodes) {
+          if (node.parentNode) {
+            node.parentNode.removeChild(node);
+          }
+        }
+        currentNodes = [];
 
-        if (resolved instanceof Node) {
-          if (currentMarker.parentNode) {
-            currentMarker.parentNode.replaceChild(resolved, currentMarker);
-            currentMarker = resolved;
-          }
-        } else if (Array.isArray(resolved)) {
-          const fragment = document.createDocumentFragment();
-          for (const item of resolved) {
-            insertChild(fragment, item);
-          }
-          if (currentMarker.parentNode) {
-            const nextMarker = document.createTextNode("");
-            currentMarker.parentNode.insertBefore(fragment, currentMarker);
-            currentMarker.parentNode.replaceChild(nextMarker, currentMarker);
-            currentMarker = nextMarker;
-          }
-        } else if (resolved === null || resolved === undefined || resolved === false) {
-          const empty = document.createTextNode("");
-          if (currentMarker.parentNode) {
-            currentMarker.parentNode.replaceChild(empty, currentMarker);
-            currentMarker = empty;
-          }
+        if (resolved === null || resolved === undefined || resolved === false) {
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        if (
+          typeof resolved === "string" ||
+          typeof resolved === "number" ||
+          typeof resolved === "boolean"
+        ) {
+          frag.appendChild(document.createTextNode(String(resolved)));
         } else {
-          // Direct text mutation when possible without recreating node!
-          if (currentMarker.nodeType === Node.TEXT_NODE) {
-            (currentMarker as Text).data = String(resolved);
-          } else {
-            const textNode = document.createTextNode(String(resolved));
-            if (currentMarker.parentNode) {
-              currentMarker.parentNode.replaceChild(textNode, currentMarker);
-              currentMarker = textNode;
-            }
-          }
+          insertChild(frag, resolved);
+        }
+
+        currentNodes = Array.from(frag.childNodes);
+        if (marker.parentNode) {
+          marker.parentNode.insertBefore(frag, marker);
         }
       });
     });
@@ -248,9 +252,17 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
       if (childScope) {
         childScope.dispose();
       }
+      for (const node of currentNodes) {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
+      }
+      if (marker.parentNode) {
+        marker.parentNode.removeChild(marker);
+      }
     });
 
-    return currentMarker;
+    return marker;
   }
 
   // Primitive static child

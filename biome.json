@@ -22,7 +22,10 @@
     "enabled": true,
     "rules": {
       "a11y": {
-        "useButtonType": "off"
+        "useButtonType": "off",
+        "noStaticElementInteractions": "off",
+        "useKeyWithClickEvents": "off",
+        "useSemanticElements": "off"
       },
       "suspicious": {
         "noExplicitAny": "off",

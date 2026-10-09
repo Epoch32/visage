@@ -287,12 +287,33 @@ export class MockElement extends MockNode {
     this.dispatchEvent({ type: "blur" });
   }
 
+  get placeholder(): string {
+    return this.getAttribute("placeholder") ?? "";
+  }
+
+  set placeholder(val: string) {
+    this.setAttribute("placeholder", val);
+  }
+
   querySelector(selector: string): MockElement | null {
     const all = this.querySelectorAll(selector);
     return all[0] ?? null;
   }
 
   querySelectorAll(selector: string): MockElement[] {
+    const parts = selector.trim().split(/\s+/);
+    if (parts.length > 1) {
+      let currentSet: MockElement[] = [this as any];
+      for (const part of parts) {
+        const nextSet: MockElement[] = [];
+        for (const el of currentSet) {
+          nextSet.push(...el.querySelectorAll(part));
+        }
+        currentSet = nextSet;
+      }
+      return currentSet;
+    }
+
     const matches: MockElement[] = [];
 
     const traverse = (node: MockNode) => {

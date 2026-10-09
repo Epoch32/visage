@@ -1,4 +1,4 @@
-export type DevToolsTab = "signals" | "query" | "rpc" | "dom" | "concepts";
+export type DevToolsTab = "signals" | "graph" | "query" | "rpc" | "dom" | "concepts";
 
 export interface SignalRecord {
   id: string;
@@ -6,6 +6,8 @@ export interface SignalRecord {
   type: "signal" | "computed";
   getValue: () => any;
   version: () => number;
+  dependencies?: string[];
+  subscribersCount?: () => number;
   lastUpdatedAt: number;
 }
 

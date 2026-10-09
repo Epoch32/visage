@@ -11,8 +11,10 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  Command,
   createIcon,
   createToastManager,
+  DataTable,
   Dialog,
   DialogClose,
   DialogContent,
@@ -602,6 +604,101 @@ describe("Visage UI Component Primitives", () => {
       (switchBtn as HTMLButtonElement).click();
       expect(checked()).toBe(true);
       expect(switchBtn.getAttribute("aria-checked")).toBe("true");
+
+      unmount();
+    });
+
+    it("renders Command palette shorthand and handles item selection", () => {
+      let selectedAction = "";
+      const unmount = render(
+        () => (
+          <Command
+            placeholder="Search commands..."
+            groups={[
+              {
+                heading: "Navigation",
+                items: [
+                  {
+                    value: "profile",
+                    label: "Go to Profile",
+                    shortcut: "⌘P",
+                    onSelect: () => {
+                      selectedAction = "profile";
+                    }
+                  },
+                  {
+                    value: "settings",
+                    label: "Open Settings",
+                    shortcut: "⌘S",
+                    onSelect: () => {
+                      selectedAction = "settings";
+                    }
+                  }
+                ]
+              }
+            ]}
+          />
+        ),
+        container
+      );
+
+      const input = container.querySelector('input[role="searchbox"]') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.placeholder).toBe("Search commands...");
+
+      const options = container.querySelectorAll('[role="option"]');
+      expect(options.length).toBe(2);
+      expect(options[0]?.textContent).toContain("Go to Profile");
+      expect(options[0]?.textContent).toContain("⌘P");
+
+      (options[0] as HTMLElement).click();
+      expect(selectedAction).toBe("profile");
+
+      unmount();
+    });
+
+    it("renders DataTable with sorting, filtering, selection, and pagination", () => {
+      const users = [
+        { id: "1", name: "Alice", role: "Admin", status: "Active" },
+        { id: "2", name: "Bob", role: "Developer", status: "Active" },
+        { id: "3", name: "Charlie", role: "Designer", status: "Pending" }
+      ];
+
+      let clickedUser = "";
+      const unmount = render(
+        () => (
+          <DataTable
+            data={users}
+            selection="multi"
+            pageSize={2}
+            columns={[
+              { id: "name", header: "User Name", accessorKey: "name", sortable: true },
+              { id: "role", header: "Role", accessorKey: "role" },
+              { id: "status", header: "Status", accessorKey: "status" }
+            ]}
+            onRowClick={(row) => {
+              clickedUser = row.name;
+            }}
+          />
+        ),
+        container
+      );
+
+      const table = container.querySelector("table")!;
+      expect(table).not.toBeNull();
+
+      const headers = container.querySelectorAll("th");
+      expect(headers.length).toBe(4); // checkbox + 3 cols
+      expect(headers[1]?.textContent).toContain("User Name");
+
+      // Sorted by default click
+      (headers[1] as HTMLElement).click();
+
+      const rows = container.querySelectorAll("tbody tr");
+      expect(rows.length).toBe(2); // Page size 2
+
+      (rows[0] as HTMLElement).click();
+      expect(clickedUser).toBe("Alice");
 
       unmount();
     });

@@ -11,6 +11,29 @@ export {
   useAccordionItemContext
 } from "./accordion";
 export {
+  Command,
+  CommandDialog,
+  type CommandDialogProps,
+  CommandEmpty,
+  CommandGroup,
+  type CommandGroupData,
+  CommandInput,
+  type CommandInputProps,
+  CommandItem,
+  type CommandItemData,
+  type CommandItemProps,
+  CommandList,
+  type CommandProps,
+  useCommandContext
+} from "./command";
+export {
+  type ColumnDef,
+  DataTable,
+  type DataTableProps,
+  type SortDirection,
+  type SortState
+} from "./data-table";
+export {
   Dialog,
   DialogClose,
   DialogContent,
