@@ -87,7 +87,8 @@
     "build:example": "bun build examples/survey/index.ts --outdir ./examples/survey/dist --minify",
     "example:survey": "bun examples/survey/server.ts",
     "example:ui": "vite examples/ui-showcase",
-    "example:auth": "vite examples/enterprise-auth"
+    "example:auth": "vite examples/enterprise-auth",
+    "example:api": "bun examples/api-showcase/server.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

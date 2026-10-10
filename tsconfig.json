@@ -26,6 +26,7 @@
       "visage/rpc": ["./src/rpc/index.ts"],
       "visage/style": ["./src/style/index.ts"],
       "visage/devtools": ["./src/devtools/index.ts"],
+      "visage/api": ["./src/api/index.ts"],
       "visage/ui": ["./src/ui/index.ts"],
       "visage/vite": ["./src/vite/index.ts"],
       "visage/*": ["./src/*"]

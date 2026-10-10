@@ -46,7 +46,8 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
             "visage/router",
             "visage/form",
             "visage/virtual",
-            "visage/devtools"
+            "visage/devtools",
+            "visage/api"
           ]
         },
         resolve: {
