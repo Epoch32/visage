@@ -17,6 +17,7 @@ export {
   RPCError,
   STATUS_TO_ERROR_CODE
 } from "../rpc/error";
+export { createApiClient } from "./client";
 export {
   buildFileRouter,
   compileRoutePattern,
@@ -43,10 +44,21 @@ export {
   subscription
 } from "./procedure";
 export type {
+  ApiCallOptions,
+  ApiClient,
+  ApiClientHeadersRule,
+  ApiClientOptions,
+  ApiEndpointMethods,
+  ApiMethodCaller,
   ApiProcedure,
   ApiRouterConfig,
+  ApiSubscriptionCallbacks,
+  ApiSubscriptionCaller,
+  ApiSubscriptionHandle,
   FileRouteModule,
   HttpMethod,
+  InferApiInput,
+  InferApiOutput,
   MiddlewareContext,
   MiddlewareDefinition,
   MiddlewareFn,

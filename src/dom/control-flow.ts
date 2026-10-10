@@ -8,9 +8,31 @@ export interface ShowProps<T> {
 }
 
 /**
- * Show conditionally renders children when condition is truthy, with fine-grained scope teardown
+ * Conditionally renders JSX children when the `when` condition evaluates to truthy,
+ * with fine-grained reactive scope lifecycle management and automatic fallback rendering.
+ *
+ * @example
+ * ```tsx
+ * const loggedIn = signal(false);
+ *
+ * <Show when={loggedIn} fallback={<div>Please log in</div>}>
+ *   <Dashboard />
+ * </Show>
+ * ```
  */
-export function Show<T>(props: ShowProps<T>): Node {
+export function Show<T>(props: ShowProps<T>): any {
+  if (typeof document === "undefined") {
+    const condition = resolveValue(props.when);
+    if (condition) {
+      return typeof props.children === "function" && props.children.length > 0
+        ? (props.children as (item: () => T) => Child)(() => resolveValue(props.when) as T)
+        : typeof props.children === "function"
+          ? (props.children as () => Child)()
+          : props.children;
+    }
+    return props.fallback ?? null;
+  }
+
   const marker = document.createTextNode("");
   const initialFrag = document.createDocumentFragment();
   let currentScope: Scope | null = null;
@@ -93,9 +115,33 @@ interface ItemRecord<T> {
 }
 
 /**
- * For renders a reactive list with keyed/item-reconciliation without full-tree re-rendering
+ * Keyed / referential list renderer with fine-grained item reconciliation.
+ *
+ * Items in the list are reused across array mutations without re-rendering existing items
+ * or tearing down their active reactive scopes.
+ *
+ * @example
+ * ```tsx
+ * const items = signal(["Apple", "Banana", "Cherry"]);
+ *
+ * <For each={items} fallback={<div>No items found</div>}>
+ *   {(item, index) => (
+ *     <li>
+ *       {index() + 1}. {item}
+ *     </li>
+ *   )}
+ * </For>
+ * ```
  */
-export function For<T>(props: ForProps<T>): Node {
+export function For<T>(props: ForProps<T>): any {
+  if (typeof document === "undefined") {
+    const list = resolveValue(props.each) ?? [];
+    if (list.length === 0) {
+      return props.fallback ?? null;
+    }
+    return list.map((item, idx) => props.children(item, () => idx));
+  }
+
   const marker = document.createTextNode("");
   const initialFrag = document.createDocumentFragment();
   let items: ItemRecord<T>[] = [];
@@ -253,7 +299,11 @@ export interface PortalProps {
 /**
  * Portal renders children into a different DOM container while preserving reactive context
  */
-export function Portal(props: PortalProps): Node {
+export function Portal(props: PortalProps): any {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
   const marker = document.createTextNode("");
   let currentScope: Scope | null = null;
   let nodes: Node[] = [];

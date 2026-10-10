@@ -109,3 +109,141 @@ export interface ApiRouterConfig {
   };
   onError?: (err: Error, req: Request) => Response | Promise<Response>;
 }
+
+export type ApiClientHeadersRule =
+  | Record<string, string>
+  | (() => Promise<Record<string, string>> | Record<string, string>);
+
+export interface ApiClientOptions {
+  baseUrl: string;
+  fetch?: typeof fetch;
+  headers?:
+    | Record<string, string>
+    | Record<string, ApiClientHeadersRule>
+    | (() => Promise<Record<string, string>> | Record<string, string>);
+}
+
+export interface ApiCallOptions {
+  signal?: AbortSignal;
+  headers?: Record<string, string>;
+}
+
+export interface ApiSubscriptionCallbacks<TData = any> {
+  onData: (data: TData) => void;
+  onError?: (error: any) => void;
+  onComplete?: () => void;
+}
+
+export interface ApiSubscriptionHandle {
+  unsubscribe: () => void;
+}
+
+export type InferApiInput<P> =
+  P extends ApiProcedure<infer TInput, any, any>
+    ? TInput
+    : P extends (...args: any[]) => any
+      ? any
+      : void;
+
+export type InferApiOutput<P> =
+  P extends ApiProcedure<any, infer TOutput, any>
+    ? TOutput
+    : P extends (...args: any[]) => Promise<infer TOutput>
+      ? TOutput
+      : unknown;
+
+export type ApiMethodCaller<P> =
+  InferApiInput<P> extends void | undefined
+    ? (input?: void, options?: ApiCallOptions) => Promise<InferApiOutput<P>>
+    : (input: InferApiInput<P>, options?: ApiCallOptions) => Promise<InferApiOutput<P>>;
+
+export type ApiSubscriptionCaller<P> =
+  InferApiInput<P> extends void | undefined
+    ? (
+        input: void | undefined,
+        callbacks: ApiSubscriptionCallbacks<InferApiOutput<P>>
+      ) => ApiSubscriptionHandle
+    : (
+        input: InferApiInput<P>,
+        callbacks: ApiSubscriptionCallbacks<InferApiOutput<P>>
+      ) => ApiSubscriptionHandle;
+
+export type ApiEndpointMethods<T> = {
+  get: T extends { GET: infer P }
+    ? ApiMethodCaller<P>
+    : T extends { get: infer P }
+      ? ApiMethodCaller<P>
+      : T extends { default: infer P }
+        ? ApiMethodCaller<P>
+        : (input?: any, options?: ApiCallOptions) => Promise<any>;
+  post: T extends { POST: infer P }
+    ? ApiMethodCaller<P>
+    : T extends { post: infer P }
+      ? ApiMethodCaller<P>
+      : (input?: any, options?: ApiCallOptions) => Promise<any>;
+  put: T extends { PUT: infer P }
+    ? ApiMethodCaller<P>
+    : T extends { put: infer P }
+      ? ApiMethodCaller<P>
+      : (input?: any, options?: ApiCallOptions) => Promise<any>;
+  patch: T extends { PATCH: infer P }
+    ? ApiMethodCaller<P>
+    : T extends { patch: infer P }
+      ? ApiMethodCaller<P>
+      : (input?: any, options?: ApiCallOptions) => Promise<any>;
+  del: T extends { DELETE: infer P }
+    ? ApiMethodCaller<P>
+    : T extends { del: infer P }
+      ? ApiMethodCaller<P>
+      : (input?: any, options?: ApiCallOptions) => Promise<any>;
+  delete: T extends { DELETE: infer P }
+    ? ApiMethodCaller<P>
+    : T extends { del: infer P }
+      ? ApiMethodCaller<P>
+      : (input?: any, options?: ApiCallOptions) => Promise<any>;
+  subscribe: T extends { GET: infer P }
+    ? ApiSubscriptionCaller<P>
+    : T extends { subscription: infer P }
+      ? ApiSubscriptionCaller<P>
+      : (input: any, callbacks: ApiSubscriptionCallbacks) => ApiSubscriptionHandle;
+
+  queryKey: (input?: any) => unknown[];
+  queryOptions: (input?: any, extra?: any) => any;
+  createQuery: (input?: any, extra?: any) => any;
+  useQuery: (input?: any, extra?: any) => any;
+
+  mutationKey: () => unknown[];
+  mutationOptions: (extra?: any) => any;
+  createMutation: (extra?: any) => any;
+  useMutation: (extra?: any) => any;
+};
+
+export type DynamicApiClient = {
+  get: (input?: any, options?: ApiCallOptions) => Promise<any>;
+  post: (input?: any, options?: ApiCallOptions) => Promise<any>;
+  put: (input?: any, options?: ApiCallOptions) => Promise<any>;
+  patch: (input?: any, options?: ApiCallOptions) => Promise<any>;
+  del: (input?: any, options?: ApiCallOptions) => Promise<any>;
+  delete: (input?: any, options?: ApiCallOptions) => Promise<any>;
+  subscribe: (input: any, callbacks: ApiSubscriptionCallbacks) => ApiSubscriptionHandle;
+  queryKey: (input?: any) => unknown[];
+  queryOptions: (input?: any, extra?: any) => any;
+  createQuery: (input?: any, extra?: any) => any;
+  useQuery: (input?: any, extra?: any) => any;
+  mutationKey: () => unknown[];
+  mutationOptions: (extra?: any) => any;
+  createMutation: (extra?: any) => any;
+  useMutation: (extra?: any) => any;
+  (param: string | number): DynamicApiClient;
+} & Record<string, any>;
+
+export type ApiClient<TRoutes = any> = 0 extends 1 & TRoutes
+  ? DynamicApiClient
+  : [TRoutes] extends [Record<string, any>]
+    ? {
+        [K in keyof TRoutes]-?: ((param: string | number) => ApiClient<TRoutes[K]>) &
+          ApiEndpointMethods<TRoutes[K]> &
+          ApiClient<TRoutes[K]>;
+      } & ((param: string | number) => any) &
+        ApiEndpointMethods<any>
+    : DynamicApiClient;

@@ -111,16 +111,19 @@ export function createApiHandler(
       let procedure: ApiProcedure | undefined = matchedRoute.procedures.default;
 
       if (!procedure) {
-        if (method === "GET" && matchedRoute.procedures.get) {
-          procedure = matchedRoute.procedures.get;
-        } else if (method === "POST" && matchedRoute.procedures.post) {
-          procedure = matchedRoute.procedures.post;
-        } else if (method === "PUT" && matchedRoute.procedures.put) {
-          procedure = matchedRoute.procedures.put;
-        } else if (method === "DELETE" && matchedRoute.procedures.del) {
-          procedure = matchedRoute.procedures.del;
-        } else if (method === "PATCH" && matchedRoute.procedures.patch) {
-          procedure = matchedRoute.procedures.patch;
+        if (method === "GET") {
+          procedure = matchedRoute.procedures.GET || matchedRoute.procedures.get;
+        } else if (method === "POST") {
+          procedure = matchedRoute.procedures.POST || matchedRoute.procedures.post;
+        } else if (method === "PUT") {
+          procedure = matchedRoute.procedures.PUT || matchedRoute.procedures.put;
+        } else if (method === "DELETE") {
+          procedure =
+            matchedRoute.procedures.DELETE ||
+            matchedRoute.procedures.del ||
+            matchedRoute.procedures.delete;
+        } else if (method === "PATCH") {
+          procedure = matchedRoute.procedures.PATCH || matchedRoute.procedures.patch;
         }
       }
 

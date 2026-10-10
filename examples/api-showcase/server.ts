@@ -43,6 +43,27 @@ export default {
       return api.fetch(req);
     }
 
+    // Client Browser JavaScript Bundle
+    if (url.pathname === "/bundle.js") {
+      try {
+        const entryPath = new URL("./client.tsx", import.meta.url).pathname;
+        const buildResult = await (globalThis as any).Bun.build({
+          entrypoints: [entryPath],
+          target: "browser",
+          minify: false
+        });
+
+        if (buildResult.success && buildResult.outputs[0]) {
+          const code = await buildResult.outputs[0].text();
+          return new Response(code, {
+            headers: { "Content-Type": "application/javascript; charset=utf-8" }
+          });
+        }
+      } catch (err) {
+        console.error("Bundle build error:", err);
+      }
+    }
+
     // SSR Frontend Page (/)
     const appHtml = renderToString(() => App());
     const html = `<!DOCTYPE html>
@@ -55,6 +76,7 @@ export default {
   </head>
   <body>
     <div id="root">${appHtml}</div>
+    <script type="module" src="/bundle.js"></script>
   </body>
 </html>`;
 

@@ -102,7 +102,28 @@ function createStoreProxy<T extends object>(target: T): T {
 }
 
 /**
- * Create a deep reactive proxy store with per-property fine-grained signal tracking
+ * Create a deep reactive proxy store with per-property fine-grained signal tracking.
+ *
+ * Nested objects and arrays are lazily wrapped in reactive proxies. Reading a property
+ * tracks that exact key, and updating a property only notifies computations observing that key.
+ *
+ * @example
+ * ```tsx
+ * const state = createStore({
+ *   user: { name: "Alice", role: "admin" },
+ *   items: ["Apple", "Banana"]
+ * });
+ *
+ * // Fine-grained read
+ * <div>User: {() => state.user.name}</div>
+ *
+ * // Fine-grained write (mutates only user.name subscribers)
+ * state.user.name = "Bob";
+ * state.items.push("Cherry");
+ * ```
+ *
+ * @param initialState - An object or array representing the initial state tree
+ * @returns A deeply reactive proxy store
  */
 export function createStore<T extends object>(initialState: T): Store<T> {
   if (!isObject(initialState)) {
@@ -112,7 +133,15 @@ export function createStore<T extends object>(initialState: T): Store<T> {
 }
 
 /**
- * Mutate a store inside a batch operation
+ * Mutate a store inside a synchronous batch operation.
+ *
+ * @example
+ * ```tsx
+ * mutateStore(state, (draft) => {
+ *   draft.user.name = "Charlie";
+ *   draft.user.role = "user";
+ * });
+ * ```
  */
 export function mutateStore<T extends object>(store: Store<T>, mutator: (draft: T) => void): void {
   batch(() => {
@@ -121,7 +150,10 @@ export function mutateStore<T extends object>(store: Store<T>, mutator: (draft: 
 }
 
 /**
- * Unwrap a reactive proxy store to get raw object
+ * Unwrap a reactive proxy store to get the underlying raw, un-proxied JavaScript object.
+ *
+ * @param store - The reactive store proxy
+ * @returns The raw underlying object
  */
 export function unwrapStore<T>(store: T): T {
   if (isObject(store) && (store as any)[STORE_RAW]) {

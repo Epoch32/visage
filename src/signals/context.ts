@@ -9,7 +9,30 @@ export interface Context<T> {
 }
 
 /**
- * Create a reactive Context for dependency injection across the component tree
+ * Create a reactive Context for dependency injection across the component tree.
+ *
+ * Context allows passing state and utilities down the component tree without
+ * manually drilling props through every intermediate component.
+ *
+ * @example
+ * ```tsx
+ * const ThemeContext = createContext<"light" | "dark">("light");
+ *
+ * // Provide value in parent
+ * function App() {
+ *   return (
+ *     <ThemeContext.Provider value="dark">
+ *       <Header />
+ *     </ThemeContext.Provider>
+ *   );
+ * }
+ *
+ * // Consume value in descendant
+ * function Header() {
+ *   const theme = useContext(ThemeContext);
+ *   return <div>Current theme: {theme}</div>;
+ * }
+ * ```
  */
 export function createContext<T>(defaultValue: T): Context<T>;
 export function createContext<T>(): Context<T | undefined>;
@@ -47,7 +70,10 @@ export function createContext<T>(defaultValue?: T): Context<T | undefined> {
 }
 
 /**
- * Consume a Context value from the nearest ancestor Provider
+ * Consume a Context value from the nearest ancestor Provider, falling back to defaultValue.
+ *
+ * @param context - The Context object returned from `createContext`
+ * @returns The current context value
  */
 export function useContext<T>(context: Context<T>): T {
   let scope = getActiveScope();

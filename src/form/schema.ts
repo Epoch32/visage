@@ -34,6 +34,7 @@ export type SchemaLike<T = any> =
   | ((value: unknown) => ValidationResult<T> | boolean | string | null | undefined);
 
 export abstract class Schema<T = any> {
+  declare readonly _type: T;
   abstract validate(value: unknown, path?: string): ValidationResult<T>;
 
   // Standard Schema v1 specification compatibility

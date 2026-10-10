@@ -1,8 +1,29 @@
 import type { Child } from "../dom";
 import type { ReadonlySignal } from "../signals";
 
+/**
+ * Fine-grained reactive property value.
+ *
+ * Can be a static value `T`, a reactive `ReadonlySignal<T>`, or a dynamic getter function `() => T`.
+ * Visage binds reactive props directly to the DOM attribute or property via fine-grained effects,
+ * updating only the exact target attribute when the signal changes without re-rendering the component.
+ *
+ * @example
+ * ```tsx
+ * const count = signal(5);
+ *
+ * // Direct signal
+ * <input disabled={count} />
+ *
+ * // Getter function
+ * <div title={() => `Item count: ${count()}`} />
+ * ```
+ */
 export type ReactiveProp<T> = T | ReadonlySignal<T> | (() => T);
 
+/**
+ * Flexible reactive class value supporting strings, conditional objects, arrays, and getters.
+ */
 export type ClassValue =
   | string
   | number
@@ -13,10 +34,28 @@ export type ClassValue =
   | ClassValue[]
   | Record<string, any>;
 
+/**
+ * Reactive class / className property.
+ *
+ * @example
+ * ```tsx
+ * // Object conditional syntax
+ * <div class={{ active: isActive(), hidden: isHidden() }} />
+ *
+ * // Array syntax
+ * <div class={["btn", isPrimary() ? "btn-primary" : "btn-secondary"]} />
+ *
+ * // Signal / Getter syntax
+ * <div class={() => `theme-${theme()}`} />
+ * ```
+ */
 export type ClassProp = ReactiveProp<
   string | number | boolean | undefined | null | ClassValue[] | Record<string, any>
 >;
 
+/**
+ * Standard HTML Element attributes with fine-grained reactive property bindings.
+ */
 export type HTMLAttributes<T extends HTMLElement = HTMLElement> = {
   [K in keyof HTMLElementTagNameMap[keyof HTMLElementTagNameMap]]?: any;
 } & {
@@ -197,7 +236,13 @@ export interface VisageIntrinsicElements {
   [elemName: string]: HTMLAttributes<HTMLElement>;
 }
 
+/**
+ * Visage JSX Namespace Definitions
+ */
 export namespace JSX {
+  /**
+   * Represents any valid JSX element in Visage (DOM Node, Signal, Function Getter, VNode, string, number, null, undefined).
+   */
   export type Element = Node | Child;
 
   export interface ElementChildrenAttribute {
@@ -214,6 +259,9 @@ export namespace JSX {
 
 declare global {
   namespace JSX {
+    /**
+     * Represents any valid JSX element in Visage (DOM Node, Signal, Function Getter, VNode, string, number, null, undefined).
+     */
     type Element = Node | Child;
 
     interface ElementChildrenAttribute {

@@ -1,5 +1,18 @@
 // Reactive Primitives
 
+// File-Based API & Opinionated RPC
+export {
+  type ApiClient,
+  type ApiClientOptions,
+  buildFileRouter,
+  createApi,
+  createApiClient,
+  createApiHandler,
+  defineMiddleware,
+  type FileRouteModule,
+  ProcedureBuilder,
+  procedure
+} from "./api";
 // In-Browser DevTools & Visual Inspector
 export {
   connectDevTools,
@@ -167,6 +180,8 @@ export {
   type Context,
   computed,
   createContext,
+  createEffect,
+  createMemo,
   createRoot,
   createSignal,
   createStore,

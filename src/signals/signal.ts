@@ -90,7 +90,32 @@ export class Signal<T> implements IDependency {
 }
 
 /**
- * Factory for creating writable signals
+ * Factory for creating writable, fine-grained reactive signals.
+ *
+ * Signals are the core primitive of Visage's reactivity. Reading a signal inside
+ * a component JSX body, `computed()`, or `effect()` automatically registers that
+ * computation as a dependent subscriber.
+ *
+ * @example
+ * ```tsx
+ * const count = signal(0);
+ *
+ * // Read value
+ * console.log(count()); // 0
+ * console.log(count.value); // 0
+ *
+ * // Write value
+ * count.set(1);
+ * count(2);
+ * count.update(prev => prev + 1);
+ *
+ * // In JSX
+ * <div>Current count: {count}</div>
+ * ```
+ *
+ * @param initialValue - The initial value stored in the signal
+ * @param optionsOrEquals - Custom equality comparison function or SignalOptions
+ * @returns A writable reactive signal function accessor
  */
 export function signal<T>(
   initialValue: T,
@@ -146,7 +171,21 @@ export function signal<T>(
 }
 
 /**
- * Tuple-based signal constructor [get, set] (Solid / Signals convention)
+ * Tuple-based signal constructor returning `[getter, setter]` (Solid / Preact Signals convention).
+ *
+ * @example
+ * ```tsx
+ * const [count, setCount] = createSignal(0);
+ *
+ * setCount(5);
+ * setCount(prev => prev + 1);
+ *
+ * <div>Count: {count}</div>
+ * ```
+ *
+ * @param initialValue - The initial value stored in the signal
+ * @param optionsOrEquals - Custom equality comparison function or SignalOptions
+ * @returns A tuple containing `[ReadonlySignal<T>, (value: T | ((prev: T) => T)) => void]`
  */
 export function createSignal<T>(
   initialValue: T,

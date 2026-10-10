@@ -1,5 +1,10 @@
 /** @jsxImportSource visage */
 import { computed, For, Show, signal, VisageDevTools } from "visage";
+import { createApiClient } from "visage/api";
+
+const api = createApiClient({
+  baseUrl: "/api"
+});
 
 interface Todo {
   id: string;
@@ -36,20 +41,15 @@ export function App() {
   const completedCount = computed(() => todos().filter((t) => t.completed).length);
   const totalCount = computed(() => todos().length);
 
-  // Fetch initial todos
+  // Fetch initial todos via typed ApiClient
   const loadTodos = async () => {
     isLoading.set(true);
     errorMsg.set(null);
     try {
-      const res = await fetch("/api/todos");
-      const json = await res.json();
-      if (json.ok) {
-        todos.set(json.data);
-      } else {
-        errorMsg.set(json.error?.message || "Failed to load todos");
-      }
+      const data = await api.todos.get();
+      todos.set(data);
     } catch (e: any) {
-      errorMsg.set(e.message);
+      errorMsg.set(e.message || "Failed to load todos");
     } finally {
       isLoading.set(false);
     }
@@ -61,16 +61,9 @@ export function App() {
     if (!title) return;
 
     try {
-      const res = await fetch("/api/todos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title })
-      });
-      const json = await res.json();
-      if (json.ok) {
-        todos.update((prev) => [...prev, json.data.todo]);
-        newTodoTitle.set("");
-      }
+      const data = await api.todos.post({ title });
+      todos.update((prev) => [...prev, data.todo]);
+      newTodoTitle.set("");
     } catch (e: any) {
       errorMsg.set(e.message);
     }
@@ -78,17 +71,8 @@ export function App() {
 
   const toggleTodo = async (id: string, completed: boolean) => {
     try {
-      const res = await fetch(`/api/todos/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !completed })
-      });
-      const json = await res.json();
-      if (json.ok) {
-        todos.update((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, completed: !completed } : t))
-        );
-      }
+      await api.todos[id].patch({ completed: !completed });
+      todos.update((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !completed } : t)));
     } catch (e: any) {
       errorMsg.set(e.message);
     }
@@ -96,11 +80,8 @@ export function App() {
 
   const deleteTodo = async (id: string) => {
     try {
-      const res = await fetch(`/api/todos/${id}`, { method: "DELETE" });
-      const json = await res.json();
-      if (json.ok) {
-        todos.update((prev) => prev.filter((t) => t.id !== id));
-      }
+      await api.todos[id].delete();
+      todos.update((prev) => prev.filter((t) => t.id !== id));
     } catch (e: any) {
       errorMsg.set(e.message);
     }
@@ -109,43 +90,51 @@ export function App() {
   const fetchAdminMetrics = async () => {
     adminError.set(null);
     try {
-      const res = await fetch("/api/admin/metrics", {
+      const data = await api.admin.metrics.get(undefined, {
         headers: { Authorization: adminToken() }
       });
-      const json = await res.json();
-      if (json.ok) {
-        adminMetrics.set(json.data);
-      } else {
-        adminError.set(`[HTTP ${res.status}] ${json.error?.message}`);
-        adminMetrics.set(null);
-      }
+      adminMetrics.set(data);
     } catch (e: any) {
       adminError.set(e.message);
+      adminMetrics.set(null);
     }
   };
+
+  let sseSubscription: { unsubscribe: () => void } | null = null;
 
   const startSseStream = () => {
     if (isStreaming()) return;
     isStreaming.set(true);
-    sseEvents.set([]);
-
-    const eventSource = new EventSource("/api/admin/events");
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        sseEvents.update((prev) => [data, ...prev.slice(0, 9)]);
-      } catch (err) {
-        console.error("SSE Parse Error:", err);
+    const token = adminToken().replace(/^Bearer\s+/i, "");
+    sseSubscription = api.admin.events.subscribe(
+      { token },
+      {
+        onData: (data: any) => {
+          sseEvents.update((prev) => [data, ...prev.slice(0, 9)]);
+        },
+        onError: (err: any) => {
+          adminError.set(err.message || "SSE stream error");
+          isStreaming.set(false);
+        },
+        onComplete: () => {
+          isStreaming.set(false);
+        }
       }
-    };
-    eventSource.onerror = () => {
-      eventSource.close();
-      isStreaming.set(false);
-    };
+    );
+  };
+
+  const stopSseStream = () => {
+    if (sseSubscription) {
+      sseSubscription.unsubscribe();
+      sseSubscription = null;
+    }
+    isStreaming.set(false);
   };
 
   // Initial load
-  loadTodos();
+  if (typeof window !== "undefined") {
+    loadTodos();
+  }
 
   return (
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #09090b; color: #f4f4f5; min-height: 100vh; padding: 2.5rem;">
@@ -267,12 +256,17 @@ export function App() {
             </button>
             <button
               type="button"
-              onClick={startSseStream}
-              disabled={() => isStreaming()}
+              onClick={() => {
+                if (isStreaming()) {
+                  stopSseStream();
+                } else {
+                  startSseStream();
+                }
+              }}
               style="flex: 1; background: #6366f1; color: #fff; border: none; padding: 0.5rem; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 0.875rem;"
             >
               <Show when={() => isStreaming()} fallback="Start SSE Stream">
-                <span>Streaming SSE...</span>
+                <span>Stop SSE Stream</span>
               </Show>
             </button>
           </div>

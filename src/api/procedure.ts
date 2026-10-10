@@ -1,7 +1,4 @@
-/**
- * Visage Procedure Builders & Middleware Definitions
- */
-import type { SchemaLike, StandardSchemaV1 } from "../form/schema";
+import type { InferSchemaType, SchemaLike, StandardSchemaV1 } from "../form/schema";
 import type {
   ApiProcedure,
   MiddlewareDefinition,
@@ -13,9 +10,24 @@ import type {
 /**
  * Define a type-safe Query procedure
  */
-export function query<TInput = any, TOutput = any, TCtx = any>(
+export function query<
+  TSchema extends SchemaLike<any> | StandardSchemaV1<any>,
+  TOutput = any,
+  TCtx = any
+>(options: {
+  input: TSchema;
+  output?: SchemaLike<TOutput> | StandardSchemaV1<TOutput>;
+  resolve: (args: {
+    input: InferSchemaType<TSchema>;
+    ctx: TCtx;
+    req: Request;
+    params: Record<string, string>;
+  }) => Promise<TOutput> | TOutput | AsyncGenerator<any, void, unknown>;
+}): ApiProcedure<InferSchemaType<TSchema>, TOutput, TCtx>;
+export function query<TInput = void, TOutput = any, TCtx = any>(
   options: ProcedureOptions<TInput, TOutput, TCtx>
-): ApiProcedure<TInput, TOutput, TCtx> {
+): ApiProcedure<TInput, TOutput, TCtx>;
+export function query(options: any): ApiProcedure<any, any, any> {
   return {
     type: "query",
     options
@@ -25,9 +37,24 @@ export function query<TInput = any, TOutput = any, TCtx = any>(
 /**
  * Define a type-safe Mutation procedure
  */
-export function mutation<TInput = any, TOutput = any, TCtx = any>(
+export function mutation<
+  TSchema extends SchemaLike<any> | StandardSchemaV1<any>,
+  TOutput = any,
+  TCtx = any
+>(options: {
+  input: TSchema;
+  output?: SchemaLike<TOutput> | StandardSchemaV1<TOutput>;
+  resolve: (args: {
+    input: InferSchemaType<TSchema>;
+    ctx: TCtx;
+    req: Request;
+    params: Record<string, string>;
+  }) => Promise<TOutput> | TOutput | AsyncGenerator<any, void, unknown>;
+}): ApiProcedure<InferSchemaType<TSchema>, TOutput, TCtx>;
+export function mutation<TInput = void, TOutput = any, TCtx = any>(
   options: ProcedureOptions<TInput, TOutput, TCtx>
-): ApiProcedure<TInput, TOutput, TCtx> {
+): ApiProcedure<TInput, TOutput, TCtx>;
+export function mutation(options: any): ApiProcedure<any, any, any> {
   return {
     type: "mutation",
     options

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   createApi,
+  createApiClient,
   mutation,
   parsePragma,
   procedure,
@@ -53,7 +54,7 @@ export const middleware = () => {};
       "./routes/admin/_middleware.ts": {
         middleware: async ({ req, next }: any) => {
           const auth = req.headers.get("Authorization");
-          if (!auth?.startsWith("Bearer admin-token")) {
+          if (auth !== "Bearer admin-token") {
             throw new RPCError(401, "Admin Authorization Required");
           }
           return next({ adminUser: { id: "admin_99", role: "admin" } });
@@ -243,6 +244,107 @@ export const middleware = () => {};
       const json = await res.json();
       expect(json.ok).toBe(true);
       expect(json.data.result).toBe("Hi with secret-123");
+    });
+  });
+
+  describe("Typed API Client (createApiClient)", () => {
+    it("calls GET, POST, dynamic parameters, and unwrap response data", async () => {
+      const files = {
+        "./health.ts": {
+          GET: query({
+            resolve: () => ({ status: "ok", timestamp: 12345 })
+          })
+        },
+        "./users/[id].ts": {
+          GET: query({
+            input: v.object({ id: v.string() }),
+            resolve: ({ params }) => ({ id: params.id, name: `User ${params.id}` })
+          }),
+          POST: mutation({
+            input: v.object({ email: v.string() }),
+            resolve: ({ params, input }) => ({
+              id: params.id,
+              email: input.email,
+              updated: true
+            })
+          })
+        },
+        "./admin/stream.ts": {
+          GET: subscription({
+            resolve: async function* () {
+              yield { event: "ping", seq: 1 };
+              yield { event: "pong", seq: 2 };
+            }
+          })
+        }
+      };
+
+      const api = createApi(files, { prefix: "/api" });
+
+      const client = createApiClient({
+        baseUrl: "http://localhost/api",
+        fetch: async (url, init) => {
+          const req = new Request(url, init);
+          return api.fetch(req);
+        }
+      });
+
+      // 1. Static GET endpoint
+      const health = await client.health.get();
+      expect(health).toEqual({ status: "ok", timestamp: 12345 });
+
+      // 2. Dynamic path parameter via index accessor
+      const user1 = await client.users["user-99"].get();
+      expect(user1).toEqual({ id: "user-99", name: "User user-99" });
+
+      // 3. Dynamic path parameter via function call
+      const user2 = await client.users("user-100").get();
+      expect(user2).toEqual({ id: "user-100", name: "User user-100" });
+
+      // 4. POST mutation with body
+      const updated = await client.users["user-99"].post({ email: "user99@visage.dev" });
+      expect(updated).toEqual({
+        id: "user-99",
+        email: "user99@visage.dev",
+        updated: true
+      });
+
+      // 5. Query Options and Query Signals
+      const qOpts = client.users["user-99"].queryOptions();
+      expect(qOpts.queryKey).toEqual(["users", "user-99"]);
+      const queryData = await qOpts.queryFn({ signal: new AbortController().signal });
+      expect(queryData).toEqual({ id: "user-99", name: "User user-99" });
+
+      // 6. SSE Subscription
+      const received: any[] = [];
+      await new Promise<void>((resolve, reject) => {
+        client.admin.stream.subscribe(undefined, {
+          onData: (data: any) => {
+            received.push(data);
+            if (received.length === 2) resolve();
+          },
+          onError: (err: any) => reject(err),
+          onComplete: () => resolve()
+        });
+      });
+
+      expect(received).toEqual([
+        { event: "ping", seq: 1 },
+        { event: "pong", seq: 2 }
+      ]);
+    });
+  });
+
+  describe("Server-Side Rendering (SSR) Integration", () => {
+    it("renders JSX component trees with Show, For, and DevTools to HTML string without document", async () => {
+      const { renderToString } = await import("../src/server");
+      const { App } = await import("../examples/api-showcase/App");
+
+      const html = renderToString(() => App());
+      expect(typeof html).toBe("string");
+      expect(html).toContain("Visage Full-Stack API Showcase");
+      expect(html).toContain("Reactive Todos (/api/todos)");
+      expect(html).toContain("Guarded Admin Family (/api/admin/*)");
     });
   });
 });

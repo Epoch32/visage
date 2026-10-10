@@ -143,7 +143,25 @@ export class Computed<T> implements ISubscriber, IDependency {
 }
 
 /**
- * Factory for creating computed signals
+ * Factory for creating lazy, memoized, glitch-free computed signals.
+ *
+ * Computed values are only recalculated when one of their recorded reactive
+ * dependencies changes and the value is actually accessed.
+ *
+ * @example
+ * ```tsx
+ * const count = signal(2);
+ * const double = computed(() => count() * 2);
+ *
+ * console.log(double()); // 4
+ *
+ * // In JSX, passes directly or as a function
+ * <div>Doubled value: {double}</div>
+ * ```
+ *
+ * @param fn - The pure reactive computation function
+ * @param options - Optional debug metadata and internal flags
+ * @returns A readonly reactive signal function accessor
  */
 export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySignal<T> {
   const isInternal = options?.internal ?? false;
@@ -186,3 +204,14 @@ export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySig
 
   return accessor;
 }
+
+/**
+ * Solid-compatible alias for `computed()`.
+ *
+ * @example
+ * ```tsx
+ * const count = signal(5);
+ * const squared = createMemo(() => count() ** 2);
+ * ```
+ */
+export const createMemo = computed;

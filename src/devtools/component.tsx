@@ -14,6 +14,10 @@ import { devtoolsStyles } from "./styles";
 import type { DevToolsOptions, DevToolsTab } from "./types";
 
 export function VisageDevTools(props: DevToolsOptions = {}) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   const hub = devtoolsHub;
   if (props.initialOpen !== undefined) {
     hub.isOpen.set(props.initialOpen);

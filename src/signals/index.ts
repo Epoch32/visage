@@ -1,7 +1,8 @@
 export {
   Computed,
   type ComputedOptions,
-  computed
+  computed,
+  createMemo
 } from "./computed";
 
 export {
@@ -11,6 +12,7 @@ export {
 } from "./context";
 
 export {
+  createEffect,
   Effect,
   effect
 } from "./effect";

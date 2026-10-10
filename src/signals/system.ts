@@ -65,7 +65,24 @@ export function flushEffects(): void {
 }
 
 /**
- * Batch multiple signal mutations so downstreams update synchronously once at completion
+ * Batch multiple signal mutations so downstreams and effects update synchronously once at completion.
+ *
+ * Prevents intermediate flicker, wasted recomputations, and glitch states.
+ *
+ * @example
+ * ```tsx
+ * const firstName = signal("Jane");
+ * const lastName = signal("Doe");
+ *
+ * batch(() => {
+ *   firstName.set("John");
+ *   lastName.set("Smith");
+ *   // Downstream computed and effects run only ONCE here
+ * });
+ * ```
+ *
+ * @param fn - A function performing multiple signal updates
+ * @returns The return value of `fn`
  */
 export function batch<T>(fn: () => T): T {
   batchDepth++;
@@ -80,7 +97,21 @@ export function batch<T>(fn: () => T): T {
 }
 
 /**
- * Read reactive state without subscribing current effect or computed
+ * Read reactive state without subscribing the current active effect or computed computation.
+ *
+ * @example
+ * ```tsx
+ * effect(() => {
+ *   const id = currentId(); // Subscribed: effect re-runs when currentId changes
+ *
+ *   // Not subscribed: effect does NOT re-run when analyticsCounter changes
+ *   const count = untrack(() => analyticsCounter());
+ *   sendMetric(id, count);
+ * });
+ * ```
+ *
+ * @param fn - A function reading reactive signals without tracking
+ * @returns The return value of `fn`
  */
 export function untrack<T>(fn: () => T): T {
   const prev = currentSubscriber;

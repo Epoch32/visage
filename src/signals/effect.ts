@@ -120,9 +120,42 @@ export class Effect implements ISubscriber {
 }
 
 /**
- * Execute side-effects reactively when dependencies change
+ * Execute side-effects reactively when dependencies change.
+ *
+ * Runs immediately upon creation and tracks any signals read within `fn`.
+ * When dependencies change, re-execution is scheduled automatically.
+ *
+ * An optional cleanup function can be returned from `fn`, which runs
+ * before the next re-execution and when the enclosing scope is disposed.
+ *
+ * @example
+ * ```tsx
+ * const count = signal(0);
+ *
+ * effect(() => {
+ *   console.log("Count changed to:", count());
+ *
+ *   const timer = setInterval(() => console.log("tick"), 1000);
+ *   return () => clearInterval(timer);
+ * });
+ * ```
+ *
+ * @param fn - The side-effect function, optionally returning a cleanup function
+ * @returns A manual disposal cleanup function
  */
 export function effect(fn: () => void | CleanupFn): CleanupFn {
   const eff = new Effect(fn);
   return () => eff.dispose();
 }
+
+/**
+ * Solid / React-compatible alias for `effect()`.
+ *
+ * @example
+ * ```tsx
+ * createEffect(() => {
+ *   document.title = `Total: ${count()}`;
+ * });
+ * ```
+ */
+export const createEffect = effect;

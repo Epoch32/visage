@@ -1,7 +1,9 @@
 node_modules
 dist
 **/dist
+packages/
 .git
 .gemini
 *.tsbuildinfo
+.DS_Store
 

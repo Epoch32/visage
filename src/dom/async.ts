@@ -1,116 +1,25 @@
+import { effect, getActiveScope, onCleanup, runInScope, Scope, signal } from "../signals";
+import { type Child, insertChild } from "./render";
 import {
-  effect,
-  getActiveScope,
-  onCleanup,
-  type ReadonlySignal,
-  runInScope,
-  Scope,
-  signal,
-  type WritableSignal
-} from "../signals";
-import { createContext, useContext } from "../signals/context";
-import { type Child, insertChild, type ReactiveValue, resolveValue } from "./render";
+  createResource,
+  type Resource,
+  type ResourceActions,
+  SuspenseContext,
+  type SuspenseContextValue
+} from "./resource";
 
-// Suspense Context for tracking active async requests
-export interface SuspenseContextValue {
-  registerPromise(p: Promise<any>): void;
-}
-
-export const SuspenseContext = createContext<SuspenseContextValue | null>(null);
-
-export interface ResourceActions<T> {
-  mutate(value: T): void;
-  refetch(): Promise<T>;
-  readonly loading: ReadonlySignal<boolean>;
-  readonly error: ReadonlySignal<any>;
-}
-
-export type Resource<T> = ReadonlySignal<T | undefined> & ResourceActions<T>;
-
-/**
- * Create an asynchronous resource tied to optional source signals and suspense boundaries
- */
-export function createResource<T>(fetcher: () => Promise<T>): Resource<T>;
-export function createResource<T, S>(
-  source: ReactiveValue<S>,
-  fetcher: (source: S) => Promise<T>
-): Resource<T>;
-export function createResource<T, S>(
-  sourceOrFetcher: ReactiveValue<S> | (() => Promise<T>),
-  maybeFetcher?: (source: S) => Promise<T>
-): Resource<T> {
-  const isDirect = typeof maybeFetcher !== "function";
-  const fetcher = isDirect ? (sourceOrFetcher as () => Promise<T>) : maybeFetcher!;
-  const source = isDirect ? null : (sourceOrFetcher as ReactiveValue<S>);
-
-  const data: WritableSignal<T | undefined> = signal<T | undefined>(undefined);
-  const loading = signal<boolean>(true);
-  const error = signal<any>(null);
-
-  let currentPromise: Promise<T> | null = null;
-  let requestId = 0;
-
-  const load = async (arg?: S): Promise<T> => {
-    const currentReq = ++requestId;
-    loading.set(true);
-    error.set(null);
-
-    const promise = isDirect ? (fetcher as () => Promise<T>)() : fetcher(arg!);
-    currentPromise = promise;
-
-    const suspense = useContext(SuspenseContext);
-    if (suspense) {
-      suspense.registerPromise(promise);
-    }
-
-    try {
-      const res = await promise;
-      if (currentReq === requestId) {
-        data.set(res);
-        loading.set(false);
-        currentPromise = null;
-      }
-      return res;
-    } catch (err) {
-      if (currentReq === requestId) {
-        error.set(err);
-        loading.set(false);
-        currentPromise = null;
-      }
-      throw err;
-    }
-  };
-
-  if (source) {
-    effect(() => {
-      const sourceVal = resolveValue(source);
-      if (sourceVal !== false && sourceVal !== null && sourceVal !== undefined) {
-        load(sourceVal).catch(() => {});
-      }
-    });
-  } else {
-    load().catch(() => {});
-  }
-
-  const accessor = ((): T | undefined => {
-    if (loading() && currentPromise) {
-      const suspense = useContext(SuspenseContext);
-      if (suspense) {
-        suspense.registerPromise(currentPromise);
-      }
-    }
-    return data();
-  }) as Resource<T>;
-
-  Object.defineProperties(accessor, {
-    loading: { get: () => loading },
-    error: { get: () => error },
-    mutate: { value: (val: T) => data.set(val) },
-    refetch: { value: () => (source ? load(resolveValue(source)) : load()) }
-  });
-
-  return accessor;
-}
+export {
+  type Component,
+  type LazyComponent,
+  lazy
+} from "./lazy";
+export {
+  createResource,
+  type Resource,
+  type ResourceActions,
+  SuspenseContext,
+  type SuspenseContextValue
+};
 
 export interface SuspenseProps {
   fallback: Child;
@@ -118,9 +27,23 @@ export interface SuspenseProps {
 }
 
 /**
- * Suspense boundary for zero-VDOM async coordination
+ * Suspense boundary for fine-grained async coordination.
+ * Displays the `fallback` UI while child async resources or queries are loading.
+ *
+ * @example
+ * ```tsx
+ * <Suspense fallback={<div>Loading profile...</div>}>
+ *   <UserProfile />
+ * </Suspense>
+ * ```
  */
-export function Suspense(props: SuspenseProps): Node {
+export function Suspense(props: SuspenseProps): any {
+  if (typeof document === "undefined") {
+    return typeof props.children === "function"
+      ? (props.children as () => Child)()
+      : props.children;
+  }
+
   const marker = document.createTextNode("");
   const initialFrag = document.createDocumentFragment();
   const pendingCount = signal(0);
@@ -166,11 +89,11 @@ export function Suspense(props: SuspenseProps): Node {
     currentScope = new Scope(getActiveScope());
 
     runInScope(currentScope, () => {
-      const SuspenseProvider = SuspenseContext.Provider;
-      let rendered: any;
       let threwPromise: Promise<any> | null = null;
+      let rendered: any = null;
 
       try {
+        const SuspenseProvider = SuspenseContext.Provider;
         rendered = SuspenseProvider({
           value: suspenseValue,
           children: props.children
@@ -208,9 +131,34 @@ export interface ErrorBoundaryProps {
 }
 
 /**
- * ErrorBoundary catches rendering and effect errors in subtrees
+ * Catches JavaScript rendering and effect errors in descendant subtrees
+ * and displays a fallback UI instead of crashing the application.
+ *
+ * @example
+ * ```tsx
+ * <ErrorBoundary fallback={(err, reset) => (
+ *   <div>
+ *     <p>Something went wrong: {err.message}</p>
+ *     <button onClick={reset}>Retry</button>
+ *   </div>
+ * )}>
+ *   <RiskyComponent />
+ * </ErrorBoundary>
+ * ```
  */
-export function ErrorBoundary(props: ErrorBoundaryProps): Node {
+export function ErrorBoundary(props: ErrorBoundaryProps): any {
+  if (typeof document === "undefined") {
+    try {
+      return typeof props.children === "function"
+        ? (props.children as () => Child)()
+        : props.children;
+    } catch (err: any) {
+      return typeof props.fallback === "function"
+        ? (props.fallback as any)(err, () => {})
+        : props.fallback;
+    }
+  }
+
   const marker = document.createTextNode("");
   const initialFrag = document.createDocumentFragment();
   const currentError = signal<any>(null);
@@ -281,64 +229,4 @@ export function ErrorBoundary(props: ErrorBoundaryProps): Node {
   });
 
   return initialFrag;
-}
-
-export type Component<P = any> = (props: P) => Child;
-
-export type LazyComponent<T extends Component<any>> = T & {
-  preload(): Promise<T>;
-};
-
-/**
- * Lazy load an asynchronous component with Suspense boundary coordination and preloading
- */
-export function lazy<T extends Component<any>>(
-  importer: () => Promise<{ default: T } | T>
-): LazyComponent<T> {
-  let loadedComponent: T | null = null;
-  let loadingPromise: Promise<T> | null = null;
-
-  const preload = (): Promise<T> => {
-    if (loadedComponent) {
-      return Promise.resolve(loadedComponent);
-    }
-    if (!loadingPromise) {
-      loadingPromise = importer()
-        .then((mod) => {
-          const comp =
-            mod && typeof mod === "object" && "default" in mod
-              ? (mod as { default: T }).default
-              : (mod as T);
-          loadedComponent = comp;
-          return comp;
-        })
-        .catch((err) => {
-          loadingPromise = null;
-          throw err;
-        });
-    }
-    return loadingPromise;
-  };
-
-  const LazyWrapper = ((props: any) => {
-    if (loadedComponent) {
-      return loadedComponent(props);
-    }
-
-    const promise = preload();
-    const suspense = useContext(SuspenseContext);
-    if (suspense) {
-      suspense.registerPromise(promise);
-    }
-
-    const res = createResource(() => promise);
-    return () => {
-      const Comp = res();
-      return Comp ? Comp(props) : null;
-    };
-  }) as LazyComponent<T>;
-
-  LazyWrapper.preload = preload;
-
-  return LazyWrapper;
 }

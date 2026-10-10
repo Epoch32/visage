@@ -57,7 +57,19 @@ export class Scope {
 }
 
 /**
- * Register a cleanup callback for the current running effect or active scope
+ * Register a cleanup callback for the current running effect or active scope.
+ *
+ * Runs automatically when the enclosing component/scope unmounts or before
+ * the effect re-executes.
+ *
+ * @example
+ * ```tsx
+ * function TimerComponent() {
+ *   const id = setInterval(() => console.log("tick"), 1000);
+ *   onCleanup(() => clearInterval(id));
+ *   return <div>Timer running</div>;
+ * }
+ * ```
  */
 export function onCleanup(fn: CleanupFn): void {
   if (currentSubscriber && "addCleanup" in currentSubscriber) {
@@ -68,7 +80,25 @@ export function onCleanup(fn: CleanupFn): void {
 }
 
 /**
- * Create an isolated reactive root scope
+ * Create an isolated reactive root scope that outlives the current execution context.
+ *
+ * Computations and signals created inside `fn` will not be tied to any parent scope
+ * and will persist until the provided `dispose` callback is invoked.
+ *
+ * @example
+ * ```tsx
+ * const dispose = createRoot((dispose) => {
+ *   const count = signal(0);
+ *   effect(() => console.log(count()));
+ *   return dispose;
+ * });
+ *
+ * // Later, dispose of all memory & subscribers
+ * dispose();
+ * ```
+ *
+ * @param fn - A factory function receiving the `dispose` callback
+ * @returns The return value of `fn`
  */
 export function createRoot<T>(fn: (dispose: () => void) => T): T {
   const prevScope = currentScope;
@@ -82,7 +112,7 @@ export function createRoot<T>(fn: (dispose: () => void) => T): T {
 }
 
 /**
- * Run a function with a specified scope active
+ * Run a function with a specified reactive scope active.
  */
 export function runInScope<T>(scope: Scope | null, fn: () => T): T {
   const prevScope = currentScope;
@@ -95,7 +125,7 @@ export function runInScope<T>(scope: Scope | null, fn: () => T): T {
 }
 
 /**
- * Get the currently active scope
+ * Get the currently active reactive scope.
  */
 export function getActiveScope(): Scope | null {
   return getCurrentScope();
