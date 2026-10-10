@@ -46,6 +46,10 @@
       "types": "./src/rpc/index.ts",
       "import": "./src/rpc/index.ts"
     },
+    "./api": {
+      "types": "./src/api/index.ts",
+      "import": "./src/api/index.ts"
+    },
     "./style": {
       "types": "./src/style/index.ts",
       "import": "./src/style/index.ts"

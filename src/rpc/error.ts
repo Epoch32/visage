@@ -30,16 +30,41 @@ export class RPCError extends Error {
   readonly status: number;
   readonly issues?: ValidationIssue[];
 
-  constructor(options: {
-    code: RPCErrorCode;
-    message?: string;
-    issues?: ValidationIssue[];
-    cause?: unknown;
-  }) {
-    super(options.message ?? options.code, { cause: options.cause });
-    this.name = "RPCError";
-    this.code = options.code;
-    this.status = ERROR_CODE_TO_STATUS[options.code] ?? 500;
-    this.issues = options.issues;
+  constructor(
+    codeOrStatusOrOptions:
+      | RPCErrorCode
+      | number
+      | {
+          code: RPCErrorCode;
+          message?: string;
+          issues?: ValidationIssue[];
+          cause?: unknown;
+        },
+    message?: string
+  ) {
+    if (typeof codeOrStatusOrOptions === "number") {
+      const code = STATUS_TO_ERROR_CODE[codeOrStatusOrOptions] || "INTERNAL_SERVER_ERROR";
+      super(message || code);
+      this.name = "RPCError";
+      this.code = code;
+      this.status = codeOrStatusOrOptions;
+    } else if (typeof codeOrStatusOrOptions === "string") {
+      super(message || codeOrStatusOrOptions);
+      this.name = "RPCError";
+      this.code = codeOrStatusOrOptions;
+      this.status = ERROR_CODE_TO_STATUS[codeOrStatusOrOptions] || 500;
+    } else {
+      super(codeOrStatusOrOptions.message ?? codeOrStatusOrOptions.code, {
+        cause: codeOrStatusOrOptions.cause
+      });
+      this.name = "RPCError";
+      this.code = codeOrStatusOrOptions.code;
+      this.status = ERROR_CODE_TO_STATUS[codeOrStatusOrOptions.code] ?? 500;
+      this.issues = codeOrStatusOrOptions.issues;
+    }
+  }
+
+  get statusCode(): number {
+    return this.status;
   }
 }
