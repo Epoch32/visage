@@ -2,7 +2,7 @@
 
 > **Lightning-fast, zero-VDOM, fine-grained reactive full-stack UI framework.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-blue.svg)](LICENSE)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](tsconfig.json)
 [![Tests: Passing](https://img.shields.io/badge/Tests-115%20Passed-brightgreen.svg)](tests/)
 [![Biome: Checked](https://img.shields.io/badge/Linter-Biome-green.svg)](biome.json)
@@ -99,4 +99,4 @@ bun run check
 
 ## 📄 License
 
-MIT © 2026 Visage Contributors.
+Mozilla Public License 2.0 (MPL-2.0) © 2026 Visage Contributors.
