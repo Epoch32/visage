@@ -1,17 +1,11 @@
 import { type Child, insertChild } from "../dom/render";
-import { getActiveScope, runInScope, Scope, untrack } from "./signal";
+import { getActiveScope, runInScope, Scope } from "./scope";
+import { untrack } from "./system";
 
 export interface Context<T> {
   id: symbol;
   defaultValue: T;
   Provider: (props: { value: T; children: Child }) => any;
-}
-
-// Extend Scope with context registry
-declare module "./signal" {
-  interface Scope {
-    context?: Map<symbol, any>;
-  }
 }
 
 /**
