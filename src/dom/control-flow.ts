@@ -33,11 +33,12 @@ export function Show<T>(props: ShowProps<T>): any {
     return props.fallback ?? null;
   }
 
-  const marker = document.createTextNode("");
+  const marker = document.createComment("visage-show");
   const initialFrag = document.createDocumentFragment();
+  initialFrag.appendChild(marker);
+
   let currentScope: Scope | null = null;
   let currentContent: Node[] = [];
-  let isMounted = false;
 
   effect(() => {
     const condition = resolveValue(props.when);
@@ -75,26 +76,34 @@ export function Show<T>(props: ShowProps<T>): any {
       currentScope = new Scope(getActiveScope());
       untrack(() => {
         runInScope(currentScope, () => {
-          insertChild(frag, props.fallback);
+          const fallbackRes =
+            typeof props.fallback === "function"
+              ? (props.fallback as () => Child)()
+              : props.fallback;
+          insertChild(frag, fallbackRes);
         });
       });
     }
 
     currentContent = Array.from(frag.childNodes);
 
-    if (marker.parentNode) {
-      marker.parentNode.insertBefore(frag, marker);
-    } else if (!isMounted) {
-      initialFrag.appendChild(frag);
+    const parent = marker.parentNode;
+    if (parent) {
+      parent.insertBefore(frag, marker);
     }
   });
-
-  isMounted = true;
-  initialFrag.appendChild(marker);
 
   onCleanup(() => {
     if (currentScope) {
       currentScope.dispose();
+    }
+    for (const node of currentContent) {
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+    }
+    if (marker.parentNode) {
+      marker.parentNode.removeChild(marker);
     }
   });
 
