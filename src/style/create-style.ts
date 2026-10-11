@@ -4,6 +4,7 @@ import { type ClassValue, cx } from "./cx";
 import { getScopeId } from "./hash";
 import { styleManager } from "./manager";
 import { scopeCSS } from "./parser";
+import { formatStyleProp } from "./scale";
 
 /**
  * Standard CSS Properties interface with full TypeScript & VS Code IntelliSense,
@@ -32,33 +33,8 @@ export type StyleClasses<T extends string = string> = {
     cx: (...args: ClassValue[]) => string;
   };
 
-const UNITLESS_PROPERTIES = new Set([
-  "animationIterationCount",
-  "aspectRatio",
-  "borderImageSlice",
-  "columnCount",
-  "columns",
-  "flex",
-  "flexGrow",
-  "flexShrink",
-  "flexOrder",
-  "fontWeight",
-  "lineHeight",
-  "opacity",
-  "order",
-  "orphans",
-  "scale",
-  "tabSize",
-  "widows",
-  "zIndex",
-  "zoom"
-]);
-
 function formatCSSValue(prop: string, val: any): string {
-  if (typeof val === "number" && val !== 0 && !UNITLESS_PROPERTIES.has(prop)) {
-    return `${val}px`;
-  }
-  return String(val);
+  return formatStyleProp(prop, val);
 }
 
 /**
@@ -148,7 +124,7 @@ export function createStyle<T extends string = string>(
     cssInput = templateOrObject;
     options = valuesOrOptions[0];
   } else {
-    const template = templateOrObject as TemplateStringsArray;
+    const template = templateOrObject as unknown as TemplateStringsArray;
     for (let i = 0; i < template.length; i++) {
       cssInput += template[i];
       if (i < valuesOrOptions.length) {

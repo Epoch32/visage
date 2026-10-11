@@ -9,6 +9,7 @@ import {
   Scope
 } from "../signals";
 import { hasReactiveClass, normalizeClass } from "../style/cx";
+import { formatStyleProp } from "../style/scale";
 
 export type ReactiveValue<T> = T | ReadonlySignal<T> | (() => T);
 export type Child =
@@ -106,6 +107,19 @@ export function setAttribute(el: HTMLElement | SVGElement, key: string, value: a
   }
 }
 
+function setStyleProperty(el: HTMLElement | SVGElement, prop: string, val: any): void {
+  const formatted = formatStyleProp(prop, val);
+  if (prop.startsWith("--") || prop.includes("-")) {
+    if (formatted === "") {
+      el.style.removeProperty(prop);
+    } else {
+      el.style.setProperty(prop, formatted);
+    }
+  } else {
+    (el.style as any)[prop] = formatted;
+  }
+}
+
 function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
   if (
     value === null ||
@@ -143,10 +157,10 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
         const styleVal = value[styleKey];
         if (isReactive(styleVal)) {
           effect(() => {
-            (el.style as any)[styleKey] = resolveValue(styleVal) ?? "";
+            setStyleProperty(el, styleKey, resolveValue(styleVal));
           });
         } else {
-          (el.style as any)[styleKey] = styleVal ?? "";
+          setStyleProperty(el, styleKey, styleVal);
         }
       }
     }

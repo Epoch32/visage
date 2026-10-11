@@ -403,6 +403,29 @@ export class MockElement extends MockNode {
       }
     }
   }
+
+  get children(): MockElement[] {
+    return this.childNodes.filter((c): c is MockElement => c instanceof MockElement);
+  }
+
+  get outerHTML(): string {
+    const tag = this.tagName.toLowerCase();
+    let attrs = "";
+    for (const [k, v] of this.attributes) {
+      attrs += ` ${k}="${v}"`;
+    }
+    const styleEntries = Object.entries(this.style);
+    if (styleEntries.length > 0 && !this.attributes.has("style")) {
+      const styleStr = styleEntries
+        .map(([k, v]) => `${k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v}`)
+        .join("; ");
+      attrs += ` style="${styleStr}"`;
+    }
+    const inner = this.childNodes
+      .map((c) => (c instanceof MockElement ? c.outerHTML : (c as any).data || c.textContent || ""))
+      .join("");
+    return `<${tag}${attrs}>${inner}</${tag}>`;
+  }
 }
 
 export function setupDOM() {

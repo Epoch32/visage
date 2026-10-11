@@ -1,4 +1,5 @@
-import { type Child, insertChild, setAttribute } from "../dom";
+import { type Child, insertChild, resolveValue, setAttribute } from "../dom";
+import { formatStyleProp } from "../style/scale";
 
 export type { JSX } from "./jsx";
 
@@ -51,12 +52,19 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
           if (resolved) attributes.set("class", resolved);
         } else if (propName === "style") {
           const val = restProps[propName];
-          const resolved = typeof val === "function" ? val() : val;
+          const resolved = resolveValue(val);
           if (typeof resolved === "string") {
             attributes.set("style", resolved);
           } else if (typeof resolved === "object" && resolved !== null) {
             const styleStr = Object.entries(resolved)
-              .map(([k, v]) => `${k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v}`)
+              .map(([k, v]) => {
+                const finalVal = resolveValue(v);
+                const formatted = formatStyleProp(k, finalVal);
+                if (!formatted) return "";
+                const kebab = k.startsWith("--") ? k : k.replace(/([A-Z])/g, "-$1").toLowerCase();
+                return `${kebab}: ${formatted}`;
+              })
+              .filter(Boolean)
               .join("; ");
             if (styleStr) attributes.set("style", styleStr);
           }

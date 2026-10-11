@@ -225,6 +225,34 @@ export {
   styleManager,
   useStyle
 } from "./style";
+// Spatial Engine & Semantic Layout Primitives
+export {
+  type BaseLayoutProps,
+  Center,
+  type CenterProps,
+  DIMENSION_KEYWORDS,
+  em,
+  fluid,
+  formatStyleProp,
+  glass,
+  type GlassOptions,
+  Grid,
+  type GridProps,
+  px,
+  radius,
+  type RadiusVariant,
+  rem,
+  Row,
+  type RowProps,
+  shadow,
+  type ShadowVariant,
+  space,
+  Spacer,
+  type SpacerProps,
+  Stack,
+  type StackProps,
+  UNITLESS_PROPERTIES
+} from "./style";
 // Template HTML Cloning & Tagged Template
 export {
   html,

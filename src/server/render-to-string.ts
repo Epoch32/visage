@@ -82,6 +82,22 @@ function renderNodeToString(node: any): string {
         }
       }
 
+      if (
+        node.style &&
+        typeof node.style === "object" &&
+        !(node.attributes instanceof Map && node.attributes.has("style"))
+      ) {
+        const styleEntries = Object.entries(node.style).filter(
+          ([_, v]) => typeof v === "string" && v.length > 0
+        );
+        if (styleEntries.length > 0) {
+          const styleStr = styleEntries
+            .map(([k, v]) => `${k.startsWith("--") ? k : k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v}`)
+            .join("; ");
+          attrStr += ` style="${escapeHtml(styleStr)}"`;
+        }
+      }
+
       if (isVoid) {
         return `<${tag}${attrStr} />`;
       }
