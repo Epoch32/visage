@@ -3,80 +3,80 @@
   "version": "1.0.0",
   "description": "Lightning-fast, zero-VDOM, fine-grained reactive UI library with full TypeScript support",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./signals": {
-      "types": "./src/signals/index.ts",
-      "import": "./src/signals/index.ts"
+      "types": "./dist/signals/index.d.ts",
+      "import": "./dist/signals/index.js"
     },
     "./dom": {
-      "types": "./src/dom/index.ts",
-      "import": "./src/dom/index.ts"
+      "types": "./dist/dom/index.d.ts",
+      "import": "./dist/dom/index.js"
     },
     "./router": {
-      "types": "./src/router/index.ts",
-      "import": "./src/router/index.ts"
+      "types": "./dist/router/index.d.ts",
+      "import": "./dist/router/index.js"
     },
     "./template": {
-      "types": "./src/template/index.ts",
-      "import": "./src/template/index.ts"
+      "types": "./dist/template/index.d.ts",
+      "import": "./dist/template/index.js"
     },
     "./server": {
-      "types": "./src/server/index.ts",
-      "import": "./src/server/index.ts"
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
     },
     "./form": {
-      "types": "./src/form/index.ts",
-      "import": "./src/form/index.ts"
+      "types": "./dist/form/index.d.ts",
+      "import": "./dist/form/index.js"
     },
     "./virtual": {
-      "types": "./src/virtual/index.ts",
-      "import": "./src/virtual/index.ts"
+      "types": "./dist/virtual/index.d.ts",
+      "import": "./dist/virtual/index.js"
     },
     "./query": {
-      "types": "./src/query/index.ts",
-      "import": "./src/query/index.ts"
+      "types": "./dist/query/index.d.ts",
+      "import": "./dist/query/index.js"
     },
     "./rpc": {
-      "types": "./src/rpc/index.ts",
-      "import": "./src/rpc/index.ts"
+      "types": "./dist/rpc/index.d.ts",
+      "import": "./dist/rpc/index.js"
     },
     "./api": {
-      "types": "./src/api/index.ts",
-      "import": "./src/api/index.ts"
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
     },
     "./style": {
-      "types": "./src/style/index.ts",
-      "import": "./src/style/index.ts"
+      "types": "./dist/style/index.d.ts",
+      "import": "./dist/style/index.js"
     },
     "./devtools": {
-      "types": "./src/devtools/index.ts",
-      "import": "./src/devtools/index.ts"
+      "types": "./dist/devtools/index.d.ts",
+      "import": "./dist/devtools/index.js"
     },
     "./vite": {
-      "types": "./src/vite/index.ts",
-      "import": "./src/vite/index.ts"
+      "types": "./dist/vite/index.d.ts",
+      "import": "./dist/vite/index.js"
     },
     "./ui": {
-      "types": "./src/ui/index.ts",
-      "import": "./src/ui/index.ts"
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
     },
     "./charts": {
-      "types": "./src/charts/index.ts",
-      "import": "./src/charts/index.ts"
+      "types": "./dist/charts/index.d.ts",
+      "import": "./dist/charts/index.js"
     },
     "./jsx-runtime": {
-      "types": "./src/jsx-runtime/index.ts",
-      "import": "./src/jsx-runtime/index.ts"
+      "types": "./dist/jsx-runtime/index.d.ts",
+      "import": "./dist/jsx-runtime/index.js"
     },
     "./jsx-dev-runtime": {
-      "types": "./src/jsx-runtime/index.ts",
-      "import": "./src/jsx-runtime/index.ts"
+      "types": "./dist/jsx-runtime/index.d.ts",
+      "import": "./dist/jsx-runtime/index.js"
     }
   },
   "sideEffects": false,
@@ -100,7 +100,7 @@
     "package.json"
   ],
   "scripts": {
-    "build": "bun build src/index.ts src/signals/index.ts src/dom/index.ts src/template/index.ts src/api/index.ts src/rpc/index.ts src/query/index.ts src/style/index.ts src/devtools/index.ts src/ui/index.ts src/virtual/index.ts src/form/index.ts src/server/index.ts src/router/index.ts src/vite/index.ts src/jsx-runtime/index.ts src/charts/index.ts --outdir dist/",
+    "build": "bun build src/index.ts src/signals/index.ts src/dom/index.ts src/template/index.ts src/api/index.ts src/rpc/index.ts src/query/index.ts src/style/index.ts src/devtools/index.ts src/ui/index.ts src/virtual/index.ts src/form/index.ts src/server/index.ts src/router/index.ts src/vite/index.ts src/jsx-runtime/index.ts src/charts/index.ts --root src --outdir dist/ && bun x tsc -p tsconfig.build.json",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",

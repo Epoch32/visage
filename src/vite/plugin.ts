@@ -57,6 +57,10 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
           ]
         },
         resolve: {
+          alias: [
+            { find: /^visage\/(.*)/, replacement: "@epoch32/visage/$1" },
+            { find: /^visage$/, replacement: "@epoch32/visage" }
+          ],
           dedupe: ["@epoch32/visage", "visage"]
         }
       };
