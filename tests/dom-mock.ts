@@ -152,6 +152,12 @@ export class MockComment extends MockNode {
 
 export class MockDocumentFragment extends MockNode {
   override nodeType = MockNode.DOCUMENT_FRAGMENT_NODE;
+
+  get outerHTML(): string {
+    return this.childNodes
+      .map((c) => (c as any).outerHTML || (c as any).data || c.textContent || "")
+      .join("");
+  }
 }
 
 export class MockElement extends MockNode {
@@ -163,6 +169,20 @@ export class MockElement extends MockNode {
   scrollLeft = 0;
   private _clientHeight?: number;
   private _clientWidth?: number;
+
+  getBoundingClientRect() {
+    return {
+      top: 0,
+      left: 0,
+      right: this.clientWidth,
+      bottom: this.clientHeight,
+      width: this.clientWidth,
+      height: this.clientHeight,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    };
+  }
 
   get clientHeight(): number {
     if (this._clientHeight !== undefined) return this._clientHeight;

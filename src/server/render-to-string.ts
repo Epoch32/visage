@@ -41,6 +41,9 @@ export function renderChildToString(child: Child): string {
   }
 
   if (typeof child === "object" && "nodeType" in child) {
+    if ((child as any).nodeType === 11 && (child as any).childNodes) {
+      return (child as any).childNodes.map((c: any) => renderChildToString(c)).join("");
+    }
     return (child as any).outerHTML || (child as any).textContent || "";
   }
 
@@ -71,6 +74,10 @@ function renderNodeToString(node: any): string {
   }
 
   if (typeof node === "object" && node !== null) {
+    if (node.nodeType === 11) {
+      return (node.childNodes || []).map((c: any) => renderNodeToString(c)).join("");
+    }
+
     if ("tagName" in node) {
       const tag = String(node.tagName).toLowerCase();
       const isVoid = VOID_ELEMENTS.has(tag);
@@ -92,7 +99,10 @@ function renderNodeToString(node: any): string {
         );
         if (styleEntries.length > 0) {
           const styleStr = styleEntries
-            .map(([k, v]) => `${k.startsWith("--") ? k : k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v}`)
+            .map(
+              ([k, v]) =>
+                `${k.startsWith("--") ? k : k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v}`
+            )
             .join("; ");
           attrStr += ` style="${escapeHtml(styleStr)}"`;
         }

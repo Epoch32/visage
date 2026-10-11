@@ -162,16 +162,7 @@ export function shadow(variant: ShadowVariant | string): string {
   return variant;
 }
 
-export type RadiusVariant =
-  | "none"
-  | "sm"
-  | "md"
-  | "lg"
-  | "xl"
-  | "2xl"
-  | "3xl"
-  | "full"
-  | number;
+export type RadiusVariant = "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full" | number;
 
 export const RADIUS_PRESETS: Record<string, string> = {
   none: "0px",
@@ -207,10 +198,7 @@ export interface GlassOptions {
  * Generates tactile glassmorphism CSS styles with backdrop filters and frosted borders.
  */
 export function glass(options: GlassOptions = {}): Record<string, string> {
-  const blurVal =
-    typeof options.blur === "number"
-      ? `${options.blur}px`
-      : options.blur ?? "20px";
+  const blurVal = typeof options.blur === "number" ? `${options.blur}px` : (options.blur ?? "20px");
   const tintVal = options.tint ?? "rgba(255, 255, 255, 0.65)";
   const borderVal = options.border ?? "1px solid rgba(255, 255, 255, 0.75)";
 

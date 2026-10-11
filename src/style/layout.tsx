@@ -216,14 +216,7 @@ export interface RowProps extends BaseLayoutProps {
   inline?: boolean;
 }
 
-const ROW_EXCLUDE = new Set([
-  ...COMMON_EXCLUDE,
-  "align",
-  "justify",
-  "reversed",
-  "wrap",
-  "inline"
-]);
+const ROW_EXCLUDE = new Set([...COMMON_EXCLUDE, "align", "justify", "reversed", "wrap", "inline"]);
 
 /**
  * <Row> Layout Primitive
@@ -242,7 +235,7 @@ export function Row(props: RowProps): Child {
 
   layoutStyles.display = props.inline ? "inline-flex" : "flex";
   layoutStyles.flexDirection = props.reversed ? "row-reverse" : "row";
-  layoutStyles.alignItems = props.align ? ALIGN_MAP[props.align] ?? props.align : "center";
+  layoutStyles.alignItems = props.align ? (ALIGN_MAP[props.align] ?? props.align) : "center";
 
   if (props.justify && JUSTIFY_MAP[props.justify]) {
     layoutStyles.justifyContent = JUSTIFY_MAP[props.justify]!;

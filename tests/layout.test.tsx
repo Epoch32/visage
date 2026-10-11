@@ -2,23 +2,23 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { setupDOM } from "./dom-mock";
 
 setupDOM();
+
 import {
   Center,
-  createRoot,
   fluid,
-  glass,
   Grid,
+  glass,
   px,
+  Row,
   radius,
   rem,
   render,
   renderToString,
-  Row,
+  Spacer,
+  Stack,
   shadow,
   signal,
-  space,
-  Spacer,
-  Stack
+  space
 } from "../src";
 
 describe("Visage Spatial Engine & Layout Primitives", () => {
@@ -219,7 +219,9 @@ describe("Visage Spatial Engine & Layout Primitives", () => {
 
       const el = container.querySelector("#fluid-grid") as HTMLElement;
       expect(el.style.display).toBe("grid");
-      expect(el.style.gridTemplateColumns).toContain("repeat(auto-fit, minmax(min(100%, 250px), 1fr))");
+      expect(el.style.gridTemplateColumns).toContain(
+        "repeat(auto-fit, minmax(min(100%, 250px), 1fr))"
+      );
       expect(el.style.gap).toBe("24px");
     });
   });

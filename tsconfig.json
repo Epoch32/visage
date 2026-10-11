@@ -28,6 +28,7 @@
       "visage/devtools": ["./src/devtools/index.ts"],
       "visage/api": ["./src/api/index.ts"],
       "visage/ui": ["./src/ui/index.ts"],
+      "visage/charts": ["./src/charts/index.ts"],
       "visage/vite": ["./src/vite/index.ts"],
       "visage/*": ["./src/*"]
     },
