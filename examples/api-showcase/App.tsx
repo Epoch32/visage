@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { computed, For, Show, signal, VisageDevTools } from "visage";
 import { createApiClient } from "visage/api";
 

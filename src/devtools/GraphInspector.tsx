@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { Show } from "../dom";
 import type { WritableSignal } from "../signals";
 import type { SignalRecord } from "./types";

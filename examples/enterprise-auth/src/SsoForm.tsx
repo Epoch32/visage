@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { ArrowRight, Building2, ExternalLink, KeyRound, ShieldAlert } from "lucide-react";
 import { createForm, v } from "visage/form";
 import { toast } from "visage/ui";

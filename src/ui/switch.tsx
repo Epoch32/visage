@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom/render";
 import { createControllableSignal } from "./utils";
 

@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom";
 import { jsx } from "../jsx-runtime";
 import type { ClassProp, HTMLAttributes } from "../jsx-runtime/jsx";

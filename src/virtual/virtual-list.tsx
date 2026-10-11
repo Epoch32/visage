@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { For } from "../dom/control-flow";
 import { computed, signal } from "../signals";
 import { createVirtualizer } from "./virtualizer";

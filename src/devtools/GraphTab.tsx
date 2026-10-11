@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { For } from "../dom";
 import { createSignal, type WritableSignal } from "../signals";
 import { GraphInspector } from "./GraphInspector";

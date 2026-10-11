@@ -92,6 +92,7 @@
     "format": "bun x @biomejs/biome format --write .",
     "example:survey": "bun examples/survey/server.ts",
     "example:ui": "vite examples/ui-showcase",
+    "example:charts": "vite examples/charts-showcase",
     "example:auth": "vite examples/enterprise-auth",
     "example:api": "bun examples/api-showcase/server.ts"
   },

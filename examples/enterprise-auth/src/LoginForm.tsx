@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import {
   ArrowRight,
   Eye,

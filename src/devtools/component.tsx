@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { onCleanup, signal } from "../signals";
 import { Style } from "../style";
 import { Tabs } from "../ui/tabs";

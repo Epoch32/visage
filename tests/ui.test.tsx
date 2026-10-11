@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { beforeEach, describe, expect, it } from "bun:test";
 import { setupDOM } from "./dom-mock";
 

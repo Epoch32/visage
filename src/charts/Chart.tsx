@@ -1,7 +1,6 @@
-/** @jsxImportSource visage */
 import { type Child, resolveValue } from "../dom";
 import type { ClassProp, ReactiveProp } from "../jsx-runtime/jsx";
-import { computed, onCleanup, signal } from "../signals";
+import { computed, onCleanup, signal, untrack } from "../signals";
 import { ChartContext, type ChartContextValue } from "./context";
 import { createBandScale, createLinearScale } from "./scale";
 import type { AnyScale, HoverState, Margin, SeriesMeta } from "./types";
@@ -67,14 +66,18 @@ export function Chart(props: ChartProps): Child {
   const xDataKey = signal<string | undefined>(undefined);
 
   const registerSeries = (meta: SeriesMeta) => {
-    seriesList.update((prev) => {
-      if (prev.some((s) => s.id === meta.id)) return prev;
-      return [...prev, meta];
+    untrack(() => {
+      seriesList.update((prev) => {
+        if (prev.some((s) => s.id === meta.id)) return prev;
+        return [...prev, meta];
+      });
     });
   };
 
   const unregisterSeries = (id: string) => {
-    seriesList.update((prev) => prev.filter((s) => s.id !== id));
+    untrack(() => {
+      seriesList.update((prev) => prev.filter((s) => s.id !== id));
+    });
   };
 
   const hoverState = signal<HoverState>({
@@ -89,7 +92,9 @@ export function Chart(props: ChartProps): Child {
     const w = innerWidth();
     const key = xDataKey();
 
-    if (key && dataArr.length > 0 && typeof dataArr[0]?.[key] === "string") {
+    const hasBarSeries = untrack(() => seriesList().some((s) => s.type === "bar"));
+
+    if (hasBarSeries && key && dataArr.length > 0) {
       const categories = dataArr.map((d: any) => String(d[key]));
       return createBandScale(categories, [0, w], {
         paddingInner: 0.1,
@@ -211,6 +216,29 @@ export function Chart(props: ChartProps): Child {
     ...props.style
   };
 
+  const rawChildren = Array.isArray(props.children) ? props.children : [props.children];
+  const childrenList: any[] = [];
+  const stack = [...rawChildren];
+  while (stack.length > 0) {
+    const item = stack.shift();
+    if (Array.isArray(item)) {
+      stack.unshift(...item);
+    } else if (item !== null && item !== undefined && item !== false) {
+      childrenList.push(item);
+    }
+  }
+
+  const svgChildren: Child[] = [];
+  const overlayChildren: Child[] = [];
+
+  for (const child of childrenList) {
+    if (typeof child === "function" && (child as any).__visage_overlay) {
+      overlayChildren.push(child);
+    } else {
+      svgChildren.push(child);
+    }
+  }
+
   return ChartContext.Provider({
     value: ctxValue,
     children: () => (
@@ -232,8 +260,9 @@ export function Chart(props: ChartProps): Child {
           style={{ overflow: "visible", display: "block" }}
         >
           <title>{props.title ?? "Data Visualization Chart"}</title>
-          <g transform={`translate(${margin.left}, ${margin.top})`}>{props.children}</g>
+          <g transform={`translate(${margin.left}, ${margin.top})`}>{svgChildren}</g>
         </svg>
+        {overlayChildren}
       </div>
     )
   });

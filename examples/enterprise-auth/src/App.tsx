@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { Building2, ChevronDown, Globe2, Lock, ShieldCheck } from "lucide-react";
 import { createSignal } from "visage";
 import { VisageDevTools } from "visage/devtools";

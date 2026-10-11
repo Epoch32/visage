@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { Show } from "../dom/control-flow";
 import type { Child } from "../dom/render";
 import { createContext, useContext } from "../signals/context";

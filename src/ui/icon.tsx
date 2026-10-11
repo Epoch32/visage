@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom/render";
 
 export type IconNode = [string, Record<string, any>][];

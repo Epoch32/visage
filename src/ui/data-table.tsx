@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { For } from "../dom/control-flow";
 import type { Child } from "../dom/render";
 import { createSignal } from "../signals";

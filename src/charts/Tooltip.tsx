@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom";
 import type { ClassProp } from "../jsx-runtime/jsx";
 import { useChartContext } from "./context";
@@ -13,7 +12,7 @@ export interface TooltipProps {
 }
 
 export function ChartTooltip(props: TooltipProps): Child {
-  return () => {
+  const render = () => {
     const ctx = useChartContext();
     const hover = ctx.hoverState();
     if (!hover.active || !hover.datum) return null;
@@ -121,6 +120,8 @@ export function ChartTooltip(props: TooltipProps): Child {
       </div>
     );
   };
+  (render as any).__visage_overlay = true;
+  return render;
 }
 
 export const Tooltip = ChartTooltip;

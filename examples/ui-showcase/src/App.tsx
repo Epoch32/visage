@@ -1,5 +1,3 @@
-/** @jsxImportSource visage */
-
 import {
   Activity,
   Bell,

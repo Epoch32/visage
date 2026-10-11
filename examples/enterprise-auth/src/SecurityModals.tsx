@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { Check, KeyRound, Shield, X } from "lucide-react";
 import { createSignal } from "visage";
 import { Dialog, toast } from "visage/ui";

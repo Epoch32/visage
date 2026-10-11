@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom";
 import { onCleanup } from "../signals";
 import { useChartContext } from "./context";
@@ -45,7 +44,6 @@ export function Line(props: LineProps): Child {
 
           const xScale = ctx.xScale();
           const yScale = ctx.yScale();
-          const xKey = ctx.xDataKey();
 
           const points: Point[] = [];
           for (let i = 0; i < dataArr.length; i++) {
@@ -55,8 +53,7 @@ export function Line(props: LineProps): Child {
 
             let x = 0;
             if (xScale.type === "band") {
-              const cat = xKey ? item[xKey] : String(i);
-              x = xScale(cat) + xScale.bandwidth() / 2;
+              x = xScale(i) + xScale.bandwidth() / 2;
             } else {
               x = xScale(i);
             }

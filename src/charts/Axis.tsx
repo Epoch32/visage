@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom";
 import { onCleanup } from "../signals";
 import { useChartContext } from "./context";
@@ -46,7 +45,7 @@ export function XAxis(props: XAxisProps): Child {
       const bw = xScale.bandwidth();
       for (let i = 0; i < ticks.length; i++) {
         const val = ticks[i];
-        const x = xScale(val) + bw / 2;
+        const x = xScale(i) + bw / 2;
         const text = props.tickFormat ? props.tickFormat(val, i) : String(val);
         elements.push(
           <text x={x} y={h + 16} text-anchor="middle" font-size={fontSize} fill={stroke}>
@@ -60,9 +59,10 @@ export function XAxis(props: XAxisProps): Child {
       for (let i = 0; i < ticks.length; i++) {
         const tickIdx = ticks[i]!;
         const x = xScale(tickIdx);
-        const rawItem = dataArr[Math.round(tickIdx)];
-        const rawVal = props.dataKey && rawItem ? rawItem[props.dataKey] : tickIdx;
-        const text = props.tickFormat ? props.tickFormat(rawVal, i) : String(rawVal ?? tickIdx);
+        const idx = Math.max(0, Math.min(dataArr.length - 1, Math.round(tickIdx)));
+        const rawItem = dataArr[idx];
+        const rawVal = props.dataKey && rawItem ? rawItem[props.dataKey] : idx;
+        const text = props.tickFormat ? props.tickFormat(rawVal, i) : String(rawVal ?? idx);
 
         elements.push(
           <text x={x} y={h + 16} text-anchor="middle" font-size={fontSize} fill={stroke}>

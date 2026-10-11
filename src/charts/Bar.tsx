@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom";
 import { onCleanup } from "../signals";
 import { useChartContext } from "./context";
@@ -40,7 +39,6 @@ export function Bar(props: BarProps): Child {
 
           const xScale = ctx.xScale();
           const yScale = ctx.yScale();
-          const xKey = ctx.xDataKey();
           const baselineY = ctx.innerHeight();
 
           // Check if there are other Bar series to calculate grouped offsets
@@ -59,8 +57,7 @@ export function Bar(props: BarProps): Child {
             let slotW = 20;
 
             if (xScale.type === "band") {
-              const cat = xKey ? item[xKey] : String(i);
-              slotX = xScale(cat);
+              slotX = xScale(i);
               slotW = xScale.bandwidth();
             } else {
               const stepW = ctx.innerWidth() / Math.max(1, dataArr.length);

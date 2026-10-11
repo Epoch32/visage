@@ -28,6 +28,10 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     name: "visage:config",
     config(_userConfig, { command }) {
       return {
+        esbuild: {
+          jsx: "automatic",
+          jsxImportSource: "visage"
+        },
         oxc: {
           jsx: {
             runtime: "automatic",

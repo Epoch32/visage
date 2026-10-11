@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import type { Child } from "../dom";
 import type { ClassProp } from "../jsx-runtime/jsx";
 import { useChartContext } from "./context";
@@ -10,7 +9,7 @@ export interface LegendProps {
 }
 
 export function ChartLegend(props: LegendProps): Child {
-  return () => {
+  const render = () => {
     const ctx = useChartContext();
     const align = props.align ?? "center";
 
@@ -50,6 +49,8 @@ export function ChartLegend(props: LegendProps): Child {
       </div>
     );
   };
+  (render as any).__visage_overlay = true;
+  return render;
 }
 
 export const Legend = ChartLegend;

@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { Switch } from "../ui/switch";
 import type { DevToolsHub } from "./hub";
 

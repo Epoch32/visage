@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { render } from "visage";
 import { App } from "./App";
 

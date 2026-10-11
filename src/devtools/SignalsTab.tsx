@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { For, Show } from "../dom";
 import type { WritableSignal } from "../signals";
 import type { DevToolsHub } from "./hub";

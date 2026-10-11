@@ -1,4 +1,3 @@
-/** @jsxImportSource visage */
 import { Activity, CheckCircle2, Cpu, Globe2, ShieldCheck } from "lucide-react";
 
 export function BrandPanel() {
