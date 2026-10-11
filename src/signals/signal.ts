@@ -126,13 +126,37 @@ function resolveStorage(storageOption?: "local" | "session" | Storage): Storage 
   if (storageOption && typeof storageOption === "object") {
     return storageOption;
   }
-  if (typeof window === "undefined") {
+  if (storageOption === "session") {
+    try {
+      if (typeof sessionStorage !== "undefined") return sessionStorage;
+    } catch {}
+    try {
+      if (typeof window !== "undefined" && (window as any).sessionStorage) {
+        return (window as any).sessionStorage;
+      }
+    } catch {}
+    try {
+      if (typeof globalThis !== "undefined" && (globalThis as any).sessionStorage) {
+        return (globalThis as any).sessionStorage;
+      }
+    } catch {}
     return null;
   }
-  if (storageOption === "session") {
-    return typeof sessionStorage !== "undefined" ? sessionStorage : null;
-  }
-  return typeof localStorage !== "undefined" ? localStorage : null;
+
+  try {
+    if (typeof localStorage !== "undefined") return localStorage;
+  } catch {}
+  try {
+    if (typeof window !== "undefined" && (window as any).localStorage) {
+      return (window as any).localStorage;
+    }
+  } catch {}
+  try {
+    if (typeof globalThis !== "undefined" && (globalThis as any).localStorage) {
+      return (globalThis as any).localStorage;
+    }
+  } catch {}
+  return null;
 }
 
 export function signal<T>(

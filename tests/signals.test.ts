@@ -250,7 +250,8 @@ describe("Visage Signals", () => {
     it("supports shorthand persist: string key", () => {
       const mockStorage = new Map<string, string>();
       const origLocal = (globalThis as any).localStorage;
-      (globalThis as any).localStorage = {
+      const origWinLocal = typeof window !== "undefined" ? (window as any).localStorage : undefined;
+      const fakeStorage = {
         getItem: (k: string) => mockStorage.get(k) ?? null,
         setItem: (k: string, v: string) => {
           mockStorage.set(k, v);
@@ -265,18 +266,26 @@ describe("Visage Signals", () => {
         length: 0
       };
 
+      (globalThis as any).localStorage = fakeStorage;
+      if (typeof window !== "undefined") {
+        (window as any).localStorage = fakeStorage;
+      }
+
       try {
         const pref = signal("system", { persist: "user-pref" });
         expect(pref()).toBe("system");
 
         pref("compact");
         expect(pref()).toBe("compact");
-        expect(globalThis.localStorage.getItem("user-pref")).toBe(JSON.stringify("compact"));
+        expect(fakeStorage.getItem("user-pref")).toBe(JSON.stringify("compact"));
 
         const restored = signal("normal", { persist: "user-pref" });
         expect(restored()).toBe("compact");
       } finally {
         (globalThis as any).localStorage = origLocal;
+        if (typeof window !== "undefined") {
+          (window as any).localStorage = origWinLocal;
+        }
       }
     });
 
