@@ -56,7 +56,7 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
     onChange: props.onSelectionChange
   });
 
-  const [currentPage, setCurrentPage] = createSignal(0);
+  const [currentPage, setCurrentPage] = createSignal(0, { internal: true });
   const pageSize = props.pageSize ?? 10;
   const selectionMode = props.selection ?? "none";
 

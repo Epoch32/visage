@@ -18,15 +18,18 @@ export function createControllableSignal<T>(options: {
   onChange?: (value: T) => void;
 }): [ReadonlySignal<T>, (next: T | ((prev: T) => T)) => void] {
   const isControlled = typeof options.value === "function";
-  const internal = signal<T>(options.defaultValue as T);
+  const internal = signal<T>(options.defaultValue as T, { internal: true });
 
-  const getter = computed<T>(() => {
-    if (isControlled) {
-      const externalVal = options.value!();
-      if (externalVal !== undefined) return externalVal;
-    }
-    return internal();
-  });
+  const getter = computed<T>(
+    () => {
+      if (isControlled) {
+        const externalVal = options.value!();
+        if (externalVal !== undefined) return externalVal;
+      }
+      return internal();
+    },
+    { internal: true }
+  );
 
   const setter = (next: T | ((prev: T) => T)) => {
     const currentVal = getter();

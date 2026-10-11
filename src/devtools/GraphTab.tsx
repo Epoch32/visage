@@ -12,8 +12,10 @@ interface GraphTabProps {
 }
 
 export function GraphTab(props: GraphTabProps) {
-  const [filterType, setFilterType] = createSignal<"all" | "signal" | "computed">("all");
-  const [hoveredId, setHoveredId] = createSignal<string | null>(null);
+  const [filterType, setFilterType] = createSignal<"all" | "signal" | "computed">("all", {
+    internal: true
+  });
+  const [hoveredId, setHoveredId] = createSignal<string | null>(null, { internal: true });
 
   const allSignals = () => props.hub.signalsList();
 

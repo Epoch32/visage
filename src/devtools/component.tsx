@@ -18,6 +18,9 @@ export function VisageDevTools(props: DevToolsOptions = {}) {
   }
 
   const hub = devtoolsHub;
+  if (typeof window !== "undefined" && !(window as any).__VISAGE_DEVTOOLS__) {
+    (window as any).__VISAGE_DEVTOOLS__ = hub;
+  }
   if (props.initialOpen !== undefined) {
     hub.isOpen.set(props.initialOpen);
   }

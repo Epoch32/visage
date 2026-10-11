@@ -10,6 +10,7 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
 
   beforeEach(() => {
     setupDom();
+    (window as any).__VISAGE_DEVTOOLS__ = devtoolsHub;
     container = document.createElement("div");
     document.body.appendChild(container);
     devtoolsHub.clearAll();
