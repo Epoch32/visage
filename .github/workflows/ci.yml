@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Lint, Typecheck & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Biome Linter & Formatter Check
+        run: bun run check:ci
+
+      - name: TypeScript Static Analysis
+        run: bun run typecheck
+
+      - name: Run Test Suite
+        run: bun test
+
+      - name: Build Core Library Bundles
+        run: bun run build
+
+      - name: Verify Example App Builds
+        run: |
+          bun x vite build examples/charts-showcase
+          bun x vite build examples/ui-showcase
+          bun x vite build examples/enterprise-auth

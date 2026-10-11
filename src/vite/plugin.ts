@@ -41,6 +41,7 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
         },
         optimizeDeps: {
           exclude: [
+            "@epoch32/visage",
             "visage",
             "visage/signals",
             "visage/dom",
@@ -51,11 +52,12 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
             "visage/form",
             "visage/virtual",
             "visage/devtools",
-            "visage/api"
+            "visage/api",
+            "visage/charts"
           ]
         },
         resolve: {
-          dedupe: ["visage"]
+          dedupe: ["@epoch32/visage", "visage"]
         }
       };
     }
