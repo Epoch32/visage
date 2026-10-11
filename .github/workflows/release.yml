@@ -48,11 +48,16 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Setup Node.js for Trusted Publishing
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure latest npm for OIDC Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Ensure no stale auth token in npm config
+        run: npm config delete //registry.npmjs.org/:_authToken --location=user 2>/dev/null || true
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile
@@ -65,5 +70,3 @@ jobs:
 
       - name: Publish to NPM via Trusted Publishing (OIDC)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
