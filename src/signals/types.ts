@@ -29,10 +29,19 @@ export interface WritableSignal<T> extends ReadonlySignal<T> {
   value: T;
 }
 
+export interface PersistOptions<T> {
+  key: string;
+  storage?: "local" | "session" | Storage;
+  serialize?: (value: T) => string;
+  deserialize?: (raw: string) => T;
+  syncTabs?: boolean;
+}
+
 export interface SignalOptions<T> {
   name?: string;
   equals?: (a: T, b: T) => boolean;
   internal?: boolean;
+  persist?: string | PersistOptions<T>;
 }
 
 export interface ComputedOptions {

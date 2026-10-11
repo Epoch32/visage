@@ -4,6 +4,7 @@ import {
   computed,
   createContext,
   createRoot,
+  createSignal,
   createStore,
   effect,
   mutateStore,
@@ -202,5 +203,142 @@ describe("Visage Signals", () => {
     } finally {
       console.warn = origWarn;
     }
+  });
+
+  describe("First-Class Signal Persistence", () => {
+    it("persists signal values to storage and initializes from storage", () => {
+      const mockStorage = new Map<string, string>();
+      const fakeStorage: Storage = {
+        getItem: (k: string) => mockStorage.get(k) ?? null,
+        setItem: (k: string, v: string) => {
+          mockStorage.set(k, v);
+        },
+        removeItem: (k: string) => {
+          mockStorage.delete(k);
+        },
+        clear: () => {
+          mockStorage.clear();
+        },
+        key: (_i: number) => null,
+        length: 0
+      };
+
+      // 1. Initial state with no prior value
+      const [theme, setTheme] = createSignal("light", {
+        persist: {
+          key: "app-theme",
+          storage: fakeStorage
+        }
+      });
+      expect(theme()).toBe("light");
+
+      // 2. Set value, verify it is saved to storage
+      setTheme("dark");
+      expect(theme()).toBe("dark");
+      expect(fakeStorage.getItem("app-theme")).toBe(JSON.stringify("dark"));
+
+      // 3. New signal initialized with same key hydrates from storage
+      const [hydratedTheme] = createSignal("system", {
+        persist: {
+          key: "app-theme",
+          storage: fakeStorage
+        }
+      });
+      expect(hydratedTheme()).toBe("dark");
+    });
+
+    it("supports shorthand persist: string key", () => {
+      const mockStorage = new Map<string, string>();
+      const origLocal = (globalThis as any).localStorage;
+      (globalThis as any).localStorage = {
+        getItem: (k: string) => mockStorage.get(k) ?? null,
+        setItem: (k: string, v: string) => {
+          mockStorage.set(k, v);
+        },
+        removeItem: (k: string) => {
+          mockStorage.delete(k);
+        },
+        clear: () => {
+          mockStorage.clear();
+        },
+        key: (_i: number) => null,
+        length: 0
+      };
+
+      try {
+        const pref = signal("system", { persist: "user-pref" });
+        expect(pref()).toBe("system");
+
+        pref("compact");
+        expect(pref()).toBe("compact");
+        expect(globalThis.localStorage.getItem("user-pref")).toBe(JSON.stringify("compact"));
+
+        const restored = signal("normal", { persist: "user-pref" });
+        expect(restored()).toBe("compact");
+      } finally {
+        (globalThis as any).localStorage = origLocal;
+      }
+    });
+
+    it("supports custom serialize and deserialize handlers", () => {
+      const mockStorage = new Map<string, string>();
+      const fakeStorage: Storage = {
+        getItem: (k: string) => mockStorage.get(k) ?? null,
+        setItem: (k: string, v: string) => {
+          mockStorage.set(k, v);
+        },
+        removeItem: (k: string) => {
+          mockStorage.delete(k);
+        },
+        clear: () => {
+          mockStorage.clear();
+        },
+        key: (_i: number) => null,
+        length: 0
+      };
+
+      const [counter, setCounter] = createSignal(10, {
+        persist: {
+          key: "custom-count",
+          storage: fakeStorage,
+          serialize: (v) => `RAW:${v}`,
+          deserialize: (r) => Number.parseInt(r.replace("RAW:", ""), 10)
+        }
+      });
+      expect(counter()).toBe(10);
+
+      setCounter(42);
+      expect(fakeStorage.getItem("custom-count")).toBe("RAW:42");
+
+      const [restored] = createSignal(0, {
+        persist: {
+          key: "custom-count",
+          storage: fakeStorage,
+          serialize: (v) => `RAW:${v}`,
+          deserialize: (r) => Number.parseInt(r.replace("RAW:", ""), 10)
+        }
+      });
+      expect(restored()).toBe(42);
+    });
+
+    it("falls back gracefully when storage contains corrupted data", () => {
+      const fakeStorage: Storage = {
+        getItem: () => "invalid-non-json{{{{",
+        setItem: () => {},
+        removeItem: () => {},
+        clear: () => {},
+        key: () => null,
+        length: 0
+      };
+
+      const [theme] = createSignal("light", {
+        persist: {
+          key: "corrupt-theme",
+          storage: fakeStorage
+        }
+      });
+
+      expect(theme()).toBe("light");
+    });
   });
 });

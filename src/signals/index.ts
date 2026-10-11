@@ -49,6 +49,7 @@ export {
   COMPUTED_BRAND,
   type Dependency,
   isSignal,
+  type PersistOptions,
   type ReadonlySignal,
   SIGNAL_BRAND,
   type Subscriber,
