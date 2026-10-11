@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/Epoch32/visage/compare/visage-v1.1.0...visage-v1.1.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* copy jsx.d.ts to dist/jsx-runtime on build ([14c16ec](https://github.com/Epoch32/visage/commit/14c16ec3f94e2d30d9156f1213208cf2ce49d031))
+
 ## [1.1.0](https://github.com/Epoch32/visage/compare/visage-v1.0.0...visage-v1.1.0) (2026-10-11)
 
 
