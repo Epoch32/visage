@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/Epoch32/visage/compare/visage-v1.0.0...visage-v1.1.0) (2026-10-11)
+
+
+### Features
+
+* **build:** export compiled bundles and d.ts declarations with vite alias support ([4d44bd4](https://github.com/Epoch32/visage/commit/4d44bd493c7edd788095367b914b05d81308ead9))
+* **signals:** add first-class signal persistence with PersistOptions ([b0251b7](https://github.com/Epoch32/visage/commit/b0251b7a8ff523584e2a63c588f946faf3488973))
+
+
+### Bug Fixes
+
+* **signals:** check window, globalThis, and storage identifier for localStorage ([784d568](https://github.com/Epoch32/visage/commit/784d568d1971b6bb980451c4790c42ca6f22ae2e))
+
 ## 1.0.0 (2026-10-11)
 
 
