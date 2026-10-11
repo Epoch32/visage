@@ -80,6 +80,25 @@
     }
   },
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Epoch32/visage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Epoch32/visage/issues"
+  },
+  "homepage": "https://github.com/Epoch32/visage#readme",
+  "author": "Epoch32",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "scripts": {
     "build": "bun build src/index.ts src/signals/index.ts src/dom/index.ts src/template/index.ts src/api/index.ts src/rpc/index.ts src/query/index.ts src/style/index.ts src/devtools/index.ts src/ui/index.ts src/virtual/index.ts src/form/index.ts src/server/index.ts src/router/index.ts src/vite/index.ts src/jsx-runtime/index.ts src/charts/index.ts --outdir dist/",
     "test": "bun test",
@@ -88,8 +107,11 @@
     "test:vitest": "vitest run",
     "typecheck": "bun x tsc --noEmit",
     "check": "bun x @biomejs/biome check --write .",
+    "check:ci": "bun x @biomejs/biome check .",
     "lint": "bun x @biomejs/biome lint .",
     "format": "bun x @biomejs/biome format --write .",
+    "verify": "bun test && bun run build",
+    "prepublishOnly": "bun run verify",
     "example:survey": "bun examples/survey/server.ts",
     "example:ui": "vite examples/ui-showcase",
     "example:charts": "vite examples/charts-showcase",
