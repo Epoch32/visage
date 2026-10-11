@@ -1,44 +1,59 @@
-# ⚡ Visage
+# Visage
 
-> **Lightning-fast, zero-VDOM, fine-grained reactive full-stack UI framework.**
+Visage is a TypeScript UI framework built on fine-grained push-pull reactivity and direct DOM manipulation. It eliminates the Virtual DOM entirely: components execute once as constructors to build the reactive graph, and subsequent state mutations update individual DOM text nodes and attributes in place.
 
-[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-blue.svg)](LICENSE)
-[![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](tsconfig.json)
-[![Tests: Passing](https://img.shields.io/badge/Tests-115%20Passed-brightgreen.svg)](tests/)
-[![Biome: Checked](https://img.shields.io/badge/Linter-Biome-green.svg)](biome.json)
+## Installation
 
-Visage is a full-stack TypeScript UI library with zero Virtual DOM overhead. Components execute **once** as constructors, binding push-pull reactive signals directly to DOM nodes and attributes.
+```bash
+# Using npm
+npm install @epoch32/visage
 
----
+# Using bun
+bun add @epoch32/visage
 
-## ✨ Features at a Glance
+# Using pnpm
+pnpm add @epoch32/visage
+```
 
-- **Zero Virtual DOM**: No tree-diffing, no synthetic event wrappers. Signals update targeted DOM nodes directly in-place.
-- **Push-Pull Reactivity (`visage/signals`)**: Glitch-free, TC39-aligned reactive core (`signal`, `computed`, `effect`, `batch`, `createStore`, `createContext`, `createRoot`).
-- **File-Based API Routes (`visage/api`)**: REST file-router with **Directive Pragmas** (`// @visage-middleware cascade: true`), procedure builders (`query`, `mutation`, `subscription`), and typed client SDK (`createApiClient`).
-- **Type-Safe RPC (`visage/rpc`)**: Remote procedure call router (`createRouter`) and client proxy (`createClient`) with request batching and real-time Server-Sent Events (SSE).
-- **Server State & Query Cache (`visage/query`)**: Reactive async state caching (`createQuery`, `createMutation`, `createInfiniteQuery`, `QueryClient`).
-- **Scoped CSS Engine (`visage/style`)**: Zero-runtime CSS scoping (`createStyle`, `css`, `<Style>`) and critical CSS extraction for SSR.
-- **Visual In-Browser DevTools (`visage/devtools`)**: Live reactive DAG dependency inspector and RPC logger (`<VisageDevTools />`).
-- **Accessible UI Primitives (`visage/ui`)**: Headless and styled components (`Dialog`, `Tabs`, `Command`, `DataTable`, `DropdownMenu`, `Switch`, `Toast`, `createIcon`).
-- **High-Performance Virtualization (`visage/virtual`)**: Windowing engine for 1,000,000+ items at 120 FPS (`<VirtualList>`, `<VirtualGrid>`).
-- **Reactive Forms (`visage/form`)**: Built-in validator `v`, two-way bindings (`form.bind()`), and full **Standard Schema v1** compatibility.
-- **SSR & Streaming (`visage/server`)**: Synchronous string serialization (`renderToString`), Web Streams progressive rendering (`renderToStream`), and hydration (`hydrate`).
-- **Vite Integration (`visage/vite`)**: First-class Vite build plugin (`visage()`, `visageLucide()`).
+## Architecture
 
----
+Traditional Virtual DOM frameworks re-execute component functions on every state change, generating ephemeral trees of objects that must be reconciled against the previous render. 
 
-## 🚀 Quick Example
+Visage takes an architectural approach aligned with fine-grained reactivity:
+
+- **Construct-once execution**: Component functions execute once during mounting to wire dependencies and instantiate DOM nodes.
+- **Push-pull reactivity**: Signal updates push dirty notifications through a directed acyclic graph (DAG), and values are lazily pulled only when read by active subscribers, preventing redundant computations and glitches.
+- **Zero synthetic abstraction**: Event listeners bind directly to native browser elements, and signal values bind directly to `Text` nodes or element attributes.
+
+## Core Modules
+
+Visage is modular. Import from the package root or target specific submodules:
+
+- `@epoch32/visage/signals`: Reactive primitives (`signal`, `computed`, `effect`, `batch`, `createStore`, `createContext`, `createRoot`).
+- `@epoch32/visage/dom`: Reactive DOM control flow primitives (`<Show>`, `<For>`, `<Portal>`, `<Suspense>`, `<ErrorBoundary>`, `lazy`, `render`).
+- `@epoch32/visage/charts`: Composable, fine-grained reactive SVG data visualizations (`Chart`, `Line`, `Area`, `Bar`, `Pie`, `CartesianGrid`, `XAxis`, `YAxis`, `ChartCursor`, `ChartTooltip`, `ChartLegend`) with monotone cubic spline interpolation and categorical band scaling.
+- `@epoch32/visage/ui`: Headless, accessible UI component primitives (`Dialog`, `Tabs`, `Command`, `DataTable`, `DropdownMenu`, `Switch`, `Toast`, `Tooltip`, `Popover`, `Accordion`).
+- `@epoch32/visage/style`: Scoped CSS engine and spatial layout system (`Stack`, `Row`, `Center`, `Grid`, `Spacer`, `createStyle`, `css`, `fluid`, `glass`).
+- `@epoch32/visage/form`: Reactive form state management with automatic binding and Standard Schema v1 validation.
+- `@epoch32/visage/query`: Asynchronous server state caching and mutation lifecycle management (`createQuery`, `createMutation`, `createInfiniteQuery`, `QueryClient`).
+- `@epoch32/visage/api`: File-based REST routing with directive pragmas, procedure builders, and typed client SDKs.
+- `@epoch32/visage/rpc`: Type-safe RPC router and client proxy with request batching and Server-Sent Events (SSE).
+- `@epoch32/visage/virtual`: Element virtualization engine for large lists and grids (`VirtualList`, `VirtualGrid`).
+- `@epoch32/visage/server`: Server-side rendering (`renderToString`, `renderToStream`) and client hydration (`hydrate`).
+- `@epoch32/visage/devtools`: In-browser reactive graph inspector and RPC transaction logger (`VisageDevTools`).
+- `@epoch32/visage/vite`: Official Vite plugin providing HMR transforms and automatic JSX configuration.
+
+## Quick Example
 
 ```tsx
-import { signal, computed, Show } from "visage";
+import { render, signal, computed, Show } from "@epoch32/visage";
 
 function Counter() {
   const count = signal(0);
   const isEven = computed(() => count() % 2 === 0);
 
   return (
-    <div class="counter-card">
+    <div>
       <h2>Count: {count}</h2>
 
       <Show when={isEven} fallback={<span>Odd</span>}>
@@ -51,52 +66,46 @@ function Counter() {
     </div>
   );
 }
+
+const root = document.getElementById("app");
+if (root) {
+  render(() => <Counter />, root);
+}
 ```
 
----
+## Vite Configuration
 
-## 📦 Package Submodules
+Visage includes an official Vite plugin that configures JSX compilation and hot module replacement:
 
-| Path | Purpose |
-| :--- | :--- |
-| `visage` | Root exports: signals, JSX runtime, DOM control flow, UI components |
-| `visage/signals` | Core reactive primitives (`signal`, `computed`, `effect`, `batch`, `createStore`, `createContext`, `createRoot`) |
-| `visage/dom` | In-place DOM mutations, `<Show>`, `<For>`, `<Portal>`, `<Suspense>`, `<ErrorBoundary>`, `lazy` |
-| `visage/api` | File-based REST routing, directive pragmas, procedure builders, `createApiClient` |
-| `visage/rpc` | Programmatic RPC procedure trees, `createRouter`, `createClient`, batching, SSE |
-| `visage/query` | Async server-state query cache (`createQuery`, `createMutation`, `QueryClient`) |
-| `visage/style` | Scoped CSS engine (`createStyle`, `css`, `<Style>`, SSR extraction) |
-| `visage/devtools`| In-browser visual inspector and reactive DAG viewer (`<VisageDevTools />`) |
-| `visage/ui` | Headless and styled accessible UI primitives (`Dialog`, `Tabs`, `Command`, `DataTable`, etc.) |
-| `visage/virtual` | Zero-VDOM virtualization (`<VirtualList>`, `<VirtualGrid>`) |
-| `visage/form` | Form state machine, bindings, validator `v`, Standard Schema v1 |
-| `visage/server` | SSR HTML rendering (`renderToString`, `renderToStream`) and `hydrate` |
-| `visage/router` | Client-side SPA routing (`<Router>`, `<Route>`, `<Link>`, `useParams`, `useNavigate`) |
-| `visage/vite` | Vite build plugin pipeline, HMR transform, Lucide icon optimizer |
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import { visage } from "@epoch32/visage/vite";
 
----
+export default defineConfig({
+  plugins: [visage()]
+});
+```
 
-## 📚 Documentation & Guides
-
-For full documentation, tutorials, component galleries, and architecture deep-dives, see **[`visage-docs`](../visage-docs)**.
-
----
-
-## 🛠️ Development
+## Development
 
 ```bash
-# Run unit and integration tests (115 passing tests across 15 suites)
+# Install dependencies
+bun install
+
+# Run test suite
 bun test
 
-# Strict TypeScript typechecking
+# Run TypeScript static analysis
 bun run typecheck
 
-# Biome code formatting & linting
+# Run Biome lint and format validation
 bun run check
+
+# Verify and build all distribution targets
+bun run verify
 ```
 
----
+## License
 
-## 📄 License
-
-Mozilla Public License 2.0 (MPL-2.0) © 2026 Visage Contributors.
+Mozilla Public License 2.0 (MPL-2.0). See [LICENSE](LICENSE) for details.
