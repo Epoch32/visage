@@ -1,6 +1,8 @@
 # Visage
 
-Visage is a high-performance TypeScript UI framework built on fine-grained push-pull reactivity and direct DOM manipulation. It eliminates the Virtual DOM entirely: component functions execute exactly once as constructors to build a directed acyclic reactive graph, and subsequent state mutations update individual DOM text nodes and attributes in place with microsecond latency.
+Visage is a high-performance, full-stack TypeScript toolkit built on fine-grained push-pull reactivity and zero-VDOM direct DOM execution. 
+
+While Visage started life as an exploration into a cleaner, faster UI concept—proving that eliminating the Virtual DOM in favor of construct-once component execution yields sub-microsecond DOM updates—it has since evolved into a complete, batteries-included toolkit for building modern full-stack web applications. Everything from server-side rendering, type-safe RPC, and file-based APIs to accessible UI primitives, reactive SVG charting, virtualized lists, internationalization, and drag-and-drop IO is engineered to work together with zero external runtime dependencies.
 
 ## Documentation & Resources
 
@@ -21,15 +23,28 @@ npm install @epoch32/visage
 pnpm add @epoch32/visage
 ```
 
-## Architecture
+## Origins: Born as a Better UI Concept
 
-Traditional Virtual DOM frameworks re-execute component functions on every state change, generating ephemeral trees of objects that must be reconciled against the previous render. 
+Traditional Virtual DOM frameworks re-execute component functions on every state change, generating ephemeral trees of objects that must be reconciled against the previous render.
 
-Visage takes an architectural approach aligned with fine-grained reactivity:
+Visage began as an answer to that overhead by embracing fine-grained reactive mechanics:
 
-- **Construct-once execution**: Component functions execute once during mounting to wire dependencies and instantiate DOM nodes.
-- **Push-pull reactivity**: Signal updates push dirty notifications through a directed acyclic graph (DAG), and values are lazily pulled only when read by active subscribers, preventing redundant computations and glitches.
-- **Zero synthetic abstraction**: Event listeners bind directly to native browser elements, and signal values bind directly to `Text` nodes or element attributes.
+- **Construct-once execution**: Component functions execute once during initial mounting to wire dependencies and instantiate DOM nodes. Components never re-render.
+- **Push-pull reactivity**: Signal updates push dirty notifications through a glitch-free directed acyclic graph (DAG), and values are lazily pulled only when read by active subscribers.
+- **Zero synthetic abstraction**: Event listeners bind directly to native browser elements, and signal values bind directly to individual `Text` nodes or DOM element attributes.
+
+## Evolving into a Full-Stack Toolkit
+
+As the reactive foundation matured, the scope expanded beyond pure frontend view rendering. Today, Visage provides a unified, coherent toolkit spanning both client and server:
+
+- **End-to-End Type Safety**: Built-in full-stack RPC (`createRouter`, `createFetchHandler`, `createClient`) with Server-Sent Events (SSE) streaming and microtask batching, plus opinionated file-based REST APIs.
+- **Server-Side Rendering & Hydration**: Native streaming SSR (`renderToStream`, `renderToString`) with seamless client hydration.
+- **Data Fetching & Cache**: Server state query caching with automatic deduplication, refetching, and mutations.
+- **Headless UI & Spatial Layout**: WAI-ARIA accessible component primitives (Dialog, Select, Slider, Tabs, DropdownMenu, Command palette, Toasts) alongside a scoped spatial layout system (`Stack`, `Row`, `Grid`).
+- **Data Visualizations & Virtualization**: Reactive SVG charts (`Line`, `Area`, `Bar`, `Pie`) and element virtualization handling 100,000+ rows smoothly.
+- **Modern Web IO & Drag-and-Drop**: Fine-grained drag-and-drop ingestion with zero-flicker nested counter tracking, reactive clipboard access, and imperative file dialogs.
+- **Localization (i18n)**: Reactive internationalization with CLDR plural rules, live Crowdin/Weblate community translation sync, and dynamic async dictionary loading.
+- **Developer Experience**: Official Vite plugin with instant HMR and an in-browser live reactive DAG graph inspector.
 
 ## Quick Example
 
@@ -60,25 +75,6 @@ if (root) {
   render(() => <Counter />, root);
 }
 ```
-
-## Core Modules
-
-Visage is modular. Import from the package root or target specific submodules:
-
-- `@epoch32/visage/signals`: Reactive primitives (`signal`, `computed`, `effect`, `batch`, `createStore`, `createContext`, `createRoot`).
-- `@epoch32/visage/dom`: Reactive DOM control flow primitives (`<Show>`, `<For>`, `<Portal>`, `<Suspense>`, `<ErrorBoundary>`, `lazy`, `render`).
-- `@epoch32/visage/router`: Built-in client-side SPA router (`<Router>`, `<Routes>`, `<Route>`, `<Link>`, `useLocation`, `useNavigate`).
-- `@epoch32/visage/ui`: Headless, accessible UI component primitives (`Dialog`, `Tabs`, `Command`, `DataTable`, `DropdownMenu`, `Switch`, `Toast`, `Tooltip`, `Popover`, `Accordion`, `BottomBar`).
-- `@epoch32/visage/charts`: Composable, fine-grained reactive SVG data visualizations (`Chart`, `Line`, `Area`, `Bar`, `Pie`, `CartesianGrid`, `XAxis`, `YAxis`, `ChartCursor`, `ChartTooltip`, `ChartLegend`).
-- `@epoch32/visage/style`: Scoped CSS engine and spatial layout system (`Stack`, `Row`, `Center`, `Grid`, `Spacer`, `createStyle`, `css`, `fluid`, `glass`).
-- `@epoch32/visage/form`: Reactive form state management with automatic binding and Standard Schema v1 validation.
-- `@epoch32/visage/query`: Asynchronous server state caching and mutation lifecycle management (`createQuery`, `createMutation`, `createInfiniteQuery`, `QueryClient`).
-- `@epoch32/visage/api`: File-based REST routing with directive pragmas, procedure builders, and typed client SDKs.
-- `@epoch32/visage/rpc`: Type-safe RPC router and client proxy with request batching and Server-Sent Events (SSE).
-- `@epoch32/visage/virtual`: Element virtualization engine for large lists and grids (`VirtualList`, `VirtualGrid`).
-- `@epoch32/visage/server`: Server-side rendering (`renderToString`, `renderToStream`) and client hydration (`hydrate`).
-- `@epoch32/visage/devtools`: In-browser reactive graph inspector and RPC transaction logger (`VisageDevTools`).
-- `@epoch32/visage/vite`: Official Vite plugin providing HMR transforms, automatic JSX configuration, and icon optimization.
 
 ## Vite Configuration
 
