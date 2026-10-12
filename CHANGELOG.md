@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/Epoch32/visage/compare/visage-v1.3.1...visage-v1.3.2) (2026-10-12)
+
+
+### Bug Fixes
+
+* support class and className to prevent issues around active/inactive elements  ([#15](https://github.com/Epoch32/visage/issues/15)) ([600bb06](https://github.com/Epoch32/visage/commit/600bb06350b783ca069b3563ea638907ecae2991))
+
 ## [1.3.1](https://github.com/Epoch32/visage/compare/visage-v1.3.0...visage-v1.3.1) (2026-10-12)
 
 
