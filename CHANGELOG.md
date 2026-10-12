@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/Epoch32/visage/compare/visage-v1.3.0...visage-v1.3.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* various core engine bug fixes ([#12](https://github.com/Epoch32/visage/issues/12)) ([ce04950](https://github.com/Epoch32/visage/commit/ce04950e2c25db9d138e85074b151f488906e244))
+
 ## [1.3.0](https://github.com/Epoch32/visage/compare/visage-v1.2.0...visage-v1.3.0) (2026-10-12)
 
 
