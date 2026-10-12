@@ -109,6 +109,18 @@ export {
   v,
   validateWithSchema
 } from "./form";
+// Fine-Grained Internationalization & Localization
+export {
+  type CreateI18nOptions,
+  createI18n,
+  type I18nInstance,
+  type PluralForms,
+  type TranslationLoader,
+  type TranslationParams,
+  type TranslationRecord,
+  type TranslationsDict,
+  type TranslationValue
+} from "./i18n";
 // Reactive IO, File Picker, Drag-and-Drop & Clipboard
 export {
   type ClipboardReturn,
