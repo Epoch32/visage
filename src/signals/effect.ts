@@ -5,8 +5,8 @@ import { Computed } from "./computed";
 import type { Scope } from "./scope";
 import {
   addPendingEffect,
-  batchDepth,
   flushEffects,
+  getBatchDepth,
   getCurrentScope,
   getCurrentSubscriber,
   removePendingEffect,
@@ -57,7 +57,7 @@ export class Effect implements ISubscriber {
     this.state = targetState;
     addPendingEffect(this);
 
-    if (batchDepth === 0) {
+    if (getBatchDepth() === 0) {
       flushEffects();
     }
   }

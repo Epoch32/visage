@@ -1,7 +1,7 @@
 /**
  * Visage Reactive Scope & Lifecycle Management
  */
-import { currentScope, currentSubscriber, getCurrentScope, setCurrentScope } from "./system";
+import { getCurrentScope, getCurrentSubscriber, setCurrentScope } from "./system";
 import type { CleanupFn, ISubscriber } from "./types";
 
 /**
@@ -14,7 +14,7 @@ export class Scope {
   isDisposed = false;
   context?: Map<symbol, any>;
 
-  constructor(parent: Scope | null = currentScope) {
+  constructor(parent: Scope | null = getCurrentScope()) {
     this.parent = parent;
     if (parent && !parent.isDisposed) {
       parent.cleanups.push(() => this.dispose());
@@ -72,10 +72,12 @@ export class Scope {
  * ```
  */
 export function onCleanup(fn: CleanupFn): void {
-  if (currentSubscriber && "addCleanup" in currentSubscriber) {
-    (currentSubscriber as any).addCleanup(fn);
-  } else if (currentScope) {
-    currentScope.addCleanup(fn);
+  const curSub = getCurrentSubscriber();
+  const curScope = getCurrentScope();
+  if (curSub && "addCleanup" in curSub) {
+    (curSub as any).addCleanup(fn);
+  } else if (curScope) {
+    curScope.addCleanup(fn);
   }
 }
 
@@ -101,7 +103,7 @@ export function onCleanup(fn: CleanupFn): void {
  * @returns The return value of `fn`
  */
 export function createRoot<T>(fn: (dispose: () => void) => T): T {
-  const prevScope = currentScope;
+  const prevScope = getCurrentScope();
   const scope = new Scope(null);
   setCurrentScope(scope);
   try {
@@ -115,7 +117,7 @@ export function createRoot<T>(fn: (dispose: () => void) => T): T {
  * Run a function with a specified reactive scope active.
  */
 export function runInScope<T>(scope: Scope | null, fn: () => T): T {
-  const prevScope = currentScope;
+  const prevScope = getCurrentScope();
   setCurrentScope(scope);
   try {
     return fn();
