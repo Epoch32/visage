@@ -246,6 +246,121 @@ body {
   line-height: 1.5;
 }
 
+/* Select */
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.select-trigger:focus-visible,
+.select-trigger:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.select-content {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  min-width: 200px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--fg);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.select-item:hover,
+.select-item:focus,
+.select-item[aria-selected="true"] {
+  background: var(--primary);
+  color: #ffffff;
+  outline: none;
+}
+
+/* Slider */
+.slider-root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  touch-action: none;
+  width: 100%;
+  height: 24px;
+  cursor: pointer;
+}
+
+.slider-track {
+  position: relative;
+  flex-grow: 1;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+}
+
+.slider-range {
+  position: absolute;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--primary);
+}
+
+.slider-thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border: 2px solid var(--primary);
+  border-radius: 9999px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  outline: none;
+  cursor: grab;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.slider-thumb:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.slider-thumb:focus-visible {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
 /* Switch */
 .switch {
   width: 44px;
@@ -396,6 +511,12 @@ body {
 
 /* Tooltip */
 .tooltip-content {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  white-space: nowrap;
   background: var(--bg-muted);
   border: 1px solid var(--border);
   color: var(--fg);

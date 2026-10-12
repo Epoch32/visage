@@ -106,6 +106,35 @@ export {
   usePopoverContext
 } from "./popover";
 export {
+  Select,
+  SelectContent,
+  type SelectContentProps,
+  type SelectContextValue,
+  SelectItem,
+  type SelectItemProps,
+  type SelectOptionData,
+  type SelectProps,
+  SelectRoot,
+  SelectTrigger,
+  type SelectTriggerProps,
+  SelectValue,
+  type SelectValueProps,
+  useSelectContext
+} from "./select";
+export {
+  Slider,
+  type SliderContextValue,
+  type SliderProps,
+  SliderRange,
+  type SliderRangeProps,
+  SliderRoot,
+  SliderThumb,
+  type SliderThumbProps,
+  SliderTrack,
+  type SliderTrackProps,
+  useSliderContext
+} from "./slider";
+export {
   Switch,
   type SwitchProps,
   SwitchThumb,

@@ -31,6 +31,8 @@ import {
   PopoverContent,
   PopoverPortal,
   PopoverTrigger,
+  Select,
+  Slider,
   Switch,
   SwitchThumb,
   Tabs,
@@ -782,6 +784,84 @@ describe("Visage UI Component Primitives", () => {
 
       (rows[0] as HTMLElement).click();
       expect(clickedUser).toBe("Alice");
+
+      unmount();
+    });
+
+    it("renders Select primitive with options and handles selection", () => {
+      let selectedVal = "light";
+      const unmount = render(
+        () => (
+          <Select
+            defaultValue="light"
+            onValueChange={(val) => {
+              selectedVal = val;
+            }}
+            options={[
+              { value: "light", label: "Light Theme" },
+              { value: "dark", label: "Dark Theme" },
+              { value: "system", label: "System Default" }
+            ]}
+          />
+        ),
+        container
+      );
+
+      const trigger = container.querySelector('[role="combobox"]') as HTMLElement;
+      expect(trigger).not.toBeNull();
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+      trigger.click();
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+
+      const options = document.body.querySelectorAll('[role="option"]');
+      expect(options.length).toBe(3);
+
+      (options[1] as HTMLElement).click();
+      expect(selectedVal).toBe("dark");
+
+      unmount();
+    });
+
+    it("renders Slider primitive with min, max, step and keyboard controls", () => {
+      let sliderVal = 20;
+      const unmount = render(
+        () => (
+          <Slider
+            defaultValue={20}
+            min={0}
+            max={100}
+            step={5}
+            onValueChange={(val) => {
+              sliderVal = val;
+            }}
+          />
+        ),
+        container
+      );
+
+      const slider = container.querySelector('[role="slider"]') as HTMLElement;
+      expect(slider).not.toBeNull();
+      expect(slider.getAttribute("aria-valuenow")).toBe("20");
+
+      // Press ArrowRight to increase by step (5)
+      slider.dispatchEvent({
+        type: "keydown",
+        key: "ArrowRight",
+        preventDefault: () => {}
+      } as any);
+
+      expect(sliderVal).toBe(25);
+      expect(slider.getAttribute("aria-valuenow")).toBe("25");
+
+      // Press ArrowDown to decrease by step (5)
+      slider.dispatchEvent({
+        type: "keydown",
+        key: "ArrowDown",
+        preventDefault: () => {}
+      } as any);
+
+      expect(sliderVal).toBe(20);
 
       unmount();
     });

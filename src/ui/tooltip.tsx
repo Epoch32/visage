@@ -231,7 +231,7 @@ export function TooltipContent(props: TooltipContentProps): Child {
       data-state={() => (isOpen() ? "open" : "closed")}
       hidden={() => !isOpen()}
       class={className}
-      style={style}
+      style={{ pointerEvents: "none", ...style }}
       {...rest}
     >
       {children}
@@ -243,7 +243,7 @@ export function TooltipContent(props: TooltipContentProps): Child {
         role="tooltip"
         data-state="open"
         class={className}
-        style={style}
+        style={{ pointerEvents: "none", ...style }}
         {...rest}
       >
         {children}

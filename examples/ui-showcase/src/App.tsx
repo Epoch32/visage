@@ -15,13 +15,27 @@ import {
 } from "lucide-react";
 import { createSignal } from "visage";
 import { VisageDevTools } from "visage/devtools";
-import { Accordion, Dialog, DropdownMenu, Switch, Tabs, Toast, Tooltip, toast } from "visage/ui";
+import {
+  Accordion,
+  Dialog,
+  DropdownMenu,
+  Select,
+  Slider,
+  Switch,
+  Tabs,
+  Toast,
+  Tooltip,
+  toast
+} from "visage/ui";
 
 export function App() {
   const [notifications, setNotifications] = createSignal(true);
   const [darkMode, setDarkMode] = createSignal(true);
   const [likeCount, setLikeCount] = createSignal(42);
   const [isLiked, setIsLiked] = createSignal(false);
+  const [selectedTheme, setSelectedTheme] = createSignal("obsidian");
+  const [sliderVolume, setSliderVolume] = createSignal(65);
+  const [sliderBrightness, setSliderBrightness] = createSignal(80);
 
   const toggleLike = () => {
     if (isLiked()) {
@@ -142,6 +156,10 @@ export function App() {
                         <Tabs.Trigger value="accordion" class="tab-trigger">
                           <Folder size={16} />
                           <span>Accordion</span>
+                        </Tabs.Trigger>
+                        <Tabs.Trigger value="controls" class="tab-trigger">
+                          <Settings size={16} />
+                          <span>Controls & Sliders</span>
                         </Tabs.Trigger>
                         <Tabs.Trigger value="switches" class="tab-trigger">
                           <Sparkles size={16} />
@@ -269,6 +287,92 @@ export function App() {
                             }
                           ]}
                         />
+                      </Tabs.Content>
+
+                      {/* Controls Tab (Select & Slider Primitives) */}
+                      <Tabs.Content value="controls" class="tab-content">
+                        <div style={{ display: "flex", "flex-direction": "column", gap: "24px" }}>
+                          <div>
+                            <h3 style={{ margin: "0 0 8px 0", "font-size": "16px", "font-weight": "600" }}>
+                              Accessible Select Primitive
+                            </h3>
+                            <p style={{ margin: "0 0 16px 0", color: "var(--fg-muted)", "font-size": "14px" }}>
+                              Keyboard-navigable listbox with focus traps, escape dismissal, and reactive model binding.
+                            </p>
+                            <div style={{ display: "flex", "flex-direction": "column", gap: "8px", "max-width": "320px" }}>
+                              <label style={{ "font-size": "13px", "font-weight": "500", color: "var(--fg-muted)" }}>
+                                Active Palette:
+                              </label>
+                              <Select
+                                value={selectedTheme}
+                                onValueChange={(val: string) => {
+                                  setSelectedTheme(val);
+                                  toast({
+                                    title: "Theme updated",
+                                    description: `Switched color palette to ${val}.`,
+                                    variant: "success"
+                                  });
+                                }}
+                                options={[
+                                  { value: "obsidian", label: "Obsidian Dark (Default)" },
+                                  { value: "synthwave", label: "Synthwave Neon" },
+                                  { value: "nordic", label: "Nordic Frost" },
+                                  { value: "cyberpunk", label: "Cyberpunk 2077" }
+                                ]}
+                                triggerClass="select-trigger"
+                                contentClass="select-content"
+                                itemClass="select-item"
+                                placeholder="Choose a theme..."
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ borderTop: "1px solid var(--border)", "padding-top": "20px" }}>
+                            <h3 style={{ margin: "0 0 8px 0", "font-size": "16px", "font-weight": "600" }}>
+                              Accessible Slider Primitive
+                            </h3>
+                            <p style={{ margin: "0 0 16px 0", color: "var(--fg-muted)", "font-size": "14px" }}>
+                              Pointer capture dragging, step resolution, and arrow/Home/End keyboard controls.
+                            </p>
+                            <div style={{ display: "grid", "grid-template-columns": "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+                              <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
+                                <div style={{ display: "flex", "justify-content": "space-between", "font-size": "13px" }}>
+                                  <span style={{ "font-weight": "500" }}>Output Volume</span>
+                                  <span style={{ color: "var(--fg-muted)" }}>{() => `${sliderVolume()}%`}</span>
+                                </div>
+                                <Slider
+                                  value={sliderVolume}
+                                  onValueChange={(val: number) => setSliderVolume(val)}
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  class="slider-root"
+                                  trackClass="slider-track"
+                                  rangeClass="slider-range"
+                                  thumbClass="slider-thumb"
+                                />
+                              </div>
+
+                              <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
+                                <div style={{ display: "flex", "justify-content": "space-between", "font-size": "13px" }}>
+                                  <span style={{ "font-weight": "500" }}>Display Brightness (Step 5)</span>
+                                  <span style={{ color: "var(--fg-muted)" }}>{() => `${sliderBrightness()}%`}</span>
+                                </div>
+                                <Slider
+                                  value={sliderBrightness}
+                                  onValueChange={(val: number) => setSliderBrightness(val)}
+                                  min={0}
+                                  max={100}
+                                  step={5}
+                                  class="slider-root"
+                                  trackClass="slider-track"
+                                  rangeClass="slider-range"
+                                  thumbClass="slider-thumb"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </Tabs.Content>
 
                       {/* Switches Tab (Shorthand) */}
