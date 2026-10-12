@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/Epoch32/visage/compare/visage-v1.2.0...visage-v1.3.0) (2026-10-12)
+
+
+### Features
+
+* **ui:** add modular BottomBar mobile toolbar primitives ([8694a35](https://github.com/Epoch32/visage/commit/8694a352e05a4babec2670213f1cf712aa6452e4))
+* **ui:** export BottomBar primitives from root package entry ([cb3a5de](https://github.com/Epoch32/visage/commit/cb3a5deffc43f901385b1067854f935d0a0ea1a4))
+
+
+### Bug Fixes
+
+* **ui:** render icon and label alongside children in BottomBarItem ([6c66cea](https://github.com/Epoch32/visage/commit/6c66ceab106d5c70af809de2647b06f1b530b848))
+
 ## [1.2.0](https://github.com/Epoch32/visage/compare/visage-v1.1.5...visage-v1.2.0) (2026-10-12)
 
 
