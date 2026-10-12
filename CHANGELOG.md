@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/Epoch32/visage/compare/visage-v1.3.3...visage-v1.4.0) (2026-10-12)
+
+
+### Features
+
+* **ui:** add accessible Select and Slider primitives with showcase fixes ([bd33288](https://github.com/Epoch32/visage/commit/bd33288c75edd15aa6ab68d21a8939e7ecf7ea14))
+
 ## [1.3.3](https://github.com/Epoch32/visage/compare/visage-v1.3.2...visage-v1.3.3) (2026-10-12)
 
 
