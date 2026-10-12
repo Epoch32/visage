@@ -253,6 +253,7 @@ export function Routes(props: RoutesProps): Child {
 export interface LinkProps {
   href: string;
   class?: string | (() => string);
+  className?: string | (() => string);
   activeClass?: string;
   replace?: boolean;
   children: Child;
@@ -264,7 +265,16 @@ export interface LinkProps {
  */
 export function Link(props: LinkProps): Child {
   const router = useContext(RouterContext);
-  const { href, class: className, activeClass = "active", replace, children, ...rest } = props;
+  const {
+    href,
+    class: classProp,
+    className: classNameProp,
+    activeClass = "active",
+    replace,
+    children,
+    ...rest
+  } = props;
+  const rawClass = classProp ?? classNameProp;
 
   const handleClick = (e: MouseEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
@@ -286,7 +296,7 @@ export function Link(props: LinkProps): Child {
   });
 
   const computedClass = computed(() => {
-    const baseCls = typeof className === "function" ? className() : (className ?? "");
+    const baseCls = typeof rawClass === "function" ? rawClass() : (rawClass ?? "");
     if (activeClass && isActive()) {
       return baseCls ? `${baseCls} ${activeClass}` : activeClass;
     }
