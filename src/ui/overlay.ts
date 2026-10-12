@@ -97,9 +97,9 @@ export function useDismiss(
     }
   };
 
-  // Setup outside pointer listener
+  // Setup outside pointer listener and global escape key listener
   if (typeof document !== "undefined") {
-    const unbind = onClickOutside(
+    const unbindPointer = onClickOutside(
       () => {
         const el = element();
         const rawIgnores =
@@ -120,7 +120,27 @@ export function useDismiss(
         }
       }
     );
-    onCleanup(unbind);
+
+    const onGlobalKeyDown = (e: KeyboardEvent) => {
+      if (!isEnabled() || e.defaultPrevented) return;
+      if (e.key === "Escape" && (options.escapeKey ?? true)) {
+        if (options.onEscapeKeyDown) {
+          options.onEscapeKeyDown(e);
+        }
+        if (!e.defaultPrevented) {
+          options.onDismiss();
+          e.stopPropagation();
+        }
+      }
+    };
+
+    const targetWindow = typeof window !== "undefined" ? window : document;
+    targetWindow.addEventListener("keydown", onGlobalKeyDown as any);
+
+    onCleanup(() => {
+      unbindPointer();
+      targetWindow.removeEventListener("keydown", onGlobalKeyDown as any);
+    });
   }
 
   return {
