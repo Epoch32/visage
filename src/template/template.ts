@@ -66,10 +66,21 @@ export function html(
 
   for (const bind of bindings) {
     if (bind.isAttr && bind.attrName) {
-      const targetEl = findElementWithAttributeValue(root, bind.attrName, bind.id);
+      const targetEl = findElementWithAttributeValue(root as HTMLElement, bind.attrName, bind.id);
       if (targetEl) {
         targetEl.removeAttribute(bind.attrName);
         setAttribute(targetEl, bind.attrName, bind.value);
+      }
+    } else if (bind.isAttr && !bind.attrName) {
+      const propAttr = `data-visage-prop-${bind.id.replace(MARKER_PREFIX, "")}`;
+      const targetEl = findElementWithAttributeValue(root as HTMLElement, propAttr, bind.id);
+      if (targetEl) {
+        targetEl.removeAttribute(propAttr);
+        if (typeof bind.value === "object" && bind.value !== null) {
+          for (const key of Object.keys(bind.value)) {
+            setAttribute(targetEl, key, bind.value[key]);
+          }
+        }
       }
     } else if (!bind.isAttr) {
       const commentNode = findCommentNode(root, bind.id);
