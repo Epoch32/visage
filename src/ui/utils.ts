@@ -35,9 +35,7 @@ export function createControllableSignal<T>(options: {
     const currentVal = getter();
     const nextVal = typeof next === "function" ? (next as (prev: T) => T)(currentVal) : next;
 
-    if (!isControlled) {
-      internal.set(nextVal);
-    }
+    internal.set(nextVal);
     if (options.onChange && nextVal !== currentVal) {
       options.onChange(nextVal);
     }

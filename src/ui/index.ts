@@ -92,6 +92,8 @@ export {
   type SwitchThumbProps
 } from "./switch";
 export {
+  type CreateTabsOptions,
+  createTabs,
   Tabs,
   TabsContent,
   type TabsContentProps,

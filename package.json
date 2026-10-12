@@ -100,7 +100,7 @@
     "package.json"
   ],
   "scripts": {
-    "build": "bun build src/index.ts src/signals/index.ts src/dom/index.ts src/template/index.ts src/api/index.ts src/rpc/index.ts src/query/index.ts src/style/index.ts src/devtools/index.ts src/ui/index.ts src/virtual/index.ts src/form/index.ts src/server/index.ts src/router/index.ts src/vite/index.ts src/jsx-runtime/index.ts src/charts/index.ts --root src --outdir dist/ && bun x tsc -p tsconfig.build.json && cp src/jsx-runtime/jsx.d.ts dist/jsx-runtime/jsx.d.ts",
+    "build": "bun build src/index.ts src/signals/index.ts src/dom/index.ts src/template/index.ts src/api/index.ts src/rpc/index.ts src/query/index.ts src/style/index.ts src/devtools/index.ts src/ui/index.ts src/virtual/index.ts src/form/index.ts src/server/index.ts src/router/index.ts src/vite/index.ts src/jsx-runtime/index.ts src/charts/index.ts --root src --outdir dist/ --splitting && bun x tsc -p tsconfig.build.json && cp src/jsx-runtime/jsx.d.ts dist/jsx-runtime/jsx.d.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",

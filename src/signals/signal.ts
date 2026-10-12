@@ -1,7 +1,7 @@
 /**
  * Visage Core Writable Signal & State Primitives
  */
-import { batch, currentScope, currentSubscriber, warnedCyclicSubscribers } from "./system";
+import { batch, getCurrentScope, getCurrentSubscriber, warnedCyclicSubscribers } from "./system";
 import {
   type IDependency,
   type ISubscriber,
@@ -32,10 +32,11 @@ export class Signal<T> implements IDependency {
   }
 
   get(): T {
-    if (currentSubscriber !== null && currentSubscriber.state !== SubscriberState.DISPOSED) {
-      this._subscribers.add(currentSubscriber);
-      currentSubscriber.sources.add(this);
-      currentSubscriber.sourceVersions.set(this, this.version);
+    const curSub = getCurrentSubscriber();
+    if (curSub !== null && curSub.state !== SubscriberState.DISPOSED) {
+      this._subscribers.add(curSub);
+      curSub.sources.add(this);
+      curSub.sourceVersions.set(this, this.version);
     }
     return this._value;
   }
@@ -45,9 +46,10 @@ export class Signal<T> implements IDependency {
       return;
     }
 
-    if (currentSubscriber !== null && this._subscribers.has(currentSubscriber)) {
-      if (!warnedCyclicSubscribers.has(currentSubscriber)) {
-        warnedCyclicSubscribers.add(currentSubscriber);
+    const curSub = getCurrentSubscriber();
+    if (curSub !== null && this._subscribers.has(curSub)) {
+      if (!warnedCyclicSubscribers.has(curSub)) {
+        warnedCyclicSubscribers.add(curSub);
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn(
             `[Visage Reactivity] Cyclic update detected: An active subscriber modified a signal that it depends on. ` +
@@ -228,8 +230,9 @@ export function signal<T>(
       }
     };
     window.addEventListener("storage", onStorage);
-    if (currentScope) {
-      currentScope.addCleanup(() => {
+    const curScope = getCurrentScope();
+    if (curScope) {
+      curScope.addCleanup(() => {
         window.removeEventListener("storage", onStorage);
       });
     }
@@ -268,8 +271,9 @@ export function signal<T>(
           .filter(Boolean)
     });
     (s as any)._devId = sigId;
-    if (currentScope) {
-      currentScope.addCleanup(() => {
+    const curScope = getCurrentScope();
+    if (curScope) {
+      curScope.addCleanup(() => {
         devtools.unregisterSignal(sigId);
       });
     }

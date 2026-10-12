@@ -6,9 +6,9 @@ import type { Scope } from "./scope";
 import {
   addPendingEffect,
   batchDepth,
-  currentScope,
-  currentSubscriber,
   flushEffects,
+  getCurrentScope,
+  getCurrentSubscriber,
   removePendingEffect,
   setCurrentScope,
   setCurrentSubscriber
@@ -28,9 +28,9 @@ export class Effect implements ISubscriber {
 
   constructor(fn: () => void | CleanupFn) {
     this._fn = fn;
-    this.scope = currentScope;
-    if (currentScope) {
-      currentScope.addSubscriber(this);
+    this.scope = getCurrentScope();
+    if (this.scope) {
+      this.scope.addSubscriber(this);
     }
     this.run();
   }
@@ -85,9 +85,9 @@ export class Effect implements ISubscriber {
     this.runCleanups();
     this.cleanupSources();
 
-    const prevSubscriber = currentSubscriber;
+    const prevSubscriber = getCurrentSubscriber();
     setCurrentSubscriber(this);
-    const prevScope = currentScope;
+    const prevScope = getCurrentScope();
     setCurrentScope(this.scope);
 
     try {

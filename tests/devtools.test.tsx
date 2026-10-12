@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { devtoolsHub, VisageDevTools } from "../src/devtools";
 import { render } from "../src/dom";
 import { QueryClient } from "../src/query";
@@ -14,6 +14,14 @@ describe("Visage In-Browser DevTools & Reactive Inspector (visage/devtools)", ()
     container = document.createElement("div");
     document.body.appendChild(container);
     devtoolsHub.clearAll();
+  });
+
+  afterEach(() => {
+    delete (window as any).__VISAGE_DEVTOOLS__;
+    devtoolsHub.clearAll();
+    if (container?.parentNode) {
+      container.parentNode.removeChild(container);
+    }
   });
 
   it("registers and tracks reactive signals and computed values", () => {

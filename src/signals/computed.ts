@@ -2,7 +2,12 @@
  * Visage Lazy, Glitch-Free Computed State Engine
  */
 import type { Scope } from "./scope";
-import { currentScope, currentSubscriber, setCurrentScope, setCurrentSubscriber } from "./system";
+import {
+  getCurrentScope,
+  getCurrentSubscriber,
+  setCurrentScope,
+  setCurrentSubscriber
+} from "./system";
 import {
   COMPUTED_BRAND,
   type ComputedOptions,
@@ -30,9 +35,9 @@ export class Computed<T> implements ISubscriber, IDependency {
 
   constructor(fn: () => T) {
     this._fn = fn;
-    this.scope = currentScope;
-    if (currentScope) {
-      currentScope.addSubscriber(this);
+    this.scope = getCurrentScope();
+    if (this.scope) {
+      this.scope.addSubscriber(this);
     }
   }
 
@@ -41,10 +46,11 @@ export class Computed<T> implements ISubscriber, IDependency {
       return this._fn();
     }
 
-    if (currentSubscriber !== null && currentSubscriber.state !== SubscriberState.DISPOSED) {
-      this._subscribers.add(currentSubscriber);
-      currentSubscriber.sources.add(this);
-      currentSubscriber.sourceVersions.set(this, this.version);
+    const curSub = getCurrentSubscriber();
+    if (curSub !== null && curSub.state !== SubscriberState.DISPOSED) {
+      this._subscribers.add(curSub);
+      curSub.sources.add(this);
+      curSub.sourceVersions.set(this, this.version);
     }
 
     if (this.state === SubscriberState.DIRTY || this.state === SubscriberState.CHECK_DIRTY) {
@@ -108,9 +114,9 @@ export class Computed<T> implements ISubscriber, IDependency {
   private recompute(): void {
     this.cleanupSources();
 
-    const prevSubscriber = currentSubscriber;
+    const prevSubscriber = getCurrentSubscriber();
     setCurrentSubscriber(this);
-    const prevScope = currentScope;
+    const prevScope = getCurrentScope();
     setCurrentScope(this.scope);
 
     try {
@@ -195,8 +201,9 @@ export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySig
           .filter(Boolean)
     });
     (c as any)._devId = sigId;
-    if (currentScope) {
-      currentScope.addCleanup(() => {
+    const curScope = getCurrentScope();
+    if (curScope) {
+      curScope.addCleanup(() => {
         devtools.unregisterSignal(sigId);
       });
     }

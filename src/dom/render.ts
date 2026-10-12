@@ -68,9 +68,6 @@ export function setAttribute(el: HTMLElement | SVGElement, key: string, value: a
     const useCapture = key.startsWith("onCapture");
 
     el.addEventListener(eventName, value as EventListener, useCapture);
-    onCleanup(() => {
-      el.removeEventListener(eventName, value as EventListener, useCapture);
-    });
     return;
   }
 
@@ -82,16 +79,27 @@ export function setAttribute(el: HTMLElement | SVGElement, key: string, value: a
 
   // Reactive class / className with array or object support
   if (key === "class" || key === "className") {
+    const isSvg = typeof SVGElement !== "undefined" && el instanceof SVGElement;
     if (hasReactiveClass(value)) {
       effect(() => {
         const cls = normalizeClass(value);
-        if (cls) el.setAttribute("class", cls);
-        else el.removeAttribute("class");
+        if (cls) {
+          el.setAttribute("class", cls);
+          if (!isSvg) (el as HTMLElement).className = cls;
+        } else {
+          el.removeAttribute("class");
+          if (!isSvg) (el as HTMLElement).className = "";
+        }
       });
     } else {
       const cls = normalizeClass(value);
-      if (cls) el.setAttribute("class", cls);
-      else el.removeAttribute("class");
+      if (cls) {
+        el.setAttribute("class", cls);
+        if (!isSvg) (el as HTMLElement).className = cls;
+      } else {
+        el.removeAttribute("class");
+        if (!isSvg) (el as HTMLElement).className = "";
+      }
     }
     return;
   }
@@ -144,10 +152,13 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
 
   if (key === "className" || key === "class") {
     const cls = normalizeClass(value);
+    const isSvg = typeof SVGElement !== "undefined" && el instanceof SVGElement;
     if (cls) {
       el.setAttribute("class", cls);
+      if (!isSvg) (el as HTMLElement).className = cls;
     } else {
       el.removeAttribute("class");
+      if (!isSvg) (el as HTMLElement).className = "";
     }
   } else if (key === "style") {
     if (typeof value === "string") {
@@ -177,6 +188,8 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
       el.setAttribute(key, String(value));
     } else if (value === true) {
       el.setAttribute(key, "");
+    } else if (value === false) {
+      el.removeAttribute(key);
     } else {
       el.setAttribute(key, String(value));
     }

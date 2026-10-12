@@ -3,55 +3,81 @@
  */
 import { type ISubscriber, SubscriberState } from "./types";
 
-export let currentSubscriber: ISubscriber | null = null;
-export let currentScope: any = null;
-export let batchDepth = 0;
-export const pendingEffects: Set<any> = new Set();
-export const warnedCyclicSubscribers: WeakSet<ISubscriber> = new WeakSet();
-export let isFlushing = false;
+interface ReactivityContext {
+  currentSubscriber: ISubscriber | null;
+  currentScope: any;
+  batchDepth: number;
+  pendingEffects: Set<any>;
+  warnedCyclicSubscribers: WeakSet<ISubscriber>;
+  isFlushing: boolean;
+}
+
+const REACTIVITY_KEY = Symbol.for("visage.reactivity.context");
+const g = globalThis as unknown as { [REACTIVITY_KEY]?: ReactivityContext };
+if (!g[REACTIVITY_KEY]) {
+  g[REACTIVITY_KEY] = {
+    currentSubscriber: null,
+    currentScope: null,
+    batchDepth: 0,
+    pendingEffects: new Set(),
+    warnedCyclicSubscribers: new WeakSet(),
+    isFlushing: false
+  };
+}
+const ctx = g[REACTIVITY_KEY]!;
+
+export let currentSubscriber: ISubscriber | null = ctx.currentSubscriber;
+export let currentScope: any = ctx.currentScope;
+export let batchDepth = ctx.batchDepth;
+export const pendingEffects: Set<any> = ctx.pendingEffects;
+export const warnedCyclicSubscribers: WeakSet<ISubscriber> = ctx.warnedCyclicSubscribers;
+export let isFlushing = ctx.isFlushing;
 
 export function setCurrentSubscriber(sub: ISubscriber | null): void {
+  ctx.currentSubscriber = sub;
   currentSubscriber = sub;
 }
 
 export function getCurrentSubscriber(): ISubscriber | null {
-  return currentSubscriber;
+  return ctx.currentSubscriber;
 }
 
 export function setCurrentScope(scope: any): void {
+  ctx.currentScope = scope;
   currentScope = scope;
 }
 
 export function getCurrentScope(): any {
-  return currentScope;
+  return ctx.currentScope;
 }
 
 export function addPendingEffect(eff: any): void {
-  pendingEffects.add(eff);
+  ctx.pendingEffects.add(eff);
 }
 
 export function removePendingEffect(eff: any): void {
-  pendingEffects.delete(eff);
+  ctx.pendingEffects.delete(eff);
 }
 
 const MAX_FLUSH_COUNT = 100;
 
 export function flushEffects(): void {
-  if (isFlushing || batchDepth > 0) return;
+  if (ctx.isFlushing || ctx.batchDepth > 0) return;
+  ctx.isFlushing = true;
   isFlushing = true;
   let iterations = 0;
   try {
-    while (pendingEffects.size > 0) {
+    while (ctx.pendingEffects.size > 0) {
       if (++iterations > MAX_FLUSH_COUNT) {
-        pendingEffects.clear();
+        ctx.pendingEffects.clear();
         throw new Error(
           `[Visage Reactivity] Maximum update depth exceeded (${MAX_FLUSH_COUNT} cycles). ` +
             `An effect continuously triggered state mutations (infinite loop detected). ` +
             `Ensure effects that modify signals do not unconditionally depend on them, or use untrack() to read state.`
         );
       }
-      const effectsToRun = Array.from(pendingEffects);
-      pendingEffects.clear();
+      const effectsToRun = Array.from(ctx.pendingEffects);
+      ctx.pendingEffects.clear();
 
       for (const eff of effectsToRun) {
         if (eff.state === SubscriberState.DIRTY || eff.state === SubscriberState.CHECK_DIRTY) {
@@ -60,6 +86,7 @@ export function flushEffects(): void {
       }
     }
   } finally {
+    ctx.isFlushing = false;
     isFlushing = false;
   }
 }
@@ -85,12 +112,14 @@ export function flushEffects(): void {
  * @returns The return value of `fn`
  */
 export function batch<T>(fn: () => T): T {
-  batchDepth++;
+  ctx.batchDepth++;
+  batchDepth = ctx.batchDepth;
   try {
     return fn();
   } finally {
-    batchDepth--;
-    if (batchDepth === 0) {
+    ctx.batchDepth--;
+    batchDepth = ctx.batchDepth;
+    if (ctx.batchDepth === 0) {
       flushEffects();
     }
   }
@@ -114,11 +143,11 @@ export function batch<T>(fn: () => T): T {
  * @returns The return value of `fn`
  */
 export function untrack<T>(fn: () => T): T {
-  const prev = currentSubscriber;
-  currentSubscriber = null;
+  const prev = ctx.currentSubscriber;
+  setCurrentSubscriber(null);
   try {
     return fn();
   } finally {
-    currentSubscriber = prev;
+    setCurrentSubscriber(prev);
   }
 }
