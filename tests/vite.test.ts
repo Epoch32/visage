@@ -176,7 +176,7 @@ export function Component() {
     const resolvedId = plugin.resolveId!("virtual:visage-icons?icons=Check,ArrowRight");
     expect(resolvedId).toBe("\0virtual:visage-icons?icons=Check,ArrowRight");
 
-    const loadedModule: any = plugin.load!(resolvedId!);
+    const loadedModule: any = plugin.load!(resolvedId as string);
     expect(loadedModule).toContain('import { createIcon } from "visage/ui";');
     expect(loadedModule).toContain(
       'import { Check as __icon_node_Check, ArrowRight as __icon_node_ArrowRight } from "lucide";'
