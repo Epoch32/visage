@@ -1,15 +1,21 @@
 # Visage
 
-Visage is a TypeScript UI framework built on fine-grained push-pull reactivity and direct DOM manipulation. It eliminates the Virtual DOM entirely: components execute once as constructors to build the reactive graph, and subsequent state mutations update individual DOM text nodes and attributes in place.
+Visage is a high-performance TypeScript UI framework built on fine-grained push-pull reactivity and direct DOM manipulation. It eliminates the Virtual DOM entirely: component functions execute exactly once as constructors to build a directed acyclic reactive graph, and subsequent state mutations update individual DOM text nodes and attributes in place with microsecond latency.
+
+## Documentation & Resources
+
+- **Official Documentation**: [https://visage.epoch32.org](https://visage.epoch32.org)
+- **Contributing Guidelines**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- **License**: [Mozilla Public License 2.0 (MPL-2.0)](LICENSE)
 
 ## Installation
 
 ```bash
-# Using npm
-npm install @epoch32/visage
-
 # Using bun
 bun add @epoch32/visage
+
+# Using npm
+npm install @epoch32/visage
 
 # Using pnpm
 pnpm add @epoch32/visage
@@ -24,24 +30,6 @@ Visage takes an architectural approach aligned with fine-grained reactivity:
 - **Construct-once execution**: Component functions execute once during mounting to wire dependencies and instantiate DOM nodes.
 - **Push-pull reactivity**: Signal updates push dirty notifications through a directed acyclic graph (DAG), and values are lazily pulled only when read by active subscribers, preventing redundant computations and glitches.
 - **Zero synthetic abstraction**: Event listeners bind directly to native browser elements, and signal values bind directly to `Text` nodes or element attributes.
-
-## Core Modules
-
-Visage is modular. Import from the package root or target specific submodules:
-
-- `@epoch32/visage/signals`: Reactive primitives (`signal`, `computed`, `effect`, `batch`, `createStore`, `createContext`, `createRoot`).
-- `@epoch32/visage/dom`: Reactive DOM control flow primitives (`<Show>`, `<For>`, `<Portal>`, `<Suspense>`, `<ErrorBoundary>`, `lazy`, `render`).
-- `@epoch32/visage/charts`: Composable, fine-grained reactive SVG data visualizations (`Chart`, `Line`, `Area`, `Bar`, `Pie`, `CartesianGrid`, `XAxis`, `YAxis`, `ChartCursor`, `ChartTooltip`, `ChartLegend`) with monotone cubic spline interpolation and categorical band scaling.
-- `@epoch32/visage/ui`: Headless, accessible UI component primitives (`Dialog`, `Tabs`, `Command`, `DataTable`, `DropdownMenu`, `Switch`, `Toast`, `Tooltip`, `Popover`, `Accordion`).
-- `@epoch32/visage/style`: Scoped CSS engine and spatial layout system (`Stack`, `Row`, `Center`, `Grid`, `Spacer`, `createStyle`, `css`, `fluid`, `glass`).
-- `@epoch32/visage/form`: Reactive form state management with automatic binding and Standard Schema v1 validation.
-- `@epoch32/visage/query`: Asynchronous server state caching and mutation lifecycle management (`createQuery`, `createMutation`, `createInfiniteQuery`, `QueryClient`).
-- `@epoch32/visage/api`: File-based REST routing with directive pragmas, procedure builders, and typed client SDKs.
-- `@epoch32/visage/rpc`: Type-safe RPC router and client proxy with request batching and Server-Sent Events (SSE).
-- `@epoch32/visage/virtual`: Element virtualization engine for large lists and grids (`VirtualList`, `VirtualGrid`).
-- `@epoch32/visage/server`: Server-side rendering (`renderToString`, `renderToStream`) and client hydration (`hydrate`).
-- `@epoch32/visage/devtools`: In-browser reactive graph inspector and RPC transaction logger (`VisageDevTools`).
-- `@epoch32/visage/vite`: Official Vite plugin providing HMR transforms and automatic JSX configuration.
 
 ## Quick Example
 
@@ -73,6 +61,25 @@ if (root) {
 }
 ```
 
+## Core Modules
+
+Visage is modular. Import from the package root or target specific submodules:
+
+- `@epoch32/visage/signals`: Reactive primitives (`signal`, `computed`, `effect`, `batch`, `createStore`, `createContext`, `createRoot`).
+- `@epoch32/visage/dom`: Reactive DOM control flow primitives (`<Show>`, `<For>`, `<Portal>`, `<Suspense>`, `<ErrorBoundary>`, `lazy`, `render`).
+- `@epoch32/visage/router`: Built-in client-side SPA router (`<Router>`, `<Routes>`, `<Route>`, `<Link>`, `useLocation`, `useNavigate`).
+- `@epoch32/visage/ui`: Headless, accessible UI component primitives (`Dialog`, `Tabs`, `Command`, `DataTable`, `DropdownMenu`, `Switch`, `Toast`, `Tooltip`, `Popover`, `Accordion`, `BottomBar`).
+- `@epoch32/visage/charts`: Composable, fine-grained reactive SVG data visualizations (`Chart`, `Line`, `Area`, `Bar`, `Pie`, `CartesianGrid`, `XAxis`, `YAxis`, `ChartCursor`, `ChartTooltip`, `ChartLegend`).
+- `@epoch32/visage/style`: Scoped CSS engine and spatial layout system (`Stack`, `Row`, `Center`, `Grid`, `Spacer`, `createStyle`, `css`, `fluid`, `glass`).
+- `@epoch32/visage/form`: Reactive form state management with automatic binding and Standard Schema v1 validation.
+- `@epoch32/visage/query`: Asynchronous server state caching and mutation lifecycle management (`createQuery`, `createMutation`, `createInfiniteQuery`, `QueryClient`).
+- `@epoch32/visage/api`: File-based REST routing with directive pragmas, procedure builders, and typed client SDKs.
+- `@epoch32/visage/rpc`: Type-safe RPC router and client proxy with request batching and Server-Sent Events (SSE).
+- `@epoch32/visage/virtual`: Element virtualization engine for large lists and grids (`VirtualList`, `VirtualGrid`).
+- `@epoch32/visage/server`: Server-side rendering (`renderToString`, `renderToStream`) and client hydration (`hydrate`).
+- `@epoch32/visage/devtools`: In-browser reactive graph inspector and RPC transaction logger (`VisageDevTools`).
+- `@epoch32/visage/vite`: Official Vite plugin providing HMR transforms, automatic JSX configuration, and icon optimization.
+
 ## Vite Configuration
 
 Visage includes an official Vite plugin that configures JSX compilation and hot module replacement:
@@ -87,7 +94,9 @@ export default defineConfig({
 });
 ```
 
-## Development
+## Contributing
+
+We welcome contributions from the community! Check out our [Contributing Guide](CONTRIBUTING.md) for details on setting up your local environment, code standards, and PR workflows.
 
 ```bash
 # Install dependencies
