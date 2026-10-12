@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/Epoch32/visage/compare/visage-v1.1.1...visage-v1.1.2) (2026-10-11)
+
+
+### Bug Fixes
+
+* **dom:** anchor Show marker before effect and support function fallback ([a754187](https://github.com/Epoch32/visage/commit/a754187971de820cf91578304a7c4b2fd840ba5a))
+
 ## [1.1.1](https://github.com/Epoch32/visage/compare/visage-v1.1.0...visage-v1.1.1) (2026-10-11)
 
 
