@@ -92,6 +92,10 @@ export {
   type StackProps
 } from "./layout";
 export {
+  type UseDismissOptions,
+  useDismiss
+} from "./overlay";
+export {
   Popover,
   PopoverClose,
   PopoverContent,

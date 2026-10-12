@@ -79,14 +79,20 @@ export function trapFocus(container: HTMLElement, event: KeyboardEvent) {
  * Listen for click outside a target element
  */
 export function onClickOutside(
-  elements: Array<HTMLElement | null | undefined> | HTMLElement | null | undefined,
+  elements:
+    | Array<HTMLElement | null | undefined>
+    | HTMLElement
+    | null
+    | undefined
+    | (() => Array<HTMLElement | null | undefined>),
   handler: (event: MouseEvent | TouchEvent) => void
 ): () => void {
   const listener = (event: MouseEvent | TouchEvent) => {
     const target = event.target as Node | null;
     if (!target) return;
 
-    const list = Array.isArray(elements) ? elements : [elements];
+    const raw = typeof elements === "function" ? elements() : elements;
+    const list = Array.isArray(raw) ? raw : [raw];
     const isInside = list.some((el) => el?.contains(target));
 
     if (!isInside) {

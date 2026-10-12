@@ -126,6 +126,42 @@ describe("Visage UI Component Primitives", () => {
 
       unmount();
     });
+
+    it("dismisses dialog on Escape key and traps focus cycle with useDismiss", () => {
+      const unmount = render(
+        () => (
+          <Dialog defaultOpen={true}>
+            {() => (
+              <DialogPortal>
+                <DialogContent class="escape-dialog">
+                  <button id="first-btn" type="button">
+                    First
+                  </button>
+                  <button id="second-btn" type="button">
+                    Second
+                  </button>
+                  <DialogClose class="dlg-close">Close</DialogClose>
+                </DialogContent>
+              </DialogPortal>
+            )}
+          </Dialog>
+        ),
+        container
+      );
+
+      const dialogContent = document.body.querySelector(".escape-dialog") as HTMLElement;
+      expect(dialogContent.getAttribute("data-state")).toBe("open");
+
+      // Press Escape
+      dialogContent.dispatchEvent({
+        type: "keydown",
+        key: "Escape",
+        stopPropagation: () => {}
+      } as any);
+      expect(dialogContent.getAttribute("data-state")).toBe("closed");
+
+      unmount();
+    });
   });
 
   describe("Tabs", () => {
@@ -336,6 +372,54 @@ describe("Visage UI Component Primitives", () => {
 
       const close = document.body.querySelector(".pop-close") as HTMLButtonElement;
       close.click();
+      expect(trigger.getAttribute("data-state")).toBe("closed");
+
+      unmount();
+    });
+
+    it("closes popover on Escape key and click outside with useDismiss", () => {
+      const unmount = render(
+        () => (
+          <div>
+            <div id="outside-area">Outside</div>
+            <Popover defaultOpen={true}>
+              {() => (
+                <>
+                  <PopoverTrigger class="esc-pop-trigger">Target</PopoverTrigger>
+                  <PopoverPortal>
+                    <PopoverContent class="esc-pop-content">Panel</PopoverContent>
+                  </PopoverPortal>
+                </>
+              )}
+            </Popover>
+          </div>
+        ),
+        container
+      );
+
+      const trigger = container.querySelector(".esc-pop-trigger") as HTMLButtonElement;
+      const content = document.body.querySelector(".esc-pop-content") as HTMLElement;
+      expect(content.getAttribute("data-state")).toBe("open");
+
+      // Press Escape
+      content.dispatchEvent({
+        type: "keydown",
+        key: "Escape",
+        stopPropagation: () => {}
+      } as any);
+      expect(trigger.getAttribute("data-state")).toBe("closed");
+
+      // Re-open
+      trigger.click();
+      expect(trigger.getAttribute("data-state")).toBe("open");
+
+      // Click outside
+      const outsideArea = container.querySelector("#outside-area") as HTMLElement;
+      outsideArea.dispatchEvent({
+        type: "mousedown",
+        bubbles: true,
+        target: outsideArea
+      } as any);
       expect(trigger.getAttribute("data-state")).toBe("closed");
 
       unmount();

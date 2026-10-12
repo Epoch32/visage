@@ -1,8 +1,9 @@
 import { Portal } from "../dom/control-flow";
 import type { Child } from "../dom/render";
-import { onCleanup, type ReadonlySignal } from "../signals";
+import type { ReadonlySignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
-import { createControllableSignal, createId, onClickOutside } from "./utils";
+import { useDismiss } from "./overlay";
+import { createControllableSignal, createId } from "./utils";
 
 export interface DropdownMenuContextValue {
   open: ReadonlySignal<boolean>;
@@ -207,6 +208,19 @@ export interface DropdownMenuContentProps {
 export function DropdownMenuContent(props: DropdownMenuContentProps): Child {
   const ctx = useContext(DropdownMenuContext);
 
+  const dismiss = useDismiss(() => ctx?.contentRef.current, {
+    enabled: () => ctx?.open() ?? false,
+    onDismiss: () => {
+      if (ctx) {
+        ctx.setOpen(false);
+        ctx.triggerRef.current?.focus();
+      }
+    },
+    escapeKey: true,
+    outsidePointer: true,
+    outsideIgnore: () => [ctx?.triggerRef.current]
+  });
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
     if (e.defaultPrevented) return;
@@ -233,10 +247,7 @@ export function DropdownMenuContent(props: DropdownMenuContentProps): Child {
       items[items.length - 1]?.focus();
       e.preventDefault();
     } else if (e.key === "Escape") {
-      if (ctx) {
-        ctx.setOpen(false);
-        ctx.triggerRef.current?.focus();
-      }
+      dismiss.handleKeyDown(e);
       e.preventDefault();
     } else if (e.key === "Tab") {
       if (ctx) ctx.setOpen(false);
@@ -259,14 +270,6 @@ export function DropdownMenuContent(props: DropdownMenuContentProps): Child {
       ref={(el: HTMLElement | null) => {
         if (ctx) {
           ctx.contentRef.current = el;
-          if (el) {
-            const cleanup = onClickOutside([ctx.triggerRef.current, el], () => {
-              if (ctx.open()) {
-                ctx.setOpen(false);
-              }
-            });
-            onCleanup(cleanup);
-          }
         }
       }}
       id={ctx?.menuId}

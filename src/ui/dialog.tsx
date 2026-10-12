@@ -2,7 +2,8 @@ import { Portal } from "../dom/control-flow";
 import type { Child } from "../dom/render";
 import type { ReadonlySignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
-import { createControllableSignal, createId, trapFocus } from "./utils";
+import { useDismiss } from "./overlay";
+import { createControllableSignal, createId } from "./utils";
 
 export interface DialogContextValue {
   open: ReadonlySignal<boolean>;
@@ -207,25 +208,26 @@ export interface DialogContentProps {
 export function DialogContent(props: DialogContentProps): Child {
   const ctx = useContext(DialogContext);
 
+  const dismiss = useDismiss(() => ctx?.contentRef.current, {
+    enabled: () => ctx?.open() ?? false,
+    onDismiss: () => ctx?.setOpen(false),
+    escapeKey: true,
+    trapFocus: true,
+    outsidePointer: false, // backdrop clicks are handled by DialogOverlay
+    closeSelector: "[data-dialog-close]",
+    onEscapeKeyDown: (e) => {
+      if (props.onKeyDown) props.onKeyDown(e);
+    }
+  });
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
-    if (e.defaultPrevented) return;
-
-    if (e.key === "Escape") {
-      ctx?.setOpen(false);
-      e.stopPropagation();
-    } else if (e.key === "Tab" && ctx?.contentRef.current) {
-      trapFocus(ctx.contentRef.current, e);
-    }
+    dismiss.handleKeyDown(e);
   };
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (e.defaultPrevented) return;
-    const target = e.target as HTMLElement | null;
-    if (target?.closest("[data-dialog-close]")) {
-      ctx?.setOpen(false);
-    }
+    dismiss.handleClick(e);
   };
 
   const {
