@@ -231,27 +231,32 @@ describe("Visage IO Primitives (visage/io)", () => {
     it("creates media preview URL and cleans up on unmount", () => {
       let createdUrl = "";
       let revokedUrl = "";
+      const origCreate = (globalThis as any).URL.createObjectURL;
+      const origRevoke = (globalThis as any).URL.revokeObjectURL;
 
-      (globalThis as any).URL = {
-        createObjectURL: (blob: any) => {
-          createdUrl = `blob:test/${blob.name || "file"}`;
-          return createdUrl;
-        },
-        revokeObjectURL: (url: string) => {
-          revokedUrl = url;
-        }
+      (globalThis as any).URL.createObjectURL = (blob: any) => {
+        createdUrl = `blob:test/${blob.name || "file"}`;
+        return createdUrl;
+      };
+      (globalThis as any).URL.revokeObjectURL = (url: string) => {
+        revokedUrl = url;
       };
 
-      createRoot((dispose) => {
-        const file = new File(["data"], "avatar.png", { type: "image/png" });
-        const url = createMediaUrl(file);
+      try {
+        createRoot((dispose) => {
+          const file = new File(["data"], "avatar.png", { type: "image/png" });
+          const url = createMediaUrl(file);
 
-        expect(url).toBe("blob:test/avatar.png");
-        expect(revokedUrl).toBe("");
+          expect(url).toBe("blob:test/avatar.png");
+          expect(revokedUrl).toBe("");
 
-        dispose();
-        expect(revokedUrl).toBe("blob:test/avatar.png");
-      });
+          dispose();
+          expect(revokedUrl).toBe("blob:test/avatar.png");
+        });
+      } finally {
+        (globalThis as any).URL.createObjectURL = origCreate;
+        (globalThis as any).URL.revokeObjectURL = origRevoke;
+      }
     });
 
     it("spawns file picker and returns files on change", async () => {
