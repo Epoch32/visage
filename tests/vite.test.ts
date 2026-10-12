@@ -159,22 +159,33 @@ export function Component() {
 
     const result: any = plugin.transform!(sampleCode, "/app/src/Button.tsx");
     expect(result).not.toBeNull();
-    expect(result.code).toContain('import { createIcon as __visageCreateIcon } from "visage/ui";');
     expect(result.code).toContain(
-      'import { Check as __icon_node_Check, ArrowRight as __icon_node_ArrowRight, Trash2 as __icon_node_Trash2 } from "lucide";'
+      'import { Check, ArrowRight as NextArrow, Trash2 } from "virtual:visage-icons?icons=Check,ArrowRight,Trash2";'
     );
-    expect(result.code).toContain('import { Heart as __icon_node_Heart } from "lucide";');
-    expect(result.code).toContain(
-      'const Check = /* @__PURE__ */ __visageCreateIcon("Check", __icon_node_Check);'
+    expect(result.code).toContain('import { Heart } from "virtual:visage-icons?icons=Heart";');
+
+    // Test re-exports
+    const exportCode = `export { Check, ArrowRight as NextArrow } from "lucide-react";`;
+    const exportResult: any = plugin.transform!(exportCode, "/app/src/Icons.ts");
+    expect(exportResult).not.toBeNull();
+    expect(exportResult.code).toBe(
+      `export { Check, ArrowRight as NextArrow } from "virtual:visage-icons?icons=Check,ArrowRight";`
     );
-    expect(result.code).toContain(
-      'const NextArrow = /* @__PURE__ */ __visageCreateIcon("ArrowRight", __icon_node_ArrowRight);'
+
+    // Test virtual module load
+    const resolvedId = plugin.resolveId!("virtual:visage-icons?icons=Check,ArrowRight");
+    expect(resolvedId).toBe("\0virtual:visage-icons?icons=Check,ArrowRight");
+
+    const loadedModule: any = plugin.load!(resolvedId!);
+    expect(loadedModule).toContain('import { createIcon } from "visage/ui";');
+    expect(loadedModule).toContain(
+      'import { Check as __icon_node_Check, ArrowRight as __icon_node_ArrowRight } from "lucide";'
     );
-    expect(result.code).toContain(
-      'const Trash2 = /* @__PURE__ */ __visageCreateIcon("Trash2", __icon_node_Trash2);'
+    expect(loadedModule).toContain(
+      'export const Check = /* @__PURE__ */ createIcon("Check", __icon_node_Check);'
     );
-    expect(result.code).toContain(
-      'const Heart = /* @__PURE__ */ __visageCreateIcon("Heart", __icon_node_Heart);'
+    expect(loadedModule).toContain(
+      'export const ArrowRight = /* @__PURE__ */ createIcon("ArrowRight", __icon_node_ArrowRight);'
     );
 
     // Unrelated code should not transform

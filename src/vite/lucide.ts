@@ -48,6 +48,9 @@ function parseNamedImports(importClause: string): ParsedImport[] {
  * });
  * ```
  */
+const VIRTUAL_PREFIX = "virtual:visage-icons";
+const RESOLVED_PREFIX = `\0${VIRTUAL_PREFIX}`;
+
 export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugin {
   const aliases = options.aliases ?? ["lucide-react"];
 
@@ -58,12 +61,15 @@ export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugi
     config() {
       return {
         optimizeDeps: {
-          exclude: aliases
+          exclude: [...aliases, VIRTUAL_PREFIX]
         }
       };
     },
 
     resolveId(id: string) {
+      if (id.startsWith(VIRTUAL_PREFIX)) {
+        return `\0${id}`;
+      }
       if (aliases.includes(id)) {
         return `\0visage-lucide:${id}`;
       }
@@ -71,6 +77,22 @@ export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugi
     },
 
     load(id: string) {
+      if (id.startsWith(RESOLVED_PREFIX)) {
+        const query = id.slice(RESOLVED_PREFIX.length);
+        const params = new URLSearchParams(query.startsWith("?") ? query.slice(1) : "");
+        const names = (params.get("icons") || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const imports = names.map((n) => `${n} as __icon_node_${n}`).join(", ");
+        const exports = names
+          .map((n) => `export const ${n} = /* @__PURE__ */ createIcon("${n}", __icon_node_${n});`)
+          .join("\n");
+
+        return `import { createIcon } from "visage/ui";\nimport { ${imports} } from "lucide";\n\n${exports}\n`;
+      }
+
       if (id.startsWith("\0visage-lucide:")) {
         return `
 import * as lucideIcons from "lucide";
@@ -88,10 +110,6 @@ export const __getIcon = (name) => {
 export default new Proxy({}, {
   get: (_, prop) => typeof prop === "string" ? __getIcon(prop) : undefined
 });
-
-// Dynamic proxy export for all lucide icon names
-${Object.keys({})};
-export * from "lucide";
 `;
       }
       return null;
@@ -106,26 +124,48 @@ export * from "lucide";
       let hasMatches = false;
 
       for (const alias of aliases) {
-        // Regex to match: import { ... } from "lucide-react" or 'lucide-react'
-        const regex = new RegExp(`import\\s*\\{([^}]+)\\}\\s*from\\s*['"]${alias}['"];?`, "g");
-
-        transformed = transformed.replace(regex, (_match, importClause) => {
+        // Match: import { ... } from "alias"
+        const importRegex = new RegExp(
+          `import\\s*\\{([^}]+)\\}\\s*from\\s*['"]${alias}['"];?`,
+          "g"
+        );
+        transformed = transformed.replace(importRegex, (_match, importClause) => {
           const imports = parseNamedImports(importClause);
           if (imports.length === 0) return "";
-
           hasMatches = true;
 
-          const lucideNamedImports = imports
-            .map((imp) => `${imp.importedName} as __icon_node_${imp.importedName}`)
+          const queryIcons = Array.from(new Set(imports.map((i) => i.importedName))).join(",");
+          const specifiers = imports
+            .map((i) =>
+              i.importedName === i.localName
+                ? i.importedName
+                : `${i.importedName} as ${i.localName}`
+            )
             .join(", ");
 
-          const componentDeclarations = imports
-            .map((imp) => {
-              return `const ${imp.localName} = /* @__PURE__ */ __visageCreateIcon("${imp.importedName}", __icon_node_${imp.importedName});`;
-            })
-            .join("\n");
+          return `import { ${specifiers} } from "${VIRTUAL_PREFIX}?icons=${queryIcons}";`;
+        });
 
-          return `import { createIcon as __visageCreateIcon } from "visage/ui";\nimport { ${lucideNamedImports} } from "lucide";\n${componentDeclarations}`;
+        // Match: export { ... } from "alias"
+        const exportRegex = new RegExp(
+          `export\\s*\\{([^}]+)\\}\\s*from\\s*['"]${alias}['"];?`,
+          "g"
+        );
+        transformed = transformed.replace(exportRegex, (_match, exportClause) => {
+          const exports = parseNamedImports(exportClause);
+          if (exports.length === 0) return "";
+          hasMatches = true;
+
+          const queryIcons = Array.from(new Set(exports.map((i) => i.importedName))).join(",");
+          const specifiers = exports
+            .map((i) =>
+              i.importedName === i.localName
+                ? i.importedName
+                : `${i.importedName} as ${i.localName}`
+            )
+            .join(", ");
+
+          return `export { ${specifiers} } from "${VIRTUAL_PREFIX}?icons=${queryIcons}";`;
         });
       }
 
