@@ -1,8 +1,9 @@
 import { Portal } from "../dom/control-flow";
 import type { Child } from "../dom/render";
-import { onCleanup, type ReadonlySignal } from "../signals";
+import type { ReadonlySignal } from "../signals";
 import { createContext, useContext } from "../signals/context";
-import { createControllableSignal, createId, onClickOutside } from "./utils";
+import { useDismiss } from "./overlay";
+import { createControllableSignal, createId } from "./utils";
 
 export interface PopoverContextValue {
   open: ReadonlySignal<boolean>;
@@ -138,24 +139,29 @@ export interface PopoverContentProps {
 export function PopoverContent(props: PopoverContentProps): Child {
   const ctx = useContext(PopoverContext);
 
+  const dismiss = useDismiss(() => ctx?.contentRef.current, {
+    enabled: () => ctx?.open() ?? false,
+    onDismiss: () => ctx?.setOpen(false),
+    escapeKey: true,
+    outsidePointer: true,
+    outsideIgnore: () => [ctx?.triggerRef.current],
+    closeSelector: "[data-popover-close]",
+    onEscapeKeyDown: (e) => {
+      if (props.onKeyDown) props.onKeyDown(e);
+      if (!e.defaultPrevented) {
+        ctx?.triggerRef.current?.focus();
+      }
+    }
+  });
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
-    if (e.defaultPrevented) return;
-
-    if (e.key === "Escape" && ctx) {
-      ctx.setOpen(false);
-      ctx.triggerRef.current?.focus();
-      e.stopPropagation();
-    }
+    dismiss.handleKeyDown(e);
   };
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    if (e.defaultPrevented) return;
-    const target = e.target as HTMLElement | null;
-    if (target?.closest("[data-popover-close]")) {
-      ctx?.setOpen(false);
-    }
+    dismiss.handleClick(e);
   };
 
   const {
@@ -175,14 +181,6 @@ export function PopoverContent(props: PopoverContentProps): Child {
       ref={(el: HTMLElement | null) => {
         if (ctx) {
           ctx.contentRef.current = el;
-          if (el) {
-            const cleanup = onClickOutside([ctx.triggerRef.current, el], () => {
-              if (ctx.open()) {
-                ctx.setOpen(false);
-              }
-            });
-            onCleanup(cleanup);
-          }
         }
       }}
       id={ctx?.contentId}

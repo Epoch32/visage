@@ -2,6 +2,7 @@ import { Portal } from "../dom/control-flow";
 import type { Child } from "../dom/render";
 import type { CommandProps } from "./command";
 import { CommandRoot } from "./command";
+import { useDismiss } from "./overlay";
 import { createControllableSignal } from "./utils";
 
 export interface CommandDialogProps extends CommandProps {
@@ -17,6 +18,15 @@ export function CommandDialog(props: CommandDialogProps): Child {
     value: props.open,
     defaultValue: props.defaultOpen ?? false,
     onChange: props.onOpenChange
+  });
+
+  const contentRef: { current: HTMLElement | null } = { current: null };
+
+  const dismiss = useDismiss(() => contentRef.current, {
+    enabled: () => open(),
+    onDismiss: () => setOpen(false),
+    escapeKey: true,
+    outsidePointer: false
   });
 
   const { overlayClass, contentClass, style, ...rest } = props;
@@ -39,8 +49,15 @@ export function CommandDialog(props: CommandDialogProps): Child {
         onClick={(e: MouseEvent) => {
           if (e.target === e.currentTarget) setOpen(false);
         }}
+        onKeyDown={dismiss.handleKeyDown}
       >
-        <div style={{ width: "100%", maxWidth: "560px" }} class={contentClass}>
+        <div
+          ref={(el: HTMLElement | null) => {
+            contentRef.current = el;
+          }}
+          style={{ width: "100%", maxWidth: "560px" }}
+          class={contentClass}
+        >
           <CommandRoot {...rest} />
         </div>
       </div>

@@ -112,6 +112,16 @@ export class MockNode {
     return this.childNodes.map((c) => c.textContent).join("");
   }
 
+  contains(other: MockNode | null | undefined): boolean {
+    if (!other) return false;
+    let curr: MockNode | null = other;
+    while (curr) {
+      if (curr === this) return true;
+      curr = curr.parentNode;
+    }
+    return false;
+  }
+
   set textContent(text: string) {
     this.childNodes = [];
     this.insertBefore(new MockText(text), null);
@@ -280,12 +290,25 @@ export class MockElement extends MockNode {
     }
   }
 
-  dispatchEvent(event: { type: string }) {
-    const set = this.listeners.get(event.type);
-    if (set) {
-      for (const h of set) {
-        h(event);
+  dispatchEvent(event: { type: string; bubbles?: boolean; target?: any; [key: string]: any }) {
+    const evt =
+      event.target === undefined ? Object.assign(Object.create(event), { target: this }) : event;
+    let current: MockNode | null = this;
+    while (current) {
+      if (current instanceof MockElement) {
+        const set = current.listeners.get(evt.type);
+        if (set) {
+          for (const h of set) {
+            h(evt);
+          }
+        }
       }
+      if (!evt.bubbles) break;
+      current = current.parentNode;
+    }
+
+    if (evt.bubbles && typeof document !== "undefined" && (document as any).dispatchEvent) {
+      (document as any).dispatchEvent(evt);
     }
   }
 
@@ -499,6 +522,14 @@ export function setupDOM() {
       },
       removeEventListener: (evt: string, fn: any) => {
         listeners.get(evt)?.delete(fn);
+      },
+      dispatchEvent: (event: { type: string; [key: string]: any }) => {
+        const set = listeners.get(event.type);
+        if (set) {
+          for (const h of set) {
+            h(event);
+          }
+        }
       }
     };
 
@@ -514,7 +545,8 @@ export function setupDOM() {
       Comment: MockComment,
       DocumentFragment: MockDocumentFragment,
       addEventListener: doc.addEventListener,
-      removeEventListener: doc.removeEventListener
+      removeEventListener: doc.removeEventListener,
+      dispatchEvent: doc.dispatchEvent
     };
 
     doc.defaultView = win;
