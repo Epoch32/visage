@@ -1,6 +1,5 @@
 import { type Child, insertChild } from "../dom/render";
 import { getActiveScope, runInScope, Scope } from "./scope";
-import { untrack } from "./system";
 
 export interface Context<T> {
   id: symbol;
