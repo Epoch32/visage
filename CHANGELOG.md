@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/Epoch32/visage/compare/visage-v1.1.3...visage-v1.1.4) (2026-10-12)
+
+
+### Bug Fixes
+
+* **core:** resolve reactivity cross-chunk desync, listener lifecycle, and svg class errors ([ce53bfe](https://github.com/Epoch32/visage/commit/ce53bfe3b34d49ccd175d85c28a3c8a3842429d5))
+
 ## [1.1.3](https://github.com/Epoch32/visage/compare/visage-v1.1.2...visage-v1.1.3) (2026-10-12)
 
 
