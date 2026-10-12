@@ -166,6 +166,51 @@ describe("Visage Signals", () => {
     expect(ageRuns).toBe(2);
   });
 
+  it("tracks store property existence ('in' operator) and key enumeration (Object.keys) reactively", () => {
+    const store = createStore<Record<string, any>>({
+      title: "Visage",
+      version: "1.3.0"
+    });
+
+    let hasAdminRuns = 0;
+    let isAdminPresent = false;
+    effect(() => {
+      hasAdminRuns++;
+      isAdminPresent = "admin" in store;
+    });
+
+    let keysRuns = 0;
+    let currentKeys: string[] = [];
+    effect(() => {
+      keysRuns++;
+      currentKeys = Object.keys(store);
+    });
+
+    expect(hasAdminRuns).toBe(1);
+    expect(isAdminPresent).toBe(false);
+    expect(keysRuns).toBe(1);
+    expect(currentKeys).toEqual(["title", "version"]);
+
+    // Dynamically add a property
+    store.admin = true;
+    expect(hasAdminRuns).toBe(2);
+    expect(isAdminPresent).toBe(true);
+    expect(keysRuns).toBe(2);
+    expect(currentKeys).toEqual(["title", "version", "admin"]);
+
+    // Mutate existing property (should NOT trigger keysRuns or hasAdminRuns)
+    store.title = "Visage Next";
+    expect(hasAdminRuns).toBe(2);
+    expect(keysRuns).toBe(2);
+
+    // Delete property
+    delete store.admin;
+    expect(hasAdminRuns).toBe(3);
+    expect(isAdminPresent).toBe(false);
+    expect(keysRuns).toBe(3);
+    expect(currentKeys).toEqual(["title", "version"]);
+  });
+
   it("provides and consumes context across scopes", () => {
     const ThemeContext = createContext("light");
     let receivedTheme = "";

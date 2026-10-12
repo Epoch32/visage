@@ -5,6 +5,7 @@ import { isSignal } from "./types";
 const STORE_RAW = Symbol("visage.store.raw");
 const STORE_SIGNALS = Symbol("visage.store.signals");
 const STORE_PROXY = Symbol("visage.store.proxy");
+const STORE_ITERATE = Symbol("visage.store.iterate");
 
 export type Store<T> = T;
 
@@ -61,9 +62,29 @@ function createStoreProxy<T extends object>(target: T): T {
       return value;
     },
 
+    has(target, prop) {
+      if (prop === STORE_RAW || prop === STORE_PROXY) return true;
+      if (typeof prop === "string" || typeof prop === "symbol") {
+        const sig = getOrCreatePropertySignal(target, prop);
+        sig.get();
+      }
+      return Reflect.has(target, prop);
+    },
+
+    ownKeys(target) {
+      const iterSig = getOrCreatePropertySignal(target, STORE_ITERATE);
+      iterSig.get();
+      return Reflect.ownKeys(target);
+    },
+
+    getOwnPropertyDescriptor(target, prop) {
+      return Reflect.getOwnPropertyDescriptor(target, prop);
+    },
+
     set(target, prop, value, receiver) {
+      const hadProp = Reflect.has(target, prop);
       const prevValue = Reflect.get(target, prop, receiver);
-      if (Object.is(prevValue, value)) {
+      if (hadProp && Object.is(prevValue, value)) {
         return true;
       }
 
@@ -72,10 +93,18 @@ function createStoreProxy<T extends object>(target: T): T {
         const sig = getOrCreatePropertySignal(target, prop);
         sig.set(value);
 
+        // If a new property was added, notify key iteration
+        if (!hadProp) {
+          const iterSig = getOrCreatePropertySignal(target, STORE_ITERATE);
+          iterSig.update((prev: number = 0) => prev + 1);
+        }
+
         // If array length or property keys changed, notify length/keys
         if (Array.isArray(target) && prop !== "length") {
           const lenSig = getOrCreatePropertySignal(target, "length");
           lenSig.set(target.length);
+          const iterSig = getOrCreatePropertySignal(target, STORE_ITERATE);
+          iterSig.update((prev: number = 0) => prev + 1);
         }
       }
       return success;
@@ -87,6 +116,8 @@ function createStoreProxy<T extends object>(target: T): T {
       if (hadProp && success) {
         const sig = getOrCreatePropertySignal(target, prop);
         sig.set(undefined);
+        const iterSig = getOrCreatePropertySignal(target, STORE_ITERATE);
+        iterSig.update((prev: number = 0) => prev + 1);
       }
       return success;
     }
