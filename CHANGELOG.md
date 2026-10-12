@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/Epoch32/visage/compare/visage-v1.1.4...visage-v1.1.5) (2026-10-12)
+
+
+### Bug Fixes
+
+* **vite:** support .mdx files in visageLucide and export icons safely in virtual module ([d5383f5](https://github.com/Epoch32/visage/commit/d5383f5e909ca81a117f2d525a018d262e247e87))
+
 ## [1.1.4](https://github.com/Epoch32/visage/compare/visage-v1.1.3...visage-v1.1.4) (2026-10-12)
 
 
