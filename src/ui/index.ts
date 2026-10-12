@@ -11,6 +11,22 @@ export {
   useAccordionItemContext
 } from "./accordion";
 export {
+  BottomBar,
+  BottomBarAction,
+  type BottomBarActionProps,
+  BottomBarBadge,
+  type BottomBarBadgeProps,
+  type BottomBarContextValue,
+  BottomBarItem,
+  type BottomBarItemConfig,
+  type BottomBarItemProps,
+  type BottomBarProps,
+  BottomBarRoot,
+  BottomBarSeparator,
+  type BottomBarSeparatorProps,
+  useBottomBarContext
+} from "./bottom-bar";
+export {
   Command,
   CommandDialog,
   type CommandDialogProps,
