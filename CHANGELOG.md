@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/Epoch32/visage/compare/visage-v1.4.0...visage-v1.5.0) (2026-10-12)
+
+
+### Features
+
+* **i18n:** add fine-grained localization engine with Crowdin/Weblate sync ([516cafa](https://github.com/Epoch32/visage/commit/516cafae8d74d93999caf407b7222d09bb573d57))
+* **io:** add reactive drag-and-drop, clipboard, file picker primitives and showcase tab ([38a0b98](https://github.com/Epoch32/visage/commit/38a0b98455f2c331c9d95b078c8dfc464f94be22))
+
 ## [1.4.0](https://github.com/Epoch32/visage/compare/visage-v1.3.3...visage-v1.4.0) (2026-10-12)
 
 
