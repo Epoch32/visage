@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Epoch32/visage/compare/visage-v1.1.5...visage-v1.2.0) (2026-10-12)
+
+
+### Features
+
+* **vite:** rewrite lucide imports and exports into virtual icon bundles ([3dcb941](https://github.com/Epoch32/visage/commit/3dcb9413044cfd0c085eec8297ea61936c008ecd))
+
 ## [1.1.5](https://github.com/Epoch32/visage/compare/visage-v1.1.4...visage-v1.1.5) (2026-10-12)
 
 
