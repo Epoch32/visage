@@ -85,43 +85,35 @@ export function BottomBarItem(props: BottomBarItemProps): Child {
         )
       ) : null}
 
-      {children !== undefined ? (
-        typeof children === "function" ? (
-          children()
-        ) : (
-          children
-        )
-      ) : (
-        <>
-          {icon ? (
-            <span
-              class="visage-bottom-bar-icon"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "18px"
-              }}
-            >
-              {typeof icon === "function" ? icon() : icon}
-            </span>
-          ) : null}
-          {label ? (
-            <span
-              class="visage-bottom-bar-label"
-              style={{
-                fontSize: "10px",
-                fontWeight: 500,
-                lineHeight: 1.2,
-                marginTop: "3px",
-                letterSpacing: "0.01em"
-              }}
-            >
-              {typeof label === "function" ? label() : label}
-            </span>
-          ) : null}
-        </>
-      )}
+      {children !== undefined ? (typeof children === "function" ? children() : children) : null}
+
+      {icon ? (
+        <span
+          class="visage-bottom-bar-icon"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "18px"
+          }}
+        >
+          {typeof icon === "function" ? icon() : icon}
+        </span>
+      ) : null}
+      {label ? (
+        <span
+          class="visage-bottom-bar-label"
+          style={{
+            fontSize: "10px",
+            fontWeight: 500,
+            lineHeight: 1.2,
+            marginTop: "3px",
+            letterSpacing: "0.01em"
+          }}
+        >
+          {typeof label === "function" ? label() : label}
+        </span>
+      ) : null}
     </Tag>
   );
 }
