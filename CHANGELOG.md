@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3](https://github.com/Epoch32/visage/compare/visage-v1.3.2...visage-v1.3.3) (2026-10-12)
+
+
+### Bug Fixes
+
+* **ui:** add global window escape listener in useDismiss primitive ([#17](https://github.com/Epoch32/visage/issues/17)) ([0d1da54](https://github.com/Epoch32/visage/commit/0d1da547f043a348df8849e36447445080c47308))
+
 ## [1.3.2](https://github.com/Epoch32/visage/compare/visage-v1.3.1...visage-v1.3.2) (2026-10-12)
 
 
