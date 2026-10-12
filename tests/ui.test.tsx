@@ -152,8 +152,8 @@ describe("Visage UI Component Primitives", () => {
       const dialogContent = document.body.querySelector(".escape-dialog") as HTMLElement;
       expect(dialogContent.getAttribute("data-state")).toBe("open");
 
-      // Press Escape
-      dialogContent.dispatchEvent({
+      // Press Escape on window directly (even when content does not have focus)
+      window.dispatchEvent({
         type: "keydown",
         key: "Escape",
         stopPropagation: () => {}
