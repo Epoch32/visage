@@ -54,7 +54,7 @@ export function createContext<T>(defaultValue?: T): Context<T | undefined> {
       return runInScope(scope, () => {
         const content =
           typeof props.children === "function"
-            ? untrack(() => (props.children as (...args: any[]) => any)())
+            ? (props.children as (...args: any[]) => any)()
             : props.children;
         if (typeof document !== "undefined") {
           const frag = document.createDocumentFragment();

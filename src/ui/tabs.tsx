@@ -227,7 +227,12 @@ export function TabsTrigger(props: TabsTriggerProps): Child {
       data-value={value}
       tabIndex={() => (isSelected() ? 0 : -1)}
       disabled={disabled}
-      class={className}
+      class={[
+        className,
+        {
+          active: isSelected
+        }
+      ]}
       style={style}
       onClick={handleClick}
       {...rest}
