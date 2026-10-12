@@ -72,13 +72,33 @@ export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugi
 
     load(id: string) {
       if (id.startsWith("\0visage-lucide:")) {
-        return "export default {};";
+        return `
+import * as lucideIcons from "lucide";
+import { createIcon } from "visage/ui";
+
+const cache = new Map();
+export const __getIcon = (name) => {
+  if (cache.has(name)) return cache.get(name);
+  const node = lucideIcons[name];
+  const comp = node ? createIcon(name, node) : () => null;
+  cache.set(name, comp);
+  return comp;
+};
+
+export default new Proxy({}, {
+  get: (_, prop) => typeof prop === "string" ? __getIcon(prop) : undefined
+});
+
+// Dynamic proxy export for all lucide icon names
+${Object.keys({})};
+export * from "lucide";
+`;
       }
       return null;
     },
 
     transform(code: string, id: string) {
-      if (!id.match(/\.[jt]sx?$/) || id.includes("node_modules")) {
+      if (!id.match(/\.([jt]sx?|mdx?)$/) || id.includes("node_modules")) {
         return null;
       }
 
