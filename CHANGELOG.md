@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/Epoch32/visage/compare/visage-v1.1.2...visage-v1.1.3) (2026-10-12)
+
+
+### Bug Fixes
+
+* **signals:** maintain reactivity in Context.Provider and bind active class in TabsTrigger ([14bd2ff](https://github.com/Epoch32/visage/commit/14bd2ffe1b7c30fa051104447150b841ec56ad08))
+* **signals:** remove unused untrack import ([5ebd48b](https://github.com/Epoch32/visage/commit/5ebd48b7823ed129efa0228b993548c222c5e3aa))
+
 ## [1.1.2](https://github.com/Epoch32/visage/compare/visage-v1.1.1...visage-v1.1.2) (2026-10-11)
 
 
