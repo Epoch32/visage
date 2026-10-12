@@ -109,6 +109,27 @@ export {
   v,
   validateWithSchema
 } from "./form";
+// Reactive IO, File Picker, Drag-and-Drop & Clipboard
+export {
+  type ClipboardReturn,
+  type CreateClipboardOptions,
+  type CreateDropZoneOptions,
+  type CreateFilePickerOptions,
+  createClipboard,
+  createDropZone,
+  createFilePicker,
+  createMediaUrl,
+  DropZone,
+  type DropZoneComponentProps,
+  type DropZoneRenderProps,
+  type DropZoneReturn,
+  type FilePickerReturn,
+  type FileRejection,
+  type FileRejectionReason,
+  isFileAccepted,
+  type OnPasteOptions,
+  onPaste
+} from "./io";
 // JSX Typings
 export type {
   AnchorAttributes,

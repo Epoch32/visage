@@ -310,6 +310,26 @@ body {
   outline: none;
 }
 
+/* DropZone */
+.dropzone-box {
+  background: var(--bg);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+  cursor: pointer;
+}
+
+.dropzone-box:hover {
+  border-color: var(--primary);
+}
+
+.dropzone-active {
+  border-color: var(--primary);
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
 /* Slider */
 .slider-root {
   position: relative;

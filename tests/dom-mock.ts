@@ -235,6 +235,35 @@ export class MockElement extends MockNode {
     this.setAttribute("id", val);
   }
 
+  get className(): string {
+    return this.getAttribute("class") ?? "";
+  }
+
+  get type(): string {
+    return this.getAttribute("type") ?? "";
+  }
+
+  set type(val: string) {
+    this.setAttribute("type", val);
+  }
+
+  get multiple(): boolean {
+    return this.getAttribute("multiple") !== null;
+  }
+
+  set multiple(val: boolean) {
+    if (val) this.setAttribute("multiple", "");
+    else this.removeAttribute("multiple");
+  }
+
+  get accept(): string {
+    return this.getAttribute("accept") ?? "";
+  }
+
+  set accept(val: string) {
+    this.setAttribute("accept", val);
+  }
+
   get classList() {
     const self = this;
     return {
@@ -512,6 +541,8 @@ export function setupDOM() {
       createTextNode: (text: string) => new MockText(text),
       createDocumentFragment: () => new MockDocumentFragment(),
       createComment: (text: string) => new MockComment(text),
+      querySelector: (selector: string) => html.querySelector(selector),
+      querySelectorAll: (selector: string) => html.querySelectorAll(selector),
       addEventListener: (evt: string, fn: any) => {
         let set = listeners.get(evt);
         if (!set) {
@@ -551,6 +582,34 @@ export function setupDOM() {
 
     doc.defaultView = win;
 
+    class MockEvent {
+      type: string;
+      defaultPrevented = false;
+      bubbles = true;
+      cancelable = true;
+      target: any = null;
+      currentTarget: any = null;
+      constructor(type: string, options?: any) {
+        this.type = type;
+        if (options?.bubbles !== undefined) this.bubbles = options.bubbles;
+        if (options?.cancelable !== undefined) this.cancelable = options.cancelable;
+      }
+      preventDefault() {
+        this.defaultPrevented = true;
+      }
+      stopPropagation() {}
+    }
+
+    class MockDragEvent extends MockEvent {
+      dataTransfer: any = null;
+      constructor(type: string, options?: any) {
+        super(type, options);
+        if (options?.dataTransfer) {
+          this.dataTransfer = options.dataTransfer;
+        }
+      }
+    }
+
     g.Node = MockNode;
     g.HTMLElement = MockElement;
     g.HTMLIFrameElement = MockElement;
@@ -562,6 +621,8 @@ export function setupDOM() {
     g.window = win;
     g.location = location;
     g.history = history;
+    g.Event = g.Event || MockEvent;
+    g.DragEvent = g.DragEvent || MockDragEvent;
   }
 }
 

@@ -2,6 +2,7 @@ import {
   Activity,
   Bell,
   Check,
+  Copy,
   FileText,
   Folder,
   Heart,
@@ -11,10 +12,12 @@ import {
   Shield,
   Sparkles,
   Sun,
-  Trash2
+  Trash2,
+  Upload
 } from "lucide-react";
 import { createSignal } from "visage";
 import { VisageDevTools } from "visage/devtools";
+import { createClipboard, DropZone } from "visage/io";
 import {
   Accordion,
   Dialog,
@@ -36,6 +39,9 @@ export function App() {
   const [selectedTheme, setSelectedTheme] = createSignal("obsidian");
   const [sliderVolume, setSliderVolume] = createSignal(65);
   const [sliderBrightness, setSliderBrightness] = createSignal(80);
+  const [uploadedFiles, setUploadedFiles] = createSignal<string[]>([]);
+
+  const clipboard = createClipboard({ timeout: 1500 });
 
   const toggleLike = () => {
     if (isLiked()) {
@@ -160,6 +166,10 @@ export function App() {
                         <Tabs.Trigger value="controls" class="tab-trigger">
                           <Settings size={16} />
                           <span>Controls & Sliders</span>
+                        </Tabs.Trigger>
+                        <Tabs.Trigger value="io" class="tab-trigger">
+                          <Upload size={16} />
+                          <span>Drag & Drop (IO)</span>
                         </Tabs.Trigger>
                         <Tabs.Trigger value="switches" class="tab-trigger">
                           <Sparkles size={16} />
@@ -439,6 +449,193 @@ export function App() {
                                   thumbClass="slider-thumb"
                                 />
                               </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Tabs.Content>
+
+                      {/* Drag & Drop and Clipboard Tab (visage/io) */}
+                      <Tabs.Content value="io" class="tab-content">
+                        <div style={{ display: "flex", "flex-direction": "column", gap: "24px" }}>
+                          <div>
+                            <h3
+                              style={{
+                                margin: "0 0 8px 0",
+                                "font-size": "16px",
+                                "font-weight": "600"
+                              }}
+                            >
+                              Reactive DropZone Primitive
+                            </h3>
+                            <p
+                              style={{
+                                margin: "0 0 16px 0",
+                                color: "var(--fg-muted)",
+                                "font-size": "14px"
+                              }}
+                            >
+                              Fine-grained drag detection with zero-flicker nested counter tracking,
+                              MIME/size validation, and imperative picker launcher.
+                            </p>
+
+                            <DropZone
+                              accept={["image/*", ".pdf", ".txt"]}
+                              maxSize={10 * 1024 * 1024}
+                              class="dropzone-box"
+                              dragOverClass="dropzone-active"
+                              onDrop={(files) => {
+                                setUploadedFiles([...uploadedFiles(), ...files.map((f) => f.name)]);
+                                toast({
+                                  title: "Files Accepted",
+                                  description: `Received ${files.length} file(s).`,
+                                  variant: "success"
+                                });
+                              }}
+                              onDropRejected={(rejections) => {
+                                toast({
+                                  title: "Files Rejected",
+                                  description: rejections.map((r) => r.message).join(", "),
+                                  variant: "error"
+                                });
+                              }}
+                            >
+                              {(zone) => (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    "flex-direction": "column",
+                                    "align-items": "center",
+                                    gap: "12px",
+                                    padding: "32px 16px",
+                                    "text-align": "center"
+                                  }}
+                                >
+                                  <Upload
+                                    size={32}
+                                    style={{
+                                      color: () =>
+                                        zone.isDraggingOver() ? "var(--primary)" : "var(--fg-muted)"
+                                    }}
+                                  />
+                                  <div>
+                                    <p
+                                      style={{
+                                        margin: "0 0 4px 0",
+                                        "font-size": "15px",
+                                        "font-weight": "600"
+                                      }}
+                                    >
+                                      {() =>
+                                        zone.isDraggingOver()
+                                          ? "Drop files to upload now!"
+                                          : "Drag & drop files here"
+                                      }
+                                    </p>
+                                    <p
+                                      style={{
+                                        margin: 0,
+                                        "font-size": "13px",
+                                        color: "var(--fg-muted)"
+                                      }}
+                                    >
+                                      Supports images, PDFs, and text files up to 10MB
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    onClick={() => zone.openPicker()}
+                                  >
+                                    Browse Files
+                                  </button>
+                                </div>
+                              )}
+                            </DropZone>
+
+                            {() =>
+                              uploadedFiles().length > 0 ? (
+                                <div style={{ "margin-top": "16px" }}>
+                                  <span
+                                    style={{
+                                      "font-size": "13px",
+                                      "font-weight": "600",
+                                      color: "var(--fg-muted)"
+                                    }}
+                                  >
+                                    Uploaded Files ({uploadedFiles().length}):
+                                  </span>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      "flex-wrap": "wrap",
+                                      gap: "8px",
+                                      "margin-top": "8px"
+                                    }}
+                                  >
+                                    {uploadedFiles().map((name) => (
+                                      <span
+                                        style={{
+                                          padding: "4px 10px",
+                                          background: "var(--bg-muted)",
+                                          border: "1px solid var(--border)",
+                                          "border-radius": "9999px",
+                                          "font-size": "12px"
+                                        }}
+                                      >
+                                        {name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null
+                            }
+                          </div>
+
+                          <div
+                            style={{ borderTop: "1px solid var(--border)", "padding-top": "20px" }}
+                          >
+                            <h3
+                              style={{
+                                margin: "0 0 8px 0",
+                                "font-size": "16px",
+                                "font-weight": "600"
+                              }}
+                            >
+                              Reactive Clipboard Primitive
+                            </h3>
+                            <p
+                              style={{
+                                margin: "0 0 16px 0",
+                                color: "var(--fg-muted)",
+                                "font-size": "14px"
+                              }}
+                            >
+                              Async read/write with auto-resetting status signal and legacy
+                              fallback.
+                            </p>
+                            <div style={{ display: "flex", gap: "10px", "align-items": "center" }}>
+                              <button
+                                type="button"
+                                class="btn btn-secondary"
+                                onClick={() => {
+                                  clipboard.copy("npm install @epoch32/visage");
+                                  toast({
+                                    title: "Copied to Clipboard",
+                                    description: "npm install @epoch32/visage copied successfully."
+                                  });
+                                }}
+                              >
+                                {() =>
+                                  clipboard.copied() ? (
+                                    <Check size={16} color="var(--success)" />
+                                  ) : (
+                                    <Copy size={16} />
+                                  )
+                                }
+                                <span>
+                                  {() => (clipboard.copied() ? "Copied!" : "Copy install command")}
+                                </span>
+                              </button>
                             </div>
                           </div>
                         </div>
