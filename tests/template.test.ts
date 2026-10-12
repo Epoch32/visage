@@ -72,4 +72,30 @@ describe("Visage Template Engine", () => {
     btn.click();
     expect(clicks).toBe(1);
   });
+
+  it("applies spread object props and attributes in html tagged template", () => {
+    let clicked = false;
+    const buttonProps = {
+      id: "submit-action",
+      "data-testid": "submit-btn",
+      title: "Submit Form",
+      onClick: () => {
+        clicked = true;
+      }
+    };
+
+    const el = html`
+      <button ${buttonProps}>Confirm</button>
+    ` as HTMLElement;
+
+    container.appendChild(el);
+    const btn = container.querySelector("#submit-action") as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute("data-testid")).toBe("submit-btn");
+    expect(btn.getAttribute("title")).toBe("Submit Form");
+    expect(btn.textContent).toBe("Confirm");
+
+    btn.click();
+    expect(clicked).toBe(true);
+  });
 });

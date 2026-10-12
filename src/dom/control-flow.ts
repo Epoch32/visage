@@ -1,4 +1,13 @@
-import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "../signals";
+import {
+  effect,
+  getActiveScope,
+  onCleanup,
+  runInScope,
+  Scope,
+  signal,
+  untrack,
+  type WritableSignal
+} from "../signals";
 import { type Child, insertChild, type ReactiveValue, resolveValue } from "./render";
 
 export interface ShowProps<T> {
@@ -120,7 +129,7 @@ interface ItemRecord<T> {
   item: T;
   scope: Scope;
   nodes: Node[];
-  indexSignal: (val?: number) => number;
+  indexSignal: WritableSignal<number>;
 }
 
 /**
@@ -206,32 +215,31 @@ export function For<T>(props: ForProps<T>): any {
     if (!parent) return;
 
     const newItems: ItemRecord<T>[] = [];
-    const prevMap = new Map<T, ItemRecord<T>>();
+    const prevMap = new Map<T, ItemRecord<T>[]>();
 
     for (const rec of items) {
-      prevMap.set(rec.item, rec);
+      const group = prevMap.get(rec.item);
+      if (group) {
+        group.push(rec);
+      } else {
+        prevMap.set(rec.item, [rec]);
+      }
     }
 
     // Fast-path: map existing or create new item scopes
     for (let i = 0; i < list.length; i++) {
       const item = list[i]!;
-      const existing = prevMap.get(item);
+      const existingGroup = prevMap.get(item);
+      const existing =
+        existingGroup && existingGroup.length > 0 ? existingGroup.shift() : undefined;
 
       if (existing) {
-        existing.indexSignal(i);
+        untrack(() => {
+          existing.indexSignal.set(i);
+        });
         newItems.push(existing);
-        prevMap.delete(item);
       } else {
-        let indexVal = i;
-        const indexSubscribers = new Set<() => void>();
-        const indexSignal = (...args: [number?]): number => {
-          if (args.length > 0 && args[0] !== undefined && args[0] !== indexVal) {
-            indexVal = args[0];
-            for (const sub of Array.from(indexSubscribers)) sub();
-          }
-          return indexVal;
-        };
-
+        const indexSignal = signal(i, { internal: true });
         const itemScope = new Scope(getActiveScope());
         let itemNodes: Node[] = [];
 
@@ -254,10 +262,12 @@ export function For<T>(props: ForProps<T>): any {
     }
 
     // Clean up removed items
-    for (const [, removed] of prevMap) {
-      removed.scope.dispose();
-      for (const node of removed.nodes) {
-        if (node.parentNode) node.parentNode.removeChild(node);
+    for (const [, remainingGroup] of prevMap) {
+      for (const removed of remainingGroup) {
+        removed.scope.dispose();
+        for (const node of removed.nodes) {
+          if (node.parentNode) node.parentNode.removeChild(node);
+        }
       }
     }
 

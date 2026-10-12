@@ -56,29 +56,40 @@ export function createVirtualizer(options: VirtualizerOptions): Virtualizer {
     return getItemHeight(index);
   };
 
+  // Cached prefix offsets for O(1) offset lookups and true O(log N) binary search
+  const offsetsCache: number[] = [0];
+  let offsetsValidUpTo = 0;
+
+  const invalidateOffsetsFrom = (index: number) => {
+    offsetsValidUpTo = Math.min(offsetsValidUpTo, index);
+  };
+
+  const getOffsetForIndex = (targetIndex: number): number => {
+    if (targetIndex <= 0) return 0;
+    if (typeof options.itemHeight === "number" && dynamicSizeCache.size === 0) {
+      return targetIndex * options.itemHeight;
+    }
+    if (targetIndex <= offsetsValidUpTo) {
+      return offsetsCache[targetIndex]!;
+    }
+    for (let i = offsetsValidUpTo; i < targetIndex; i++) {
+      offsetsCache[i + 1] = (offsetsCache[i] ?? 0) + getItemSize(i);
+    }
+    offsetsValidUpTo = targetIndex;
+    return offsetsCache[targetIndex]!;
+  };
+
+  const measurementVersion = signal(0, { internal: true });
+
   // Compute prefix offsets for fast range calculation
   const totalSize = computed(() => {
+    measurementVersion();
     const count = getCount();
     if (typeof options.itemHeight === "number" && dynamicSizeCache.size === 0) {
       return count * options.itemHeight;
     }
-    let total = 0;
-    for (let i = 0; i < count; i++) {
-      total += getItemSize(i);
-    }
-    return total;
+    return getOffsetForIndex(count);
   });
-
-  const getOffsetForIndex = (targetIndex: number): number => {
-    if (typeof options.itemHeight === "number" && dynamicSizeCache.size === 0) {
-      return targetIndex * options.itemHeight;
-    }
-    let offset = 0;
-    for (let i = 0; i < targetIndex; i++) {
-      offset += getItemSize(i);
-    }
-    return offset;
-  };
 
   const findIndexAtOffset = (offset: number): number => {
     const count = getCount();
@@ -110,12 +121,14 @@ export function createVirtualizer(options: VirtualizerOptions): Virtualizer {
   };
 
   const startIndex = computed(() => {
+    measurementVersion();
     const offset = scrollOffset();
     const rawStart = findIndexAtOffset(offset);
     return Math.max(0, rawStart - overscan);
   });
 
   const endIndex = computed(() => {
+    measurementVersion();
     const count = getCount();
     if (count === 0) return 0;
     const endOffset = scrollOffset() + (containerSize() || 500);
@@ -255,8 +268,8 @@ export function createVirtualizer(options: VirtualizerOptions): Virtualizer {
       : element.getBoundingClientRect().height;
     if (measuredSize > 0 && dynamicSizeCache.get(index) !== measuredSize) {
       dynamicSizeCache.set(index, measuredSize);
-      // Force recalculation by touching scrollOffset
-      scrollOffset.update((o) => o);
+      invalidateOffsetsFrom(index);
+      measurementVersion.update((v) => v + 1);
     }
   };
 

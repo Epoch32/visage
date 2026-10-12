@@ -100,4 +100,45 @@ describe("Visage Virtualization (visage/virtual)", () => {
 
     unmount();
   });
+
+  it("handles variable item heights with cached prefix offsets and dynamic measureElement", () => {
+    const scrollEl = document.createElement("div") as any;
+    scrollEl.clientHeight = 300;
+    scrollEl.scrollTop = 0;
+
+    // Items with variable heights: even items 40px, odd items 60px
+    const getItemHeight = (i: number) => (i % 2 === 0 ? 40 : 60);
+
+    const virtualizer = createVirtualizer({
+      count: 100,
+      itemHeight: getItemHeight,
+      overscan: 1,
+      getScrollElement: () => scrollEl
+    });
+
+    // 50 items * 40px + 50 items * 60px = 5,000px
+    expect(virtualizer.totalSize()).toBe(5000);
+
+    const items = virtualizer.virtualItems();
+    expect(items[0]?.index).toBe(0);
+    expect(items[0]?.start).toBe(0);
+    expect(items[0]?.size).toBe(40);
+    expect(items[1]?.index).toBe(1);
+    expect(items[1]?.start).toBe(40);
+    expect(items[1]?.size).toBe(60);
+
+    // Measure element dynamic size override for index 0 to 100px
+    const mockEl = {
+      getBoundingClientRect: () => ({ height: 100, width: 200 })
+    } as any;
+    virtualizer.measureElement(mockEl, 0);
+
+    // total size should increase by 60px (from 40 to 100)
+    expect(virtualizer.totalSize()).toBe(5060);
+
+    const updatedItems = virtualizer.virtualItems();
+    expect(updatedItems[0]?.size).toBe(100);
+    // index 1 start offset should shift from 40 to 100
+    expect(updatedItems[1]?.start).toBe(100);
+  });
 });

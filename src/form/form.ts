@@ -54,6 +54,32 @@ export function createForm<T extends Record<string, any> = Record<string, any>>(
   const submitCount = signal(0);
   const customErrors = signal<Partial<Record<keyof T, string>>>({});
 
+  const getValues = (): T => {
+    const res: Record<string, any> = {};
+    for (const key in fields) {
+      res[key] = (fields as any)[key].value();
+    }
+    return res as T;
+  };
+
+  const schemaValidation = computed(() => {
+    if (!options.schema) {
+      return { success: true, issuesMap: new Map<string, string>() };
+    }
+    const currentValues = getValues();
+    const res = validateWithSchema(options.schema, currentValues);
+    const issuesMap = new Map<string, string>();
+    if (!res.success && res.issues) {
+      for (const issue of res.issues) {
+        const pathKey = String(issue.path);
+        if (!issuesMap.has(pathKey)) {
+          issuesMap.set(pathKey, issue.message);
+        }
+      }
+    }
+    return { success: res.success, issuesMap };
+  });
+
   for (const key in initialValues) {
     const initVal = initialValues[key];
     const valSignal = signal(initVal);
@@ -74,24 +100,11 @@ export function createForm<T extends Record<string, any> = Record<string, any>>(
 
         if (!options.schema) return null;
 
-        const currentValues = getValues();
-        const res = validateWithSchema(options.schema, currentValues);
-        if (!res.success && res.issues) {
-          const match = res.issues.find((i) => i.path === key || i.path === `${key}`);
-          return match ? match.message : null;
-        }
-        return null;
+        const validation = schemaValidation();
+        return validation.issuesMap.get(key) ?? validation.issuesMap.get(String(key)) ?? null;
       })
     };
   }
-
-  const getValues = (): T => {
-    const res: Record<string, any> = {};
-    for (const key in fields) {
-      res[key] = (fields as any)[key].value();
-    }
-    return res as T;
-  };
 
   const errors = computed<Partial<Record<keyof T, string>>>(() => {
     const errMap: Partial<Record<keyof T, string>> = {};
@@ -118,8 +131,7 @@ export function createForm<T extends Record<string, any> = Record<string, any>>(
 
   const validate = (): boolean => {
     if (!options.schema) return true;
-    const res = validateWithSchema(options.schema, getValues());
-    return res.success;
+    return schemaValidation().success;
   };
 
   const handleSubmit = async (e?: Event): Promise<boolean> => {

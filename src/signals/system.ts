@@ -59,6 +59,14 @@ export function removePendingEffect(eff: any): void {
   ctx.pendingEffects.delete(eff);
 }
 
+export function getBatchDepth(): number {
+  return ctx.batchDepth;
+}
+
+export function getIsFlushing(): boolean {
+  return ctx.isFlushing;
+}
+
 const MAX_FLUSH_COUNT = 100;
 
 export function flushEffects(): void {

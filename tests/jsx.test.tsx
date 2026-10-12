@@ -107,13 +107,30 @@ describe("Visage JSX & Direct DOM", () => {
     const lis = container.querySelectorAll("li");
     expect(lis.length).toBe(2);
     expect(lis[0]?.textContent).toBe("Buy milk");
+    expect(lis[0]?.getAttribute("data-index")).toBe("0");
     expect(lis[1]?.textContent).toBe("Learn Visage");
+    expect(lis[1]?.getAttribute("data-index")).toBe("1");
 
     // Prepend item
     todos.set(["Wake up", "Buy milk", "Learn Visage"]);
     const updatedLis = container.querySelectorAll("li");
     expect(updatedLis.length).toBe(3);
     expect(updatedLis[0]?.textContent).toBe("Wake up");
+    expect(updatedLis[0]?.getAttribute("data-index")).toBe("0");
+    expect(updatedLis[1]?.textContent).toBe("Buy milk");
+    expect(updatedLis[1]?.getAttribute("data-index")).toBe("1");
+    expect(updatedLis[2]?.textContent).toBe("Learn Visage");
+    expect(updatedLis[2]?.getAttribute("data-index")).toBe("2");
+
+    // Reorder items
+    todos.set(["Learn Visage", "Wake up", "Buy milk"]);
+    const reorderedLis = container.querySelectorAll("li");
+    expect(reorderedLis[0]?.textContent).toBe("Learn Visage");
+    expect(reorderedLis[0]?.getAttribute("data-index")).toBe("0");
+    expect(reorderedLis[1]?.textContent).toBe("Wake up");
+    expect(reorderedLis[1]?.getAttribute("data-index")).toBe("1");
+    expect(reorderedLis[2]?.textContent).toBe("Buy milk");
+    expect(reorderedLis[2]?.getAttribute("data-index")).toBe("2");
 
     unmount();
   });

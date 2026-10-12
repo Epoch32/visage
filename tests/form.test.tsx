@@ -75,6 +75,52 @@ describe("Visage Reactive Forms & Validation", () => {
     expect(form.fields.username.error()).toBeNull();
   });
 
+  it("memoizes schema validation to run once per state update across all fields", () => {
+    let validationCalls = 0;
+    const trackingSchema = {
+      "~standard": {
+        version: 1,
+        vendor: "test",
+        validate: (data: any) => {
+          validationCalls++;
+          const issues: any[] = [];
+          if (!data.first) issues.push({ path: ["first"], message: "First required" });
+          if (!data.last) issues.push({ path: ["last"], message: "Last required" });
+          if (issues.length > 0) return { issues };
+          return { value: data };
+        }
+      }
+    };
+
+    const form = createForm({
+      initialValues: { first: "", last: "" },
+      schema: trackingSchema as any
+    });
+
+    expect(validationCalls).toBe(0);
+
+    const errFirst = form.fields.first.error();
+    const errLast = form.fields.last.error();
+    const allErrors = form.errors();
+    const isValid = form.isValid();
+
+    expect(errFirst).toBe("First required");
+    expect(errLast).toBe("Last required");
+    expect(allErrors).toEqual({ first: "First required", last: "Last required" });
+    expect(isValid).toBe(false);
+
+    // Schema validation ran only once for all fields combined
+    expect(validationCalls).toBe(1);
+
+    // Update one field
+    form.fields.first.value.set("John");
+    expect(form.fields.first.error()).toBeNull();
+    expect(form.fields.last.error()).toBe("Last required");
+    expect(form.isValid()).toBe(false);
+
+    expect(validationCalls).toBe(2);
+  });
+
   it("binds input elements reactively with form.bind()", () => {
     let submittedValues: any = null;
 
