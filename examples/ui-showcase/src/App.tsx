@@ -293,16 +293,42 @@ export function App() {
                       <Tabs.Content value="controls" class="tab-content">
                         <div style={{ display: "flex", "flex-direction": "column", gap: "24px" }}>
                           <div>
-                            <h3 style={{ margin: "0 0 8px 0", "font-size": "16px", "font-weight": "600" }}>
+                            <h3
+                              style={{
+                                margin: "0 0 8px 0",
+                                "font-size": "16px",
+                                "font-weight": "600"
+                              }}
+                            >
                               Accessible Select Primitive
                             </h3>
-                            <p style={{ margin: "0 0 16px 0", color: "var(--fg-muted)", "font-size": "14px" }}>
-                              Keyboard-navigable listbox with focus traps, escape dismissal, and reactive model binding.
+                            <p
+                              style={{
+                                margin: "0 0 16px 0",
+                                color: "var(--fg-muted)",
+                                "font-size": "14px"
+                              }}
+                            >
+                              Keyboard-navigable listbox with focus traps, escape dismissal, and
+                              reactive model binding.
                             </p>
-                            <div style={{ display: "flex", "flex-direction": "column", gap: "8px", "max-width": "320px" }}>
-                              <label style={{ "font-size": "13px", "font-weight": "500", color: "var(--fg-muted)" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                "flex-direction": "column",
+                                gap: "8px",
+                                "max-width": "320px"
+                              }}
+                            >
+                              <span
+                                style={{
+                                  "font-size": "13px",
+                                  "font-weight": "500",
+                                  color: "var(--fg-muted)"
+                                }}
+                              >
                                 Active Palette:
-                              </label>
+                              </span>
                               <Select
                                 value={selectedTheme}
                                 onValueChange={(val: string) => {
@@ -327,18 +353,49 @@ export function App() {
                             </div>
                           </div>
 
-                          <div style={{ borderTop: "1px solid var(--border)", "padding-top": "20px" }}>
-                            <h3 style={{ margin: "0 0 8px 0", "font-size": "16px", "font-weight": "600" }}>
+                          <div
+                            style={{ borderTop: "1px solid var(--border)", "padding-top": "20px" }}
+                          >
+                            <h3
+                              style={{
+                                margin: "0 0 8px 0",
+                                "font-size": "16px",
+                                "font-weight": "600"
+                              }}
+                            >
                               Accessible Slider Primitive
                             </h3>
-                            <p style={{ margin: "0 0 16px 0", color: "var(--fg-muted)", "font-size": "14px" }}>
-                              Pointer capture dragging, step resolution, and arrow/Home/End keyboard controls.
+                            <p
+                              style={{
+                                margin: "0 0 16px 0",
+                                color: "var(--fg-muted)",
+                                "font-size": "14px"
+                              }}
+                            >
+                              Pointer capture dragging, step resolution, and arrow/Home/End keyboard
+                              controls.
                             </p>
-                            <div style={{ display: "grid", "grid-template-columns": "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
-                              <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                                <div style={{ display: "flex", "justify-content": "space-between", "font-size": "13px" }}>
+                            <div
+                              style={{
+                                display: "grid",
+                                "grid-template-columns": "repeat(auto-fit, minmax(280px, 1fr))",
+                                gap: "20px"
+                              }}
+                            >
+                              <div
+                                style={{ display: "flex", "flex-direction": "column", gap: "10px" }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    "justify-content": "space-between",
+                                    "font-size": "13px"
+                                  }}
+                                >
                                   <span style={{ "font-weight": "500" }}>Output Volume</span>
-                                  <span style={{ color: "var(--fg-muted)" }}>{() => `${sliderVolume()}%`}</span>
+                                  <span style={{ color: "var(--fg-muted)" }}>
+                                    {() => `${sliderVolume()}%`}
+                                  </span>
                                 </div>
                                 <Slider
                                   value={sliderVolume}
@@ -353,10 +410,22 @@ export function App() {
                                 />
                               </div>
 
-                              <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                                <div style={{ display: "flex", "justify-content": "space-between", "font-size": "13px" }}>
-                                  <span style={{ "font-weight": "500" }}>Display Brightness (Step 5)</span>
-                                  <span style={{ color: "var(--fg-muted)" }}>{() => `${sliderBrightness()}%`}</span>
+                              <div
+                                style={{ display: "flex", "flex-direction": "column", gap: "10px" }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    "justify-content": "space-between",
+                                    "font-size": "13px"
+                                  }}
+                                >
+                                  <span style={{ "font-weight": "500" }}>
+                                    Display Brightness (Step 5)
+                                  </span>
+                                  <span style={{ color: "var(--fg-muted)" }}>
+                                    {() => `${sliderBrightness()}%`}
+                                  </span>
                                 </div>
                                 <Slider
                                   value={sliderBrightness}

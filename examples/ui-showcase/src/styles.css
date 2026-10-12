@@ -260,7 +260,9 @@ body {
   font-size: 14px;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .select-trigger:focus-visible,
@@ -349,7 +351,9 @@ body {
   transform: translate(-50%, -50%);
   outline: none;
   cursor: grab;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
 }
 
 .slider-thumb:active {
