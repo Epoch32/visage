@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/Epoch32/visage/compare/visage-v1.6.0...visage-v1.7.0) (2026-10-13)
+
+
+### Features
+
+* **dom:** add 'by' key extractor to For component for stable item reconciliation ([e838671](https://github.com/Epoch32/visage/commit/e838671b593841451b9975541309c4f25e51a0c9))
+
+
+### Bug Fixes
+
+* **dom:** preserve input selection range and avoid redundant value assignment ([eec4cd0](https://github.com/Epoch32/visage/commit/eec4cd07ad1c26a650452515531858476ae94b02))
+
 ## [1.6.0](https://github.com/Epoch32/visage/compare/visage-v1.5.1...visage-v1.6.0) (2026-10-13)
 
 
