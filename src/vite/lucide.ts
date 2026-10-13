@@ -3,7 +3,7 @@ import type { VisageVitePlugin } from "./types";
 export interface VisageLucideOptions {
   /**
    * Module aliases to intercept and translate.
-   * Defaults to `["lucide-react"]`.
+   * Defaults to `["lucide-react", "lucide"]`.
    */
   aliases?: string[];
 }
@@ -52,7 +52,7 @@ const VIRTUAL_PREFIX = "virtual:visage-icons";
 const RESOLVED_PREFIX = `\0${VIRTUAL_PREFIX}`;
 
 export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugin {
-  const aliases = options.aliases ?? ["lucide-react"];
+  const aliases = options.aliases ?? ["lucide-react", "lucide"];
 
   return {
     name: "visage:lucide",
@@ -66,9 +66,17 @@ export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugi
       };
     },
 
-    resolveId(id: string) {
+    resolveId(id: string, importer?: string) {
       if (id.startsWith(VIRTUAL_PREFIX)) {
         return `\0${id}`;
+      }
+      // Do not intercept internal imports originating from the virtual icon module itself
+      if (
+        id === "lucide" &&
+        importer &&
+        (importer.startsWith("\0") || importer.includes(VIRTUAL_PREFIX))
+      ) {
+        return null;
       }
       if (aliases.includes(id)) {
         return `\0visage-lucide:${id}`;

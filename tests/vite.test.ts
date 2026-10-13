@@ -192,4 +192,20 @@ export function Component() {
     const noMatch = plugin.transform!("console.log('hello');", "/app/src/index.ts");
     expect(noMatch).toBeNull();
   });
+
+  it("handles raw 'lucide' imports by default in visageLucide()", () => {
+    const defaultPlugin = visageLucide();
+
+    const sample = `import { Trash2 } from "lucide";`;
+    const res: any = defaultPlugin.transform!(sample, "/app/src/Panel.tsx");
+    expect(res).not.toBeNull();
+    expect(res.code).toBe('import { Trash2 } from "virtual:visage-icons?icons=Trash2";');
+
+    // Internal lucide resolution inside virtual module should not be intercepted
+    const internalResolve = defaultPlugin.resolveId!(
+      "lucide",
+      "\0virtual:visage-icons?icons=Trash2"
+    );
+    expect(internalResolve).toBeNull();
+  });
 });
