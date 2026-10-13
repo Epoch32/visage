@@ -212,12 +212,24 @@ export type InferObjectShape<S extends Record<string, SchemaLike<any>>> = {
 };
 
 export class ObjectSchema<T extends Record<string, any>> extends Schema<T> {
+  private _isOptional = false;
+
   constructor(public shape: { [K in keyof T]: SchemaLike<T[K]> }) {
     super();
   }
 
+  optional(): Schema<T | undefined> {
+    this._isOptional = true;
+    return this as any;
+  }
+
   validate(value: unknown, basePath = ""): ValidationResult<T> {
-    if (typeof value !== "object" || value === null) {
+    if (value === undefined || value === null) {
+      if (this._isOptional) return { success: true, data: undefined };
+      return { success: false, issues: [{ path: basePath, message: "This field is required" }] };
+    }
+
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
       return { success: false, issues: [{ path: basePath, message: "Must be an object" }] };
     }
 
@@ -242,6 +254,45 @@ export class ObjectSchema<T extends Record<string, any>> extends Schema<T> {
     }
 
     return { success: true, data: data as T };
+  }
+}
+
+class RecordSchema extends Schema<Record<string, any>> {
+  private _isOptional = false;
+
+  optional(): Schema<Record<string, any> | undefined> {
+    this._isOptional = true;
+    return this as any;
+  }
+
+  validate(value: unknown, path = ""): ValidationResult<Record<string, any>> {
+    if (value === undefined || value === null) {
+      if (this._isOptional) return { success: true, data: undefined };
+      return { success: false, issues: [{ path, message: "This field is required" }] };
+    }
+
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      return { success: false, issues: [{ path, message: "Must be an object" }] };
+    }
+
+    return { success: true, data: value as Record<string, any> };
+  }
+}
+
+class AnySchema extends Schema<any> {
+  private _isOptional = false;
+
+  optional(): Schema<any> {
+    this._isOptional = true;
+    return this as any;
+  }
+
+  validate(value: unknown, path = ""): ValidationResult<any> {
+    if (value === undefined || value === null) {
+      if (this._isOptional) return { success: true, data: undefined };
+      return { success: false, issues: [{ path, message: "This field is required" }] };
+    }
+    return { success: true, data: value };
   }
 }
 
@@ -293,6 +344,8 @@ export const v = {
   string: () => new StringSchema(),
   number: () => new NumberSchema(),
   boolean: () => new BooleanSchema(),
+  record: () => new RecordSchema(),
+  any: () => new AnySchema(),
   object: <S extends Record<string, SchemaLike<any>>>(
     shape: S
   ): ObjectSchema<{ [K in keyof S]: InferSchemaType<S[K]> }> => new ObjectSchema(shape as any)
