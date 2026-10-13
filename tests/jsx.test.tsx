@@ -189,4 +189,38 @@ describe("Visage JSX & Direct DOM", () => {
 
     unmount();
   });
+
+  it("reconciles items with custom key extractor 'by'", () => {
+    const list = signal([
+      { id: "1", text: "Alpha" },
+      { id: "2", text: "Beta" }
+    ]);
+
+    const unmount = render(
+      () => (
+        <ul>
+          <For each={list} by={(item) => item.id}>
+            {(item) => <li id={`item-${item.id}`}>{item.text}</li>}
+          </For>
+        </ul>
+      ),
+      container
+    );
+
+    const initialFirstNode = container.querySelector("#item-1");
+    expect(initialFirstNode).toBeTruthy();
+    expect(initialFirstNode?.textContent).toBe("Alpha");
+
+    // Replace array with new object references sharing the same id
+    list.set([
+      { id: "1", text: "Alpha Updated" },
+      { id: "2", text: "Beta" }
+    ]);
+
+    const updatedFirstNode = container.querySelector("#item-1");
+    // Node is retained rather than torn down
+    expect(updatedFirstNode).toBe(initialFirstNode);
+
+    unmount();
+  });
 });

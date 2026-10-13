@@ -122,11 +122,13 @@ export function Show<T>(props: ShowProps<T>): any {
 export interface ForProps<T> {
   each: ReactiveValue<readonly T[] | undefined | null>;
   fallback?: Child;
+  by?: (item: T) => any;
   children: (item: T, index: () => number) => Child;
 }
 
 interface ItemRecord<T> {
   item: T;
+  key: any;
   scope: Scope;
   nodes: Node[];
   indexSignal: WritableSignal<number>;
@@ -215,25 +217,28 @@ export function For<T>(props: ForProps<T>): any {
     if (!parent) return;
 
     const newItems: ItemRecord<T>[] = [];
-    const prevMap = new Map<T, ItemRecord<T>[]>();
+    const prevMap = new Map<any, ItemRecord<T>[]>();
+    const getKey = (it: T) => (props.by ? props.by(it) : it);
 
     for (const rec of items) {
-      const group = prevMap.get(rec.item);
+      const group = prevMap.get(rec.key);
       if (group) {
         group.push(rec);
       } else {
-        prevMap.set(rec.item, [rec]);
+        prevMap.set(rec.key, [rec]);
       }
     }
 
     // Fast-path: map existing or create new item scopes
     for (let i = 0; i < list.length; i++) {
       const item = list[i]!;
-      const existingGroup = prevMap.get(item);
+      const key = getKey(item);
+      const existingGroup = prevMap.get(key);
       const existing =
         existingGroup && existingGroup.length > 0 ? existingGroup.shift() : undefined;
 
       if (existing) {
+        existing.item = item;
         untrack(() => {
           existing.indexSignal.set(i);
         });
@@ -254,6 +259,7 @@ export function For<T>(props: ForProps<T>): any {
 
         newItems.push({
           item,
+          key,
           scope: itemScope,
           nodes: itemNodes,
           indexSignal
