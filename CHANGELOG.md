@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/Epoch32/visage/compare/visage-v1.5.0...visage-v1.5.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **test:** safely mock URL methods without clobbering global constructor ([d78b2de](https://github.com/Epoch32/visage/commit/d78b2deb02e59c8dbab8600e49149de334c85276))
+
 ## [1.5.0](https://github.com/Epoch32/visage/compare/visage-v1.4.0...visage-v1.5.0) (2026-10-12)
 
 
