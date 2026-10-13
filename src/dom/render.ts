@@ -177,6 +177,28 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
     }
   } else if (key === "dangerouslySetInnerHTML" && value && typeof value.__html === "string") {
     el.innerHTML = value.__html;
+  } else if (key === "value" && typeof el === "object" && el !== null && "value" in el) {
+    const stringVal = value !== null && value !== undefined ? String(value) : "";
+    if ((el as any).value !== stringVal) {
+      const isFocused =
+        typeof document !== "undefined" &&
+        document.activeElement === (el as any) &&
+        typeof (el as any).selectionStart === "number" &&
+        typeof (el as any).selectionEnd === "number";
+
+      if (isFocused) {
+        const start = (el as any).selectionStart;
+        const end = (el as any).selectionEnd;
+        (el as any).value = stringVal;
+        if (start !== null && end !== null && typeof (el as any).setSelectionRange === "function") {
+          try {
+            (el as any).setSelectionRange(start, end);
+          } catch {}
+        }
+      } else {
+        (el as any).value = stringVal;
+      }
+    }
   } else if (key in el && !(el instanceof SVGElement) && key !== "list" && key !== "form") {
     try {
       (el as any)[key] = value;
