@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/Epoch32/visage/compare/visage-v1.5.1...visage-v1.6.0) (2026-10-13)
+
+
+### Features
+
+* **form:** add optional() to ObjectSchema and add v.record() and v.any() ([1692080](https://github.com/Epoch32/visage/commit/1692080d12b85e3e2b79798f5684461afc9d4b0d))
+
 ## [1.5.1](https://github.com/Epoch32/visage/compare/visage-v1.5.0...visage-v1.5.1) (2026-10-12)
 
 
