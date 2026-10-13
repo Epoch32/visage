@@ -1,5 +1,13 @@
 import type { Child } from "../dom";
-import type { ReadonlySignal } from "../signals";
+import type { ReadonlySignal, WritableSignal } from "../signals";
+
+/**
+ * Two-way bindable target: a writable signal, a tuple [getter, setter], or an object with get/set.
+ */
+export type Bindable<T> =
+  | WritableSignal<T>
+  | [get: () => T, set: (val: T) => void]
+  | { get: () => T; set: (val: T) => void };
 
 /**
  * Fine-grained reactive property value.
@@ -99,6 +107,9 @@ export type InputAttributes = HTMLAttributes<HTMLInputElement> & {
   type?: ReactiveProp<string>;
   value?: ReactiveProp<string | number | readonly string[] | undefined | null>;
   checked?: ReactiveProp<boolean | undefined | null>;
+  "bind:value"?: Bindable<any>;
+  "bind:checked"?: Bindable<boolean>;
+  bind?: Bindable<any>;
   placeholder?: ReactiveProp<string | undefined | null>;
   name?: ReactiveProp<string | undefined | null>;
   disabled?: ReactiveProp<boolean | undefined | null>;
@@ -136,12 +147,16 @@ export interface VisageIntrinsicElements {
   input: InputAttributes;
   textarea: HTMLAttributes<HTMLTextAreaElement> & {
     value?: ReactiveProp<string | number | undefined | null>;
+    "bind:value"?: Bindable<string>;
+    bind?: Bindable<string>;
     placeholder?: ReactiveProp<string | undefined | null>;
     rows?: ReactiveProp<number | undefined | null>;
     cols?: ReactiveProp<number | undefined | null>;
   };
   select: HTMLAttributes<HTMLSelectElement> & {
     value?: ReactiveProp<any>;
+    "bind:value"?: Bindable<any>;
+    bind?: Bindable<any>;
     multiple?: ReactiveProp<boolean | undefined | null>;
   };
   option: HTMLAttributes<HTMLOptionElement> & {

@@ -223,4 +223,44 @@ describe("Visage JSX & Direct DOM", () => {
 
     unmount();
   });
+
+  it("supports two-way form bindings with bind:value and bind:checked", () => {
+    const textSignal = signal("Hello Visage");
+    const checkedSignal = signal(false);
+
+    const unmount = render(
+      () => (
+        <div>
+          <input id="text-input" bind:value={textSignal} />
+          <input id="checkbox-input" type="checkbox" bind:checked={checkedSignal} />
+        </div>
+      ),
+      container
+    );
+
+    const textEl = container.querySelector("#text-input") as HTMLInputElement;
+    const checkEl = container.querySelector("#checkbox-input") as HTMLInputElement;
+
+    // Initial state reflection
+    expect(textEl.value).toBe("Hello Visage");
+    expect(checkEl.checked).toBe(false);
+
+    // Reactive update from signal
+    textSignal.set("New Message");
+    expect(textEl.value).toBe("New Message");
+
+    checkedSignal.set(true);
+    expect(checkEl.checked).toBe(true);
+
+    // Event updates from user interaction
+    textEl.value = "User typed this";
+    textEl.dispatchEvent(new Event("input"));
+    expect(textSignal()).toBe("User typed this");
+
+    checkEl.checked = false;
+    checkEl.dispatchEvent(new Event("change"));
+    expect(checkedSignal()).toBe(false);
+
+    unmount();
+  });
 });
