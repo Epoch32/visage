@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { For, render, Show } from "../src";
+import { For, Index, render, Show } from "../src";
 import { signal } from "../src/signals";
 
 describe("Visage JSX & Direct DOM", () => {
@@ -260,6 +260,61 @@ describe("Visage JSX & Direct DOM", () => {
     checkEl.checked = false;
     checkEl.dispatchEvent(new Event("change"));
     expect(checkedSignal()).toBe(false);
+
+    unmount();
+  });
+
+  it("renders position-indexed lists with Index and preserves DOM nodes on item updates", () => {
+    const items = signal(["Item A", "Item B"]);
+
+    const unmount = render(
+      () => (
+        <ul id="index-list">
+          <Index each={items} fallback={<li id="empty-fallback">No items</li>}>
+            {(item, index) => <li id={`index-${index}`}>{() => `${index}: ${item()}`}</li>}
+          </Index>
+        </ul>
+      ),
+      container
+    );
+
+    // Initial render
+    const nodeA = container.querySelector("#index-0");
+    const nodeB = container.querySelector("#index-1");
+    expect(nodeA).toBeTruthy();
+    expect(nodeB).toBeTruthy();
+    expect(nodeA?.textContent).toBe("0: Item A");
+    expect(nodeB?.textContent).toBe("1: Item B");
+
+    // In-place item update without re-creating DOM node
+    items.set(["Updated A", "Item B"]);
+    const updatedNodeA = container.querySelector("#index-0");
+    expect(updatedNodeA).toBe(nodeA);
+    expect(updatedNodeA?.textContent).toBe("0: Updated A");
+
+    // Expand list
+    items.set(["Updated A", "Item B", "Item C"]);
+    const nodeC = container.querySelector("#index-2");
+    expect(nodeC).toBeTruthy();
+    expect(nodeC?.textContent).toBe("2: Item C");
+    expect(container.querySelector("#index-0")).toBe(nodeA);
+
+    // Shrink list
+    items.set(["Only A"]);
+    expect(container.querySelector("#index-0")).toBe(nodeA);
+    expect(container.querySelector("#index-0")?.textContent).toBe("0: Only A");
+    expect(container.querySelector("#index-1")).toBeNull();
+    expect(container.querySelector("#index-2")).toBeNull();
+
+    // Empty list -> fallback
+    items.set([]);
+    expect(container.querySelector("#index-0")).toBeNull();
+    expect(container.querySelector("#empty-fallback")?.textContent).toBe("No items");
+
+    // Repopulate from empty
+    items.set(["Restored A"]);
+    expect(container.querySelector("#empty-fallback")).toBeNull();
+    expect(container.querySelector("#index-0")?.textContent).toBe("0: Restored A");
 
     unmount();
   });

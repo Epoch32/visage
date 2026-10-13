@@ -16,6 +16,8 @@ export {
 export {
   For,
   type ForProps,
+  Index,
+  type IndexProps,
   Portal,
   type PortalProps,
   Show,

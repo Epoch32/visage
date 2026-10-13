@@ -77,6 +77,8 @@ export {
   type ErrorBoundaryProps,
   For,
   type ForProps,
+  Index,
+  type IndexProps,
   insertChild,
   isReactive,
   type LazyComponent,
