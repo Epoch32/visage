@@ -55,7 +55,10 @@ export function createContext<T>(defaultValue?: T): Context<T | undefined> {
           typeof props.children === "function"
             ? (props.children as (...args: any[]) => any)()
             : props.children;
-        if (typeof document !== "undefined") {
+        const isSsrEnv =
+          typeof (globalThis as any).__visage_ssr === "number" &&
+          (globalThis as any).__visage_ssr > 0;
+        if (typeof document !== "undefined" && !isSsrEnv) {
           const frag = document.createDocumentFragment();
           insertChild(frag, content);
           return frag;

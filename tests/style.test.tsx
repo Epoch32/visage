@@ -207,9 +207,8 @@ describe("Visage Scoped Styles & CSS Engine (visage/style)", () => {
       expect(box).not.toBeNull();
 
       // Find attribute starting with data-v-
-      const hasScopeAttr = Array.from((box as any)?.attributes?.keys?.() ?? []).some(
-        (name: unknown) => typeof name === "string" && name.startsWith("data-v-")
-      );
+      const attrNames = Array.from((box as HTMLElement).attributes).map((a) => a.name);
+      const hasScopeAttr = attrNames.some((name) => name.startsWith("data-v-"));
       expect(hasScopeAttr).toBe(true);
 
       // Verify <style> element injected into document.head

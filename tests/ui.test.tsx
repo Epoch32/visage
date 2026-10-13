@@ -155,11 +155,7 @@ describe("Visage UI Component Primitives", () => {
       expect(dialogContent.getAttribute("data-state")).toBe("open");
 
       // Press Escape on window directly (even when content does not have focus)
-      window.dispatchEvent({
-        type: "keydown",
-        key: "Escape",
-        stopPropagation: () => {}
-      } as any);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       expect(dialogContent.getAttribute("data-state")).toBe("closed");
 
       unmount();
@@ -404,11 +400,7 @@ describe("Visage UI Component Primitives", () => {
       expect(content.getAttribute("data-state")).toBe("open");
 
       // Press Escape
-      content.dispatchEvent({
-        type: "keydown",
-        key: "Escape",
-        stopPropagation: () => {}
-      } as any);
+      content.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       expect(trigger.getAttribute("data-state")).toBe("closed");
 
       // Re-open
@@ -417,11 +409,7 @@ describe("Visage UI Component Primitives", () => {
 
       // Click outside
       const outsideArea = container.querySelector("#outside-area") as HTMLElement;
-      outsideArea.dispatchEvent({
-        type: "mousedown",
-        bubbles: true,
-        target: outsideArea
-      } as any);
+      outsideArea.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
       expect(trigger.getAttribute("data-state")).toBe("closed");
 
       unmount();
@@ -845,21 +833,13 @@ describe("Visage UI Component Primitives", () => {
       expect(slider.getAttribute("aria-valuenow")).toBe("20");
 
       // Press ArrowRight to increase by step (5)
-      slider.dispatchEvent({
-        type: "keydown",
-        key: "ArrowRight",
-        preventDefault: () => {}
-      } as any);
+      slider.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
 
       expect(sliderVal).toBe(25);
       expect(slider.getAttribute("aria-valuenow")).toBe("25");
 
       // Press ArrowDown to decrease by step (5)
-      slider.dispatchEvent({
-        type: "keydown",
-        key: "ArrowDown",
-        preventDefault: () => {}
-      } as any);
+      slider.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
 
       expect(sliderVal).toBe(20);
 

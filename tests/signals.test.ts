@@ -311,9 +311,14 @@ describe("Visage Signals", () => {
         length: 0
       };
 
-      (globalThis as any).localStorage = fakeStorage;
       if (typeof window !== "undefined") {
-        (window as any).localStorage = fakeStorage;
+        Object.defineProperty(window, "localStorage", {
+          value: fakeStorage,
+          configurable: true,
+          writable: true
+        });
+      } else {
+        (globalThis as any).localStorage = fakeStorage;
       }
 
       try {
@@ -329,7 +334,11 @@ describe("Visage Signals", () => {
       } finally {
         (globalThis as any).localStorage = origLocal;
         if (typeof window !== "undefined") {
-          (window as any).localStorage = origWinLocal;
+          Object.defineProperty(window, "localStorage", {
+            value: origWinLocal,
+            configurable: true,
+            writable: true
+          });
         }
       }
     });

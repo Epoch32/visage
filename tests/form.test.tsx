@@ -155,7 +155,7 @@ describe("Visage Reactive Forms & Validation", () => {
 
     // Simulate user input
     input.value = "New Article";
-    input.dispatchEvent({ type: "input", target: { value: "New Article" } });
+    input.dispatchEvent(new Event("input", { bubbles: true }));
 
     expect(form.fields.title.value()).toBe("New Article");
     expect(form.isDirty()).toBe(true);

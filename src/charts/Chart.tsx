@@ -40,6 +40,7 @@ export function Chart(props: ChartProps): Child {
   let containerEl: HTMLElement | null = null;
 
   const handleRef = (el: HTMLElement) => {
+    if (!el || typeof el !== "object") return;
     containerEl = el;
     if (typeof ResizeObserver !== "undefined") {
       const ro = new ResizeObserver((entries) => {
@@ -52,8 +53,10 @@ export function Chart(props: ChartProps): Child {
       ro.observe(el);
       onCleanup(() => ro.disconnect());
     } else {
-      if (el.clientWidth > 0) measuredWidth.set(el.clientWidth);
-      if (el.clientHeight > 0) measuredHeight.set(el.clientHeight);
+      if (typeof el.clientWidth === "number" && el.clientWidth > 0)
+        measuredWidth.set(el.clientWidth);
+      if (typeof el.clientHeight === "number" && el.clientHeight > 0)
+        measuredHeight.set(el.clientHeight);
     }
   };
 

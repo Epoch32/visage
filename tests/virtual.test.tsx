@@ -15,7 +15,11 @@ describe("Visage Virtualization (visage/virtual)", () => {
 
   it("calculates virtual window and total size for 100,000 items", () => {
     const scrollEl = document.createElement("div") as any;
-    scrollEl.clientHeight = 500;
+    Object.defineProperty(scrollEl, "clientHeight", {
+      value: 500,
+      configurable: true,
+      writable: true
+    });
     scrollEl.scrollTop = 0;
 
     const virtualizer = createVirtualizer({
@@ -103,7 +107,11 @@ describe("Visage Virtualization (visage/virtual)", () => {
 
   it("handles variable item heights with cached prefix offsets and dynamic measureElement", () => {
     const scrollEl = document.createElement("div") as any;
-    scrollEl.clientHeight = 300;
+    Object.defineProperty(scrollEl, "clientHeight", {
+      value: 300,
+      configurable: true,
+      writable: true
+    });
     scrollEl.scrollTop = 0;
 
     // Items with variable heights: even items 40px, odd items 60px

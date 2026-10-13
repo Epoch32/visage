@@ -265,11 +265,9 @@ describe("Visage Charts (visage/charts)", () => {
       expect(chartWrapper).not.toBeNull();
 
       // Trigger pointer event
-      chartWrapper.dispatchEvent({
-        type: "mousemove",
-        clientX: 200,
-        clientY: 150
-      } as any);
+      chartWrapper.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 200, clientY: 150, bubbles: true })
+      );
 
       // Verify ChartCursor rendered
       const cursorLine = container.querySelector(".visage-chart-cursor line");

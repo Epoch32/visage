@@ -21,8 +21,26 @@ const SVG_TAGS = new Set([
   "stop"
 ]);
 
+let ssrDepth = 0;
+
+export function isSSR(): boolean {
+  const gDepth = (globalThis as any).__visage_ssr || 0;
+  return gDepth > 0 || ssrDepth > 0 || typeof document === "undefined";
+}
+
+export function runInSSRMode<T>(fn: () => T): T {
+  ssrDepth++;
+  (globalThis as any).__visage_ssr = ((globalThis as any).__visage_ssr || 0) + 1;
+  try {
+    return fn();
+  } finally {
+    ssrDepth--;
+    (globalThis as any).__visage_ssr = Math.max(0, ((globalThis as any).__visage_ssr || 1) - 1);
+  }
+}
+
 export function Fragment(props: { children?: Child }): any {
-  if (typeof document === "undefined") {
+  if (isSSR()) {
     return props.children !== undefined ? props.children : [];
   }
   const fragment = document.createDocumentFragment();
@@ -42,8 +60,8 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
   if (typeof type === "string") {
     const { children, ...restProps } = props;
 
-    // SSR Server Environment (Node / Bun / Cloudflare Workers without DOM)
-    if (typeof document === "undefined") {
+    // SSR Server Environment (Node / Bun / Cloudflare Workers without DOM, or explicit SSR render)
+    if (isSSR()) {
       const attributes = new Map<string, any>();
       for (const propName in restProps) {
         const val = restProps[propName];
@@ -68,6 +86,30 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
               .join("; ");
             if (styleStr) attributes.set("style", styleStr);
           }
+        } else if (propName === "bind:value" || propName === "bind") {
+          const resolved =
+            typeof val === "function"
+              ? val()
+              : Array.isArray(val)
+                ? val[0]()
+                : typeof val?.get === "function"
+                  ? val.get()
+                  : val;
+          if (resolved !== null && resolved !== undefined) {
+            attributes.set("value", resolved);
+          }
+        } else if (propName === "bind:checked") {
+          const resolved =
+            typeof val === "function"
+              ? val()
+              : Array.isArray(val)
+                ? val[0]()
+                : typeof val?.get === "function"
+                  ? val.get()
+                  : val;
+          if (resolved) {
+            attributes.set("checked", "checked");
+          }
         } else if (!propName.startsWith("on")) {
           const resolved = typeof val === "function" ? val() : val;
           if (resolved === true) {
@@ -78,8 +120,9 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
         }
       }
 
-      const childNodes =
+      const rawChildren =
         children !== undefined ? (Array.isArray(children) ? children : [children]) : [];
+      const childNodes = rawChildren.map((c) => (typeof c === "function" ? c() : c));
 
       return {
         tagName: type,

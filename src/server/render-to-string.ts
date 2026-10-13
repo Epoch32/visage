@@ -1,4 +1,5 @@
 import type { Child } from "../dom/render";
+import { runInSSRMode } from "../jsx-runtime";
 import { createRoot } from "../signals";
 
 const VOID_ELEMENTS = new Set([
@@ -55,8 +56,10 @@ export function renderChildToString(child: Child): string {
  */
 export function renderToString(fn: () => Child): string {
   return createRoot(() => {
-    const result = fn();
-    return renderNodeToString(result);
+    return runInSSRMode(() => {
+      const result = fn();
+      return renderNodeToString(result);
+    });
   });
 }
 
@@ -75,7 +78,12 @@ function renderNodeToString(node: any): string {
 
   if (typeof node === "object" && node !== null) {
     if (node.nodeType === 11) {
-      return (node.childNodes || []).map((c: any) => renderNodeToString(c)).join("");
+      const children = node.childNodes ? Array.from(node.childNodes) : [];
+      return children.map((c: any) => renderNodeToString(c)).join("");
+    }
+
+    if (typeof (node as any).outerHTML === "string") {
+      return (node as any).outerHTML;
     }
 
     if ("tagName" in node) {

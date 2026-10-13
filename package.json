@@ -129,6 +129,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "csstype": "^3.2.3",
+    "happy-dom": "^21.0.1",
     "lucide": "^1.54.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
