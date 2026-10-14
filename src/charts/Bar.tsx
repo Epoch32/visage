@@ -3,6 +3,7 @@ import { onCleanup } from "../signals";
 import { useChartContext } from "./context";
 
 export interface BarProps {
+  id?: string;
   dataKey: string;
   fill?: string;
   radius?: number;
@@ -12,15 +13,15 @@ export interface BarProps {
 }
 
 export function Bar(props: BarProps): Child {
+  const seriesId = props.id ?? `bar-${props.dataKey}`;
   return () => {
     const ctx = useChartContext();
 
     const fill = props.fill ?? "#6366f1";
     const radius = props.radius ?? 4;
-    const id = `bar-${props.dataKey}-${Math.random().toString(36).slice(2, 7)}`;
 
     ctx.registerSeries({
-      id,
+      id: seriesId,
       dataKey: props.dataKey,
       type: "bar",
       color: fill,
@@ -28,7 +29,7 @@ export function Bar(props: BarProps): Child {
     });
 
     onCleanup(() => {
-      ctx.unregisterSeries(id);
+      ctx.unregisterSeries(seriesId);
     });
 
     return (
@@ -43,7 +44,9 @@ export function Bar(props: BarProps): Child {
 
           // Check if there are other Bar series to calculate grouped offsets
           const allBars = ctx.series().filter((s) => s.type === "bar");
-          const barIndex = allBars.findIndex((s) => s.id === id);
+          const barIndex = allBars.findIndex(
+            (s) => s.id === seriesId || s.dataKey === props.dataKey
+          );
           const totalBars = Math.max(1, allBars.length);
 
           const bars: Child[] = [];

@@ -71,7 +71,23 @@ export function Chart(props: ChartProps): Child {
   const registerSeries = (meta: SeriesMeta) => {
     untrack(() => {
       seriesList.update((prev) => {
-        if (prev.some((s) => s.id === meta.id)) return prev;
+        const existingIdx = prev.findIndex((s) => s.id === meta.id || s.dataKey === meta.dataKey);
+        if (existingIdx !== -1) {
+          const existing = prev[existingIdx];
+          if (
+            existing &&
+            existing.id === meta.id &&
+            existing.dataKey === meta.dataKey &&
+            existing.name === meta.name &&
+            existing.color === meta.color &&
+            existing.type === meta.type
+          ) {
+            return prev;
+          }
+          const updated = [...prev];
+          updated[existingIdx] = meta;
+          return updated;
+        }
         return [...prev, meta];
       });
     });
@@ -79,7 +95,7 @@ export function Chart(props: ChartProps): Child {
 
   const unregisterSeries = (id: string) => {
     untrack(() => {
-      seriesList.update((prev) => prev.filter((s) => s.id !== id));
+      seriesList.update((prev) => prev.filter((s) => s.id !== id && s.dataKey !== id));
     });
   };
 

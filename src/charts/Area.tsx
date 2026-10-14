@@ -5,6 +5,7 @@ import { pathArea, pathLine } from "./path";
 import type { CurveType, Point } from "./types";
 
 export interface AreaProps {
+  id?: string;
   dataKey: string;
   stroke?: string;
   strokeWidth?: number | string;
@@ -17,6 +18,7 @@ export interface AreaProps {
 }
 
 export function Area(props: AreaProps): Child {
+  const seriesId = props.id ?? `area-${props.dataKey}`;
   return () => {
     const ctx = useChartContext();
 
@@ -26,10 +28,8 @@ export function Area(props: AreaProps): Child {
     const fillOpacity = props.fillOpacity ?? 1;
     const curve = props.curve ?? "smooth";
 
-    const id = `area-${props.dataKey}-${Math.random().toString(36).slice(2, 7)}`;
-
     ctx.registerSeries({
-      id,
+      id: seriesId,
       dataKey: props.dataKey,
       type: "area",
       color: stroke,
@@ -37,7 +37,7 @@ export function Area(props: AreaProps): Child {
     });
 
     onCleanup(() => {
-      ctx.unregisterSeries(id);
+      ctx.unregisterSeries(seriesId);
     });
 
     return (

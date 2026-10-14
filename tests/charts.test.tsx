@@ -9,6 +9,7 @@ import {
   CartesianGrid,
   Chart,
   ChartCursor,
+  ChartLegend,
   ChartTooltip,
   createBandScale,
   createLinearScale,
@@ -272,6 +273,60 @@ describe("Visage Charts (visage/charts)", () => {
       // Verify ChartCursor rendered
       const cursorLine = container.querySelector(".visage-chart-cursor line");
       expect(cursorLine).not.toBeNull();
+    });
+
+    it("renders chart legend without duplicate items across series", () => {
+      const data = [
+        { cat: "A", s1: 10, s2: 20 },
+        { cat: "B", s1: 30, s2: 40 }
+      ];
+
+      render(() => {
+        return (
+          <Chart data={data} width={400} height={300}>
+            <XAxis dataKey="cat" />
+            <Bar dataKey="s1" name="Series One" />
+            <Bar dataKey="s2" name="Series Two" />
+            <ChartLegend />
+          </Chart>
+        );
+      }, container);
+
+      const legend = container.querySelector('div[style*="justify-content"]');
+      expect(legend).not.toBeNull();
+
+      const labels = Array.from(legend?.querySelectorAll("span") || [])
+        .map((s) => s.textContent?.trim())
+        .filter(Boolean);
+
+      expect(labels).toEqual(["Series One", "Series Two"]);
+    });
+
+    it("renders chart tooltip without duplicate series items", () => {
+      const data = [{ cat: "Alpha", s1: 100, s2: 200 }];
+
+      render(() => {
+        return (
+          <Chart data={data} width={400} height={300}>
+            <Bar dataKey="s1" name="Metric A" />
+            <Bar dataKey="s2" name="Metric B" />
+            <ChartTooltip />
+          </Chart>
+        );
+      }, container);
+
+      const chartWrapper = container.firstElementChild as HTMLElement;
+      chartWrapper.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 100, clientY: 100, bubbles: true })
+      );
+
+      const tooltipItems = Array.from(
+        container.querySelectorAll('div[style*="justify-content: space-between"] span')
+      )
+        .map((s) => s.textContent?.trim())
+        .filter(Boolean);
+
+      expect(tooltipItems).toEqual(["Metric A", "100", "Metric B", "200"]);
     });
   });
 

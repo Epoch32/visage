@@ -20,6 +20,9 @@ export function ChartTooltip(props: TooltipProps): Child {
     const w = ctx.width();
     const datum = hover.datum;
     const series = ctx.series();
+    const uniqueSeries = series.filter(
+      (s, idx, arr) => arr.findIndex((item) => item.dataKey === s.dataKey) === idx
+    );
     const xKey = ctx.xDataKey();
 
     // Avoid tooltip escaping the right edge
@@ -41,7 +44,7 @@ export function ChartTooltip(props: TooltipProps): Child {
             zIndex: 50
           }}
         >
-          {props.content(datum, series)}
+          {props.content(datum, uniqueSeries)}
         </div>
       );
     }
@@ -84,7 +87,7 @@ export function ChartTooltip(props: TooltipProps): Child {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          {series.map((s) => {
+          {uniqueSeries.map((s) => {
             const rawVal = datum[s.dataKey];
             if (rawVal === undefined || rawVal === null) return null;
 

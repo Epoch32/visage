@@ -6,8 +6,7 @@ import {
   onCleanup,
   type ReadonlySignal,
   runInScope,
-  Scope,
-  untrack
+  Scope
 } from "../signals";
 import { hasReactiveClass, normalizeClass } from "../style/cx";
 import { formatStyleProp } from "../style/scale";
@@ -361,42 +360,32 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
 
   if (isReactive(child)) {
     // Ultra-fast path for primitive string/number signals
-    const isSig = isSignal(child);
-    const initial =
-      isSig && typeof (child as any).peek === "function"
-        ? (child as any).peek()
-        : untrack(() => resolveValue(child as ReactiveValue<any>));
-
-    if (typeof initial === "string" || typeof initial === "number") {
-      let textNode: Text;
-      if (
-        before === null &&
-        parent.firstChild !== null &&
-        parent.firstChild === parent.lastChild &&
-        parent.firstChild.nodeType === Node.TEXT_NODE &&
-        (parent.firstChild as Text).data === " "
-      ) {
-        textNode = parent.firstChild as Text;
-      } else {
-        textNode = document.createTextNode("");
-        if (before === null) {
-          parent.appendChild(textNode);
+    if (isSignal(child)) {
+      const initial = typeof (child as any).peek === "function" ? (child as any).peek() : undefined;
+      if (typeof initial === "string" || typeof initial === "number") {
+        let textNode: Text;
+        if (
+          before === null &&
+          parent.firstChild !== null &&
+          parent.firstChild === parent.lastChild &&
+          parent.firstChild.nodeType === Node.TEXT_NODE &&
+          (parent.firstChild as Text).data === " "
+        ) {
+          textNode = parent.firstChild as Text;
         } else {
-          parent.insertBefore(textNode, before);
+          textNode = document.createTextNode("");
+          if (before === null) {
+            parent.appendChild(textNode);
+          } else {
+            parent.insertBefore(textNode, before);
+          }
         }
-      }
-      if (isSig) {
         effect(() => {
           const val = (child as any)();
           textNode.data = typeof val === "string" ? val : val == null ? "" : String(val);
         });
-      } else {
-        effect(() => {
-          const val = resolveValue(child as ReactiveValue<any>);
-          textNode.data = typeof val === "string" ? val : val == null ? "" : String(val);
-        });
+        return textNode;
       }
-      return textNode;
     }
 
     // Dynamic / polymorphic reactive binding

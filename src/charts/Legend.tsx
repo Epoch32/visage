@@ -20,6 +20,9 @@ export function ChartLegend(props: LegendProps): Child {
     };
 
     const series = ctx.series();
+    const uniqueSeries = series.filter(
+      (s, idx, arr) => arr.findIndex((item) => item.dataKey === s.dataKey) === idx
+    );
     return (
       <div
         class={props.class || props.className}
@@ -33,7 +36,7 @@ export function ChartLegend(props: LegendProps): Child {
           color: "#475569"
         }}
       >
-        {series.map((s) => (
+        {uniqueSeries.map((s) => (
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span
               style={{

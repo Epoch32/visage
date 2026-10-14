@@ -5,6 +5,7 @@ import { pathLine } from "./path";
 import type { CurveType, Point } from "./types";
 
 export interface LineProps {
+  id?: string;
   dataKey: string;
   stroke?: string;
   strokeWidth?: number | string;
@@ -16,16 +17,16 @@ export interface LineProps {
 }
 
 export function Line(props: LineProps): Child {
+  const seriesId = props.id ?? `line-${props.dataKey}`;
   return () => {
     const ctx = useChartContext();
 
     const stroke = props.stroke ?? "#8b5cf6";
     const strokeWidth = props.strokeWidth ?? 2;
     const curve = props.curve ?? "linear";
-    const id = `line-${props.dataKey}-${Math.random().toString(36).slice(2, 7)}`;
 
     ctx.registerSeries({
-      id,
+      id: seriesId,
       dataKey: props.dataKey,
       type: "line",
       color: stroke,
@@ -33,7 +34,7 @@ export function Line(props: LineProps): Child {
     });
 
     onCleanup(() => {
-      ctx.unregisterSeries(id);
+      ctx.unregisterSeries(seriesId);
     });
 
     return (
