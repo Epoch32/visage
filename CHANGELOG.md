@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/Epoch32/visage/compare/visage-v1.8.0...visage-v1.8.1) (2026-10-14)
+
+
+### Performance Improvements
+
+* **dom:** implement zero-allocation event tuples and pre-cloned text node reuse ([164451e](https://github.com/Epoch32/visage/commit/164451e184c7362eba9ddb448312858cd694f2fb))
+
 ## [1.8.0](https://github.com/Epoch32/visage/compare/visage-v1.7.0...visage-v1.8.0) (2026-10-14)
 
 
