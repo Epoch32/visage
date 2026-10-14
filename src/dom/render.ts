@@ -6,10 +6,12 @@ import {
   onCleanup,
   type ReadonlySignal,
   runInScope,
-  Scope
+  Scope,
+  untrack
 } from "../signals";
 import { hasReactiveClass, normalizeClass } from "../style/cx";
 import { formatStyleProp } from "../style/scale";
+import { DELEGATED_EVENTS, delegateEvents } from "./events";
 
 export type ReactiveValue<T> = T | ReadonlySignal<T> | (() => T);
 export type Child =
@@ -61,13 +63,23 @@ export function render(fn: () => Child, container: HTMLElement | DocumentFragmen
  */
 export function setAttribute(el: HTMLElement | SVGElement, key: string, value: any): void {
   // Event listeners (e.g. onClick, onInput, onclick)
-  if (key.startsWith("on") && typeof value === "function") {
-    const eventName = key.startsWith("onCapture")
-      ? key.slice(9).toLowerCase()
-      : key.slice(2).toLowerCase();
-    const useCapture = key.startsWith("onCapture");
+  if (
+    key.startsWith("on") &&
+    (typeof value === "function" || (Array.isArray(value) && typeof value[0] === "function"))
+  ) {
+    const isCapture = key.startsWith("onCapture");
+    const eventName = isCapture ? key.slice(9).toLowerCase() : key.slice(2).toLowerCase();
 
-    el.addEventListener(eventName, value as EventListener, useCapture);
+    if (!isCapture && DELEGATED_EVENTS.has(eventName)) {
+      delegateEvents([eventName]);
+      (el as any)[`__${eventName}`] = value;
+      return;
+    }
+
+    const handler =
+      typeof value === "function" ? value : (e: Event) => (value as any)[0]((value as any)[1], e);
+
+    el.addEventListener(eventName, handler as EventListener, isCapture);
     return;
   }
 
@@ -301,7 +313,33 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
   }
 
   if (isReactive(child)) {
-    // Fine-grained reactive binding
+    // Ultra-fast path for primitive string/number signals
+    const isSig = isSignal(child);
+    const initial =
+      isSig && typeof (child as any).peek === "function"
+        ? (child as any).peek()
+        : untrack(() => resolveValue(child as ReactiveValue<any>));
+
+    if (typeof initial === "string" || typeof initial === "number") {
+      const textNode = document.createTextNode(String(initial));
+      if (before === null) {
+        parent.appendChild(textNode);
+      } else {
+        parent.insertBefore(textNode, before);
+      }
+      if (isSig) {
+        effect(() => {
+          textNode.data = String((child as any)());
+        });
+      } else {
+        effect(() => {
+          textNode.data = String(resolveValue(child as ReactiveValue<any>));
+        });
+      }
+      return textNode;
+    }
+
+    // Dynamic / polymorphic reactive binding
     const marker = document.createTextNode("");
     parent.insertBefore(marker, before);
 
@@ -375,6 +413,10 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
   }
 
   // Primitive static child
+  if (before === null && parent.firstChild === null) {
+    parent.textContent = String(child);
+    return parent.firstChild;
+  }
   const textNode = document.createTextNode(String(child));
   parent.insertBefore(textNode, before);
   return textNode;
