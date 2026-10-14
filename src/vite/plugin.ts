@@ -1,5 +1,8 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { compileJsx } from "./compiler";
 import { transformHmr } from "./hmr";
+import { scaffoldZigNative } from "./native-scaffold";
 import { createViteRpcMiddleware } from "./rpc-middleware";
 import type { VisagePluginOptions, VisageVitePlugin } from "./types";
 
@@ -7,7 +10,8 @@ import type { VisagePluginOptions, VisageVitePlugin } from "./types";
  * Official Visage Vite Plugin
  *
  * Provides zero-configuration JSX compilation, Hot Module Replacement (HMR),
- * DevTools auto-injection, and full-stack RPC development server middleware.
+ * DevTools auto-injection, full-stack RPC development server middleware, and
+ * experimental native desktop packaging via Zig.
  *
  * Example:
  * ```ts
@@ -22,13 +26,54 @@ import type { VisagePluginOptions, VisageVitePlugin } from "./types";
  */
 declare const process: any;
 
+function inlineSingleFileHtml(outDir: string): void {
+  const htmlPath = path.join(outDir, "index.html");
+  if (!fs.existsSync(htmlPath)) return;
+
+  let html = fs.readFileSync(htmlPath, "utf8");
+
+  // Remove modulepreload links to prevent failed fetches on data / memory origins
+  html = html.replace(/<link\b[^>]*rel=["']modulepreload["'][^>]*>/gi, "");
+
+  // Inline stylesheet links
+  html = html.replace(
+    /<link\b[^>]*href=["'](?:\.\/)?assets\/([^"']+)["'][^>]*>/gi,
+    (match, file) => {
+      const assetPath = path.join(outDir, "assets", file);
+      if (fs.existsSync(assetPath)) {
+        const content = fs.readFileSync(assetPath, "utf8");
+        return `<style>\n${content}\n</style>`;
+      }
+      return match;
+    }
+  );
+
+  // Inline script tags
+  html = html.replace(
+    /<script\b[^>]*src=["'](?:\.\/)?assets\/([^"']+)["'][^>]*><\/script>/gi,
+    (match, file) => {
+      const assetPath = path.join(outDir, "assets", file);
+      if (fs.existsSync(assetPath)) {
+        const content = fs.readFileSync(assetPath, "utf8");
+        return `<script type="module">\n${content}\n</script>`;
+      }
+      return match;
+    }
+  );
+
+  fs.writeFileSync(htmlPath, html, "utf8");
+}
+
 export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
   const isDev = typeof process !== "undefined" ? process.env?.NODE_ENV !== "production" : true;
+  const isZigNative = Boolean(options.experimental?.zigNative);
+  const zigOpts =
+    typeof options.experimental?.zigNative === "object" ? options.experimental.zigNative : {};
 
   const configPlugin: VisageVitePlugin = {
     name: "visage:config",
     config(_userConfig, { command }) {
-      return {
+      const baseConfig: any = {
         esbuild: {
           jsx: "automatic",
           jsxImportSource: "visage"
@@ -54,7 +99,8 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
             "visage/virtual",
             "visage/devtools",
             "visage/api",
-            "visage/charts"
+            "visage/charts",
+            "visage/native"
           ]
         },
         resolve: {
@@ -65,10 +111,37 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
           dedupe: ["@epoch32/visage", "visage"]
         }
       };
+
+      if (isZigNative) {
+        // Embedded webviews in native desktop binaries require relative asset paths
+        baseConfig.base = "./";
+      }
+
+      return baseConfig;
     }
   };
 
   const plugins: VisageVitePlugin[] = [configPlugin];
+
+  if (isZigNative) {
+    plugins.push({
+      name: "visage:experimental-native",
+      apply: "build",
+      buildStart() {
+        console.log(
+          `[visage:experimental] Zig native compilation target active (window: "${zigOpts.title ?? "Visage Native"}").`
+        );
+      },
+      closeBundle() {
+        if (typeof process !== "undefined") {
+          inlineSingleFileHtml(path.resolve(process.cwd(), "dist"));
+        }
+        if (zigOpts.scaffold !== false && typeof process !== "undefined") {
+          scaffoldZigNative(process.cwd(), zigOpts);
+        }
+      }
+    });
+  }
 
   if (options.compiler) {
     const compilerOpts = typeof options.compiler === "object" ? options.compiler : {};

@@ -7,3 +7,16 @@ packages/
 *.tsbuildinfo
 .DS_Store
 
+# Zig build artifacts and generated host files
+.zig-cache
+zig-out
+zig-pkg
+**/.zig-cache
+**/zig-out
+**/zig-pkg
+build.zig
+build.zig.zon
+**/build.zig
+**/build.zig.zon
+src-native/
+**/src-native/

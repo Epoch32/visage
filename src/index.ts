@@ -155,6 +155,14 @@ export type {
   JSX,
   ReactiveProp
 } from "./jsx-runtime/jsx";
+// Native Desktop IPC Bridge (experimental)
+export {
+  isNativeApp,
+  type NativeCallMessage,
+  type NativeEventMessage,
+  type NativeResponseMessage,
+  native
+} from "./native";
 // Query & Server State Cache
 export {
   type CreateQueryOptions,

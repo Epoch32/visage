@@ -41,6 +41,75 @@ export interface VisagePluginOptions {
    * @default false
    */
   compiler?: boolean | import("./compiler/types").CompilerOptions;
+
+  /**
+   * Opt-in experimental compiler and packager options
+   */
+  experimental?: ExperimentalOptions;
+}
+
+/**
+ * Configuration options for the experimental Zig native compiler target
+ */
+export interface ZigNativeOptions {
+  /**
+   * Title of the native OS application window
+   * @default "Visage App"
+   */
+  title?: string;
+
+  /**
+   * Initial window width in pixels
+   * @default 1024
+   */
+  width?: number;
+
+  /**
+   * Initial window height in pixels
+   * @default 768
+   */
+  height?: number;
+
+  /**
+   * Allow window resizing
+   * @default true
+   */
+  resizable?: boolean;
+
+  /**
+   * Enable browser developer tools in the native window
+   * @default false
+   */
+  debug?: boolean;
+
+  /**
+   * Target directory for generated Zig host code and build.zig
+   * @default "src-native"
+   */
+  outputDir?: string;
+
+  /**
+   * Automatically scaffold build.zig and main.zig if not present
+   * @default true
+   */
+  scaffold?: boolean;
+}
+
+/**
+ * Opt-in experimental compiler flags
+ */
+export interface ExperimentalOptions {
+  /**
+   * Experimental Zig native desktop application compiler and packager.
+   *
+   * Must be explicitly set to true or a configuration object to enable.
+   * When enabled:
+   * - Configures relative asset paths (base: "./") for embedded webviews
+   * - Enables the visage/native IPC bridge
+   * - Scaffolds native Zig host files (main.zig, build.zig)
+   * @default false
+   */
+  zigNative?: boolean | ZigNativeOptions;
 }
 
 /**
@@ -67,5 +136,7 @@ export interface VisageVitePlugin {
     id: string,
     options?: { ssr?: boolean }
   ) => Promise<{ code: string; map?: any } | null> | { code: string; map?: any } | null;
+  buildStart?: () => void | Promise<void>;
+  closeBundle?: () => void | Promise<void>;
   transformIndexHtml?: (html: string) => string | Promise<string>;
 }

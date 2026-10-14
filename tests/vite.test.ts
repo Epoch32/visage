@@ -208,4 +208,36 @@ export function Component() {
     );
     expect(internalResolve).toBeNull();
   });
+
+  describe("Experimental Compiler Options", () => {
+    it("keeps experimental zigNative compiler features completely dormant by default", () => {
+      const plugins = visage();
+      const [configPlugin] = plugins;
+
+      const config = configPlugin!.config!({}, { command: "build", mode: "production" });
+      expect(config.base).toBeUndefined();
+
+      const pluginNames = plugins.map((p) => p.name);
+      expect(pluginNames).not.toContain("visage:experimental-native");
+    });
+
+    it("activates relative base path and native plugin when zigNative is explicitly enabled", () => {
+      const plugins = visage({
+        experimental: {
+          zigNative: {
+            title: "Custom Desktop Title",
+            scaffold: false
+          }
+        }
+      });
+
+      const [configPlugin] = plugins;
+      const config = configPlugin!.config!({}, { command: "build", mode: "production" });
+      expect(config.base).toBe("./");
+      expect(config.optimizeDeps?.exclude).toContain("visage/native");
+
+      const nativePlugin = plugins.find((p) => p.name === "visage:experimental-native");
+      expect(nativePlugin).toBeDefined();
+    });
+  });
 });
