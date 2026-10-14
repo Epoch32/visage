@@ -27,6 +27,18 @@ describe("Visage Template Engine", () => {
     expect(el2.querySelector(".desc")?.textContent).toBe("Details");
   });
 
+  it("clones table row templates", () => {
+    const rowTemplate = template<HTMLTableRowElement>(
+      "<tr><td class='col-md-1'>1</td><td class='col-md-4'><a class='lbl'>text</a></td></tr>"
+    );
+
+    const tr = rowTemplate();
+    expect(tr).toBeTruthy();
+    expect(tr.tagName.toLowerCase()).toBe("tr");
+    expect(tr.querySelector(".col-md-1")?.textContent).toBe("1");
+    expect(tr.querySelector(".lbl")?.textContent).toBe("text");
+  });
+
   it("binds reactive signals and text nodes using html tagged template", () => {
     const count = signal(10);
     const title = signal("Counter App");

@@ -1,26 +1,36 @@
 import { insertChild, setAttribute } from "../dom/render";
 
-const templateCache = new Map<string, HTMLTemplateElement>();
+const nodeCache = new Map<string, Node>();
 
 /**
  * Cache and clone pre-parsed HTML template strings with native browser cloneNode(true)
  */
 export function template<T extends HTMLElement = HTMLElement>(htmlString: string): () => T {
-  let templateEl = templateCache.get(htmlString);
-
-  if (!templateEl && typeof document !== "undefined") {
-    templateEl = document.createElement("template");
-    templateEl.innerHTML = htmlString.trim();
-    templateCache.set(htmlString, templateEl);
-  }
+  let cachedNode = nodeCache.get(htmlString);
 
   return () => {
-    if (!templateEl) {
-      const wrapper = document.createElement("div");
-      wrapper.innerHTML = htmlString.trim();
-      return wrapper.firstElementChild as T;
+    if (!cachedNode) {
+      if (typeof document === "undefined") {
+        return null as unknown as T;
+      }
+      const templateEl = document.createElement("template");
+      const trimmed = htmlString.trim();
+      if (trimmed.startsWith("<tr")) {
+        templateEl.innerHTML = `<table><tbody>${trimmed}</tbody></table>`;
+        cachedNode = templateEl.content.firstElementChild!.firstElementChild!.firstElementChild!;
+      } else if (trimmed.startsWith("<td") || trimmed.startsWith("<th")) {
+        templateEl.innerHTML = `<table><tbody><tr>${trimmed}</tr></tbody></table>`;
+        cachedNode =
+          templateEl.content.firstElementChild!.firstElementChild!.firstElementChild!
+            .firstElementChild!;
+      } else {
+        templateEl.innerHTML = trimmed;
+        cachedNode = templateEl.content.firstElementChild!;
+      }
+      nodeCache.set(htmlString, cachedNode);
     }
-    return templateEl.content.firstElementChild!.cloneNode(true) as T;
+
+    return cachedNode.cloneNode(true) as T;
   };
 }
 
