@@ -295,15 +295,62 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
  */
 export function insertChild(parent: Node, child: Child, before: Node | null = null): Node | null {
   if (child === null || child === undefined || child === false || child === true) {
+    if (
+      before === null &&
+      parent.firstChild !== null &&
+      parent.firstChild === parent.lastChild &&
+      parent.firstChild.nodeType === Node.TEXT_NODE &&
+      (parent.firstChild as Text).data === " "
+    ) {
+      (parent.firstChild as Text).data = "";
+    }
     return null;
   }
 
+  if (typeof child === "string" || typeof child === "number") {
+    if (
+      before === null &&
+      parent.firstChild !== null &&
+      parent.firstChild === parent.lastChild &&
+      parent.firstChild.nodeType === Node.TEXT_NODE &&
+      (parent.firstChild as Text).data === " "
+    ) {
+      (parent.firstChild as Text).data = String(child);
+      return parent.firstChild;
+    }
+    const node = document.createTextNode(String(child));
+    if (before === null) {
+      parent.appendChild(node);
+    } else {
+      parent.insertBefore(node, before);
+    }
+    return node;
+  }
+
   if (child instanceof Node) {
+    if (
+      before === null &&
+      parent.firstChild !== null &&
+      parent.firstChild === parent.lastChild &&
+      parent.firstChild.nodeType === Node.TEXT_NODE &&
+      (parent.firstChild as Text).data === " "
+    ) {
+      parent.removeChild(parent.firstChild);
+    }
     parent.insertBefore(child, before);
     return child;
   }
 
   if (Array.isArray(child)) {
+    if (
+      before === null &&
+      parent.firstChild !== null &&
+      parent.firstChild === parent.lastChild &&
+      parent.firstChild.nodeType === Node.TEXT_NODE &&
+      (parent.firstChild as Text).data === " "
+    ) {
+      parent.removeChild(parent.firstChild);
+    }
     const fragment = document.createDocumentFragment();
     for (const item of child) {
       insertChild(fragment, item);
@@ -321,25 +368,47 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
         : untrack(() => resolveValue(child as ReactiveValue<any>));
 
     if (typeof initial === "string" || typeof initial === "number") {
-      const textNode = document.createTextNode(String(initial));
-      if (before === null) {
-        parent.appendChild(textNode);
+      let textNode: Text;
+      if (
+        before === null &&
+        parent.firstChild !== null &&
+        parent.firstChild === parent.lastChild &&
+        parent.firstChild.nodeType === Node.TEXT_NODE &&
+        (parent.firstChild as Text).data === " "
+      ) {
+        textNode = parent.firstChild as Text;
       } else {
-        parent.insertBefore(textNode, before);
+        textNode = document.createTextNode("");
+        if (before === null) {
+          parent.appendChild(textNode);
+        } else {
+          parent.insertBefore(textNode, before);
+        }
       }
       if (isSig) {
         effect(() => {
-          textNode.data = String((child as any)());
+          const val = (child as any)();
+          textNode.data = typeof val === "string" ? val : val == null ? "" : String(val);
         });
       } else {
         effect(() => {
-          textNode.data = String(resolveValue(child as ReactiveValue<any>));
+          const val = resolveValue(child as ReactiveValue<any>);
+          textNode.data = typeof val === "string" ? val : val == null ? "" : String(val);
         });
       }
       return textNode;
     }
 
     // Dynamic / polymorphic reactive binding
+    if (
+      before === null &&
+      parent.firstChild !== null &&
+      parent.firstChild === parent.lastChild &&
+      parent.firstChild.nodeType === Node.TEXT_NODE &&
+      (parent.firstChild as Text).data === " "
+    ) {
+      parent.removeChild(parent.firstChild);
+    }
     const marker = document.createTextNode("");
     parent.insertBefore(marker, before);
 

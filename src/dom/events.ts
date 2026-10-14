@@ -48,11 +48,15 @@ export function delegateEvents(eventNames: string[], doc?: Document): void {
     targetDoc.addEventListener(name, (event: Event) => {
       let node: any = event.target;
       const propKey = `__${name}`;
+      const dataKey = `__${name}Data`;
 
       while (node && node !== targetDoc) {
         const handler = node[propKey];
         if (handler) {
-          if (typeof handler === "function") {
+          const data = node[dataKey];
+          if (data !== undefined) {
+            handler(data, event);
+          } else if (typeof handler === "function") {
             handler(event);
           } else if (Array.isArray(handler) && typeof handler[0] === "function") {
             handler[0](handler[1], event);

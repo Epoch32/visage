@@ -43,6 +43,25 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain("_el$.__click = handleClick;");
   });
 
+  it("compiles event delegation tuples [handler, data] into zero-allocation property assignments", () => {
+    const input = `
+      function ItemList() {
+        return (
+          <a class="lbl" onClick={[selectItem, item.id]}>
+            {item.name}
+          </a>
+        );
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    expect(code).toContain('delegateEvents(["click"])');
+    expect(code).toContain('<a class=\\"lbl\\"> </a>');
+    expect(code).toContain("_el$.__click = selectItem;");
+    expect(code).toContain("_el$.__clickData = item.id;");
+  });
+
   it("supports non-delegated events when delegateEvents is disabled or on capture", () => {
     const input = `
       function Button() {

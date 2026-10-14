@@ -57,18 +57,33 @@ export function processElement(
   let childDomIndex = 0;
 
   // Optimization: If an element contains only a single dynamic expression child,
-  // we do not need a placeholder comment node in the template string.
-  const isSingleDynamicChild =
-    element.children.length === 1 &&
-    t.isJSXExpressionContainer(element.children[0]) &&
-    !t.isJSXEmptyExpression((element.children[0] as t.JSXExpressionContainer).expression) &&
-    !t.isStringLiteral((element.children[0] as t.JSXExpressionContainer).expression) &&
-    !t.isNumericLiteral((element.children[0] as t.JSXExpressionContainer).expression);
+  // we emit a pre-cloned text node (" ") in the template string so that the browser's
+  // native C++ cloneNode instantiates the Text node ahead of time.
+  const meaningfulChildren = element.children.filter((child) => {
+    if (t.isJSXText(child) && /[\r\n]/.test(child.value) && child.value.trim() === "") {
+      return false;
+    }
+    if (t.isJSXExpressionContainer(child) && t.isJSXEmptyExpression(child.expression)) {
+      return false;
+    }
+    return true;
+  });
 
-  if (isSingleDynamicChild) {
+  const singleChild = meaningfulChildren.length === 1 ? meaningfulChildren[0] : null;
+  const isSingleDynamicChild =
+    singleChild !== null &&
+    t.isJSXExpressionContainer(singleChild) &&
+    !t.isJSXEmptyExpression(singleChild.expression) &&
+    !t.isStringLiteral(singleChild.expression) &&
+    !t.isNumericLiteral(singleChild.expression) &&
+    !t.isJSXElement(singleChild.expression) &&
+    !t.isJSXFragment(singleChild.expression);
+
+  if (isSingleDynamicChild && singleChild && t.isJSXExpressionContainer(singleChild)) {
+    childrenHtml = " ";
     dynamicChildren.push({
       index: 0,
-      expr: (element.children[0] as t.JSXExpressionContainer).expression as t.Expression
+      expr: singleChild.expression as t.Expression
     });
   } else {
     for (let i = 0; i < element.children.length; i++) {

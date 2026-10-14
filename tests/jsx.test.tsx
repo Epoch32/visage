@@ -68,6 +68,36 @@ describe("Visage JSX & Direct DOM", () => {
     unmount();
   });
 
+  it("dispatches delegated events with zero-allocation data arguments", () => {
+    const selected = signal<number | null>(null);
+    const select = (id: number) => selected.set(id);
+
+    const unmount = render(
+      () => (
+        <div>
+          <button id="b1" onClick={[select, 101] as any}>
+            Item 101
+          </button>
+          <button id="b2" onClick={[select, 202] as any}>
+            Item 202
+          </button>
+        </div>
+      ),
+      container
+    );
+
+    const b1 = container.querySelector("#b1")!;
+    const b2 = container.querySelector("#b2")!;
+
+    b1.click();
+    expect(selected()).toBe(101);
+
+    b2.click();
+    expect(selected()).toBe(202);
+
+    unmount();
+  });
+
   it("reconciles conditional rendering with <Show>", () => {
     const loggedIn = signal(false);
 
