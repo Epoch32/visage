@@ -20,7 +20,9 @@ export type { SignalOptions };
 export class Signal<T> implements IDependency {
   [SIGNAL_BRAND] = true as const;
   private _value: T;
-  private _subscribers: Set<ISubscriber> = new Set();
+  private _sub0: ISubscriber | null = null;
+  private _sub1: ISubscriber | null = null;
+  private _subs: Set<ISubscriber> | null = null;
   private _equals: (a: T, b: T) => boolean;
   private _onSet?: (val: T) => void;
   version = 0;
@@ -34,11 +36,53 @@ export class Signal<T> implements IDependency {
   get(): T {
     const curSub = getCurrentSubscriber();
     if (curSub !== null && curSub.state !== SubscriberState.DISPOSED) {
-      this._subscribers.add(curSub);
-      curSub.sources.add(this);
-      curSub.sourceVersions.set(this, this.version);
+      if (this._subs !== null) {
+        this._subs.add(curSub);
+      } else if (this._sub0 === null) {
+        this._sub0 = curSub;
+      } else if (this._sub0 === curSub) {
+        // already subscribed
+      } else if (this._sub1 === null) {
+        this._sub1 = curSub;
+      } else if (this._sub1 === curSub) {
+        // already subscribed
+      } else {
+        const set = new Set<ISubscriber>();
+        set.add(this._sub0);
+        set.add(this._sub1);
+        set.add(curSub);
+        this._subs = set;
+        this._sub0 = null;
+        this._sub1 = null;
+      }
+      curSub.addSource(this, this.version);
     }
     return this._value;
+  }
+
+  peek(): T {
+    return this._value;
+  }
+
+  private hasSubscriber(sub: ISubscriber): boolean {
+    if (this._subs !== null) return this._subs.has(sub);
+    return this._sub0 === sub || this._sub1 === sub;
+  }
+
+  getSubscribersCount(): number {
+    if (this._subs !== null) return this._subs.size;
+    let count = 0;
+    if (this._sub0 !== null) count++;
+    if (this._sub1 !== null) count++;
+    return count;
+  }
+
+  getSubscribers(): ISubscriber[] {
+    if (this._subs !== null) return Array.from(this._subs);
+    const arr: ISubscriber[] = [];
+    if (this._sub0 !== null) arr.push(this._sub0);
+    if (this._sub1 !== null) arr.push(this._sub1);
+    return arr;
   }
 
   set(newValue: T): void {
@@ -47,7 +91,7 @@ export class Signal<T> implements IDependency {
     }
 
     const curSub = getCurrentSubscriber();
-    if (curSub !== null && this._subscribers.has(curSub)) {
+    if (curSub !== null && this.hasSubscriber(curSub)) {
       if (!warnedCyclicSubscribers.has(curSub)) {
         warnedCyclicSubscribers.add(curSub);
         if (typeof console !== "undefined" && typeof console.warn === "function") {
@@ -83,15 +127,35 @@ export class Signal<T> implements IDependency {
   }
 
   removeSubscriber(sub: ISubscriber): void {
-    this._subscribers.delete(sub);
+    if (this._subs !== null) {
+      this._subs.delete(sub);
+      if (this._subs.size === 0) {
+        this._subs = null;
+      }
+      return;
+    }
+    if (this._sub0 === sub) {
+      this._sub0 = this._sub1;
+      this._sub1 = null;
+      return;
+    }
+    if (this._sub1 === sub) {
+      this._sub1 = null;
+    }
   }
 
   private notify(): void {
-    if (this._subscribers.size === 0) return;
-
-    const subs = Array.from(this._subscribers);
-    for (const sub of subs) {
-      sub.markDirty(SubscriberState.DIRTY);
+    if (this._subs !== null) {
+      for (const sub of this._subs) {
+        sub.markDirty(SubscriberState.DIRTY);
+      }
+      return;
+    }
+    if (this._sub0 !== null) {
+      this._sub0.markDirty(SubscriberState.DIRTY);
+      if (this._sub1 !== null) {
+        this._sub1.markDirty(SubscriberState.DIRTY);
+      }
     }
   }
 }
@@ -160,6 +224,29 @@ function resolveStorage(storageOption?: "local" | "session" | Storage): Storage 
   } catch {}
   return null;
 }
+
+const SignalAccessorPrototype = {
+  __proto__: Function.prototype,
+  [SIGNAL_BRAND]: true,
+  get(this: any) {
+    return this._s.get();
+  },
+  peek(this: any) {
+    return this._s.peek();
+  },
+  set(this: any, v: any) {
+    return this._s.set(v);
+  },
+  update(this: any, fn: any) {
+    return this._s.update(fn);
+  },
+  get value() {
+    return (this as any)._s.get();
+  },
+  set value(v: any) {
+    (this as any)._s.set(v);
+  }
+};
 
 export function signal<T>(
   initialValue: T,
@@ -246,16 +333,8 @@ export function signal<T>(
     return args[0] as T;
   }) as WritableSignal<T>;
 
-  Object.defineProperties(accessor, {
-    [SIGNAL_BRAND]: { value: true },
-    get: { value: () => s.get() },
-    set: { value: (v: T) => s.set(v) },
-    update: { value: (fn: (prev: T) => T) => s.update(fn) },
-    value: {
-      get: () => s.get(),
-      set: (v: T) => s.set(v)
-    }
-  });
+  (accessor as any)._s = s;
+  Object.setPrototypeOf(accessor, SignalAccessorPrototype);
 
   if (!isInternal && typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
     const devtools = (window as any).__VISAGE_DEVTOOLS__;
@@ -264,9 +343,10 @@ export function signal<T>(
       type: "signal",
       getValue: () => s.get(),
       version: () => s.version,
-      subscribersCount: () => (s as any)._subscribers?.size ?? 0,
+      subscribersCount: () => s.getSubscribersCount(),
       dependents: () =>
-        Array.from((s as any)._subscribers ?? [])
+        s
+          .getSubscribers()
           .map((sub: any) => sub._devId)
           .filter(Boolean)
     });

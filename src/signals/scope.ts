@@ -8,25 +8,69 @@ import type { CleanupFn, ISubscriber } from "./types";
  * Reactive Scope for lifecycle and automatic memory management
  */
 export class Scope {
-  subscribers = new Set<ISubscriber>();
-  cleanups: CleanupFn[] = [];
+  private _sub0: ISubscriber | null = null;
+  private _sub1: ISubscriber | null = null;
+  private _subs: Set<ISubscriber> | null = null;
+  children: Set<Scope> | null = null;
+  cleanups: CleanupFn[] | null = null;
   parent: Scope | null = null;
   isDisposed = false;
   context?: Map<symbol, any>;
 
-  constructor(parent: Scope | null = getCurrentScope()) {
+  get subscribers(): Set<ISubscriber> | null {
+    if (this._subs !== null) return this._subs;
+    if (this._sub0 === null) return null;
+    const s = new Set<ISubscriber>();
+    s.add(this._sub0);
+    if (this._sub1 !== null) s.add(this._sub1);
+    return s;
+  }
+
+  constructor(parent: Scope | null = getCurrentScope(), detached = false) {
     this.parent = parent;
     if (parent && !parent.isDisposed) {
-      parent.cleanups.push(() => this.dispose());
+      if (!detached) {
+        if (!parent.children) parent.children = new Set();
+        parent.children.add(this);
+      }
       if (parent.context) {
-        this.context = new Map(parent.context);
+        this.context = parent.context;
       }
     }
   }
 
   addSubscriber(sub: ISubscriber): void {
     if (this.isDisposed) return;
-    this.subscribers.add(sub);
+    if (this._subs !== null) {
+      this._subs.add(sub);
+    } else if (this._sub0 === null) {
+      this._sub0 = sub;
+    } else if (this._sub0 === sub) {
+      // already added
+    } else if (this._sub1 === null) {
+      this._sub1 = sub;
+    } else if (this._sub1 === sub) {
+      // already added
+    } else {
+      const set = new Set<ISubscriber>();
+      set.add(this._sub0);
+      set.add(this._sub1);
+      set.add(sub);
+      this._subs = set;
+      this._sub0 = null;
+      this._sub1 = null;
+    }
+  }
+
+  removeSubscriber(sub: ISubscriber): void {
+    if (this._subs !== null) {
+      this._subs.delete(sub);
+    } else if (this._sub0 === sub) {
+      this._sub0 = this._sub1;
+      this._sub1 = null;
+    } else if (this._sub1 === sub) {
+      this._sub1 = null;
+    }
   }
 
   addCleanup(fn: CleanupFn): void {
@@ -34,25 +78,52 @@ export class Scope {
       fn();
       return;
     }
+    if (!this.cleanups) this.cleanups = [];
     this.cleanups.push(fn);
   }
 
   dispose(): void {
     if (this.isDisposed) return;
     this.isDisposed = true;
-    for (const sub of this.subscribers) {
-      sub.dispose();
-    }
-    this.subscribers.clear();
 
-    for (let i = this.cleanups.length - 1; i >= 0; i--) {
-      try {
-        this.cleanups[i]!();
-      } catch (err) {
-        console.error("Error during cleanup:", err);
-      }
+    if (this.parent?.children) {
+      this.parent.children.delete(this);
     }
-    this.cleanups = [];
+
+    if (this.children) {
+      for (const child of this.children) {
+        child.dispose();
+      }
+      this.children.clear();
+      this.children = null;
+    }
+
+    if (this._sub0 !== null) {
+      this._sub0.dispose();
+      this._sub0 = null;
+    }
+    if (this._sub1 !== null) {
+      this._sub1.dispose();
+      this._sub1 = null;
+    }
+    if (this._subs !== null) {
+      for (const sub of this._subs) {
+        sub.dispose();
+      }
+      this._subs.clear();
+      this._subs = null;
+    }
+
+    if (this.cleanups) {
+      for (let i = this.cleanups.length - 1; i >= 0; i--) {
+        try {
+          this.cleanups[i]!();
+        } catch (err) {
+          console.error("Error during cleanup:", err);
+        }
+      }
+      this.cleanups = null;
+    }
   }
 }
 

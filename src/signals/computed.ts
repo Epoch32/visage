@@ -49,8 +49,7 @@ export class Computed<T> implements ISubscriber, IDependency {
     const curSub = getCurrentSubscriber();
     if (curSub !== null && curSub.state !== SubscriberState.DISPOSED) {
       this._subscribers.add(curSub);
-      curSub.sources.add(this);
-      curSub.sourceVersions.set(this, this.version);
+      curSub.addSource(this, this.version);
     }
 
     if (this.state === SubscriberState.DIRTY || this.state === SubscriberState.CHECK_DIRTY) {
@@ -60,12 +59,27 @@ export class Computed<T> implements ISubscriber, IDependency {
     return this._value;
   }
 
+  peek(): T {
+    if (this.state === SubscriberState.DISPOSED) {
+      return this._fn();
+    }
+    if (this.state === SubscriberState.DIRTY || this.state === SubscriberState.CHECK_DIRTY) {
+      this.updateIfNecessary();
+    }
+    return this._value;
+  }
+
   get value(): T {
     return this.get();
   }
 
   removeSubscriber(sub: ISubscriber): void {
     this._subscribers.delete(sub);
+  }
+
+  addSource(source: IDependency, version: number): void {
+    this.sources.add(source);
+    this.sourceVersions.set(source, version);
   }
 
   markDirty(targetState: SubscriberState = SubscriberState.CHECK_DIRTY): void {
@@ -169,6 +183,20 @@ export class Computed<T> implements ISubscriber, IDependency {
  * @param options - Optional debug metadata and internal flags
  * @returns A readonly reactive signal function accessor
  */
+const ComputedAccessorPrototype = {
+  __proto__: Function.prototype,
+  [COMPUTED_BRAND]: true,
+  get(this: any) {
+    return this._c.get();
+  },
+  peek(this: any) {
+    return this._c.peek();
+  },
+  get value() {
+    return (this as any)._c.get();
+  }
+};
+
 export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySignal<T> {
   const isInternal = options?.internal ?? false;
   const customName = options?.name;
@@ -176,12 +204,8 @@ export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySig
   const c = new Computed(fn);
 
   const accessor = ((): T => c.get()) as ReadonlySignal<T>;
-
-  Object.defineProperties(accessor, {
-    [COMPUTED_BRAND]: { value: true },
-    get: { value: () => c.get() },
-    value: { get: () => c.get() }
-  });
+  (accessor as any)._c = c;
+  Object.setPrototypeOf(accessor, ComputedAccessorPrototype);
 
   if (!isInternal && typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
     const devtools = (window as any).__VISAGE_DEVTOOLS__;
