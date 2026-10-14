@@ -45,7 +45,7 @@ export function createContext<T>(defaultValue?: T): Context<T | undefined> {
       const parentScope = getActiveScope();
       const scope = new Scope(parentScope);
 
-      if (!scope.context) {
+      if (!scope.context || scope.context === parentScope?.context) {
         scope.context = new Map(parentScope?.context);
       }
       scope.context.set(id, props.value);

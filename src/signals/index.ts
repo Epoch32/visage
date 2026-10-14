@@ -24,14 +24,13 @@ export {
   runInScope,
   Scope
 } from "./scope";
-
+export { createSelector } from "./selector";
 export {
   createSignal,
   Signal,
   type SignalOptions,
   signal
 } from "./signal";
-
 export {
   createStore,
   mutateStore,

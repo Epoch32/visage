@@ -4,6 +4,7 @@ import {
   computed,
   createContext,
   createRoot,
+  createSelector,
   createSignal,
   createStore,
   effect,
@@ -402,6 +403,99 @@ describe("Visage Signals", () => {
       });
 
       expect(theme()).toBe("light");
+    });
+  });
+
+  describe("createSelector", () => {
+    it("notifies only matching keys without waking up other observers", () => {
+      const selected = signal<number | null>(null);
+      const isSelected = createSelector(selected);
+
+      let row1Runs = 0;
+      let row2Runs = 0;
+      let row3Runs = 0;
+      let row1Val = false;
+      let row2Val = false;
+      let row3Val = false;
+
+      effect(() => {
+        row1Val = isSelected(1);
+        row1Runs++;
+      });
+      effect(() => {
+        row2Val = isSelected(2);
+        row2Runs++;
+      });
+      effect(() => {
+        row3Val = isSelected(3);
+        row3Runs++;
+      });
+
+      // Initial run: all false
+      expect(row1Runs).toBe(1);
+      expect(row2Runs).toBe(1);
+      expect(row3Runs).toBe(1);
+      expect(row1Val).toBe(false);
+      expect(row2Val).toBe(false);
+      expect(row3Val).toBe(false);
+
+      // Select row 2
+      selected.set(2);
+      expect(row1Runs).toBe(1); // row 1 was NOT notified
+      expect(row2Runs).toBe(2); // row 2 became true
+      expect(row3Runs).toBe(1); // row 3 was NOT notified
+      expect(row1Val).toBe(false);
+      expect(row2Val).toBe(true);
+      expect(row3Val).toBe(false);
+
+      // Switch to row 3: only row 2 (old) and row 3 (new) run!
+      selected.set(3);
+      expect(row1Runs).toBe(1); // row 1 still untouched
+      expect(row2Runs).toBe(3); // row 2 became false
+      expect(row3Runs).toBe(2); // row 3 became true
+      expect(row1Val).toBe(false);
+      expect(row2Val).toBe(false);
+      expect(row3Val).toBe(true);
+
+      // Deselect all
+      selected.set(null);
+      expect(row1Runs).toBe(1);
+      expect(row2Runs).toBe(3);
+      expect(row3Runs).toBe(3); // row 3 became false
+      expect(row3Val).toBe(false);
+    });
+
+    it("supports custom equality functions", () => {
+      const activeCategory = signal<{ id: string }>({ id: "tech" });
+      const isCategoryActive = createSelector(
+        activeCategory,
+        (key: string, curr) => key === curr.id
+      );
+
+      let isTech = false;
+      let isNews = false;
+      let techRuns = 0;
+      let newsRuns = 0;
+
+      effect(() => {
+        isTech = isCategoryActive("tech");
+        techRuns++;
+      });
+      effect(() => {
+        isNews = isCategoryActive("news");
+        newsRuns++;
+      });
+
+      expect(isTech).toBe(true);
+      expect(isNews).toBe(false);
+      expect(techRuns).toBe(1);
+      expect(newsRuns).toBe(1);
+
+      activeCategory.set({ id: "news" });
+      expect(isTech).toBe(false);
+      expect(isNews).toBe(true);
+      expect(techRuns).toBe(2);
+      expect(newsRuns).toBe(2);
     });
   });
 });

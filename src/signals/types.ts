@@ -17,6 +17,7 @@ export const COMPUTED_BRAND = Symbol("visage.computed");
 
 export interface ReadonlySignal<T> {
   get(): T;
+  peek(): T;
   readonly value: T;
   (): T;
   readonly [SIGNAL_BRAND]: true;
@@ -60,6 +61,7 @@ export interface ISubscriber {
   state: SubscriberState;
   sources: Set<IDependency>;
   sourceVersions: Map<IDependency, number>;
+  addSource(source: IDependency, version: number): void;
   markDirty(targetState?: SubscriberState): void;
   dispose(): void;
 }
