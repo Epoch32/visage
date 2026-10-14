@@ -24,6 +24,10 @@ export {
   type ShowProps
 } from "./control-flow";
 export {
+  DELEGATED_EVENTS,
+  delegateEvents
+} from "./events";
+export {
   type Child,
   insertChild,
   isReactive,
