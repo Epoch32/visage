@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.8.0](https://github.com/Epoch32/visage/compare/visage-v1.7.0...visage-v1.8.0) (2026-10-14)
+
+
+### Features
+
+* **compiler:** add AOT JSX compiler with static template hoisting and event delegation ([03c949a](https://github.com/Epoch32/visage/commit/03c949a956028d51ee917d7360ceb2efe3ed8d04))
+* **dom:** add first-class two-way form bindings (bind:value and bind:checked) ([3bca5f0](https://github.com/Epoch32/visage/commit/3bca5f0a5df612ee040c0399d1dc042c0fc6d922))
+* **dom:** add Index component for position-indexed list rendering ([af45e40](https://github.com/Epoch32/visage/commit/af45e40ba2ffca981747a3e440f986088ac49b16))
+* **dom:** implement event delegation and primitive text child rendering ([f72285f](https://github.com/Epoch32/visage/commit/f72285f041ceced4bd3db2f568f4fa278d44f56a))
+* **signals:** add createSelector primitive with inline subscriber slots ([4e62247](https://github.com/Epoch32/visage/commit/4e622474324bfbdaba5e14789863b54abd38f44a))
+* **template:** add table element wrapping and cached node cloning ([d89f9bb](https://github.com/Epoch32/visage/commit/d89f9bba56cc22437f09eecb4310c9a76d410136))
+* **vite:** include 'lucide' by default in visageLucide aliases ([e544316](https://github.com/Epoch32/visage/commit/e5443162cd62b106fa938a9fc35467079c65bde0))
+
+
+### Performance Improvements
+
+* **signals:** optimize signals and effects with inline slots and shared prototypes ([1774a99](https://github.com/Epoch32/visage/commit/1774a99a256f7a929e7ef03a3a97fd4301c81b0e))
+
 ## [1.7.0](https://github.com/Epoch32/visage/compare/visage-v1.6.0...visage-v1.7.0) (2026-10-13)
 
 
