@@ -35,6 +35,12 @@ export interface VisagePluginOptions {
     router: ReturnType<typeof createRouter<any>>;
     endpoint?: string;
   };
+
+  /**
+   * Enable AOT JSX Template Compiler (compiles JSX into hoisted cloneNode templates)
+   * @default false
+   */
+  compiler?: boolean | import("./compiler/types").CompilerOptions;
 }
 
 /**

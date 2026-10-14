@@ -124,14 +124,27 @@
     "example:ui": "vite examples/ui-showcase",
     "example:charts": "vite examples/charts-showcase",
     "example:auth": "vite examples/enterprise-auth",
-    "example:api": "bun examples/api-showcase/server.ts"
+    "example:api": "bun examples/api-showcase/server.ts",
+    "benchmark": "vite benchmarks/keyed",
+    "benchmark:build": "vite build benchmarks/keyed"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.7",
+    "@babel/generator": "^8.0.6",
+    "@babel/parser": "^8.0.7",
+    "@babel/traverse": "^8.0.7",
+    "@babel/types": "^8.0.6",
     "@biomejs/biome": "^2.5.15",
+    "@types/babel__core": "^7.20.5",
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__traverse": "^7.28.0",
     "csstype": "^3.2.3",
     "happy-dom": "^21.0.1",
     "lucide": "^1.54.0",
+    "puppeteer-core": "^25.13.0",
+    "solid-js": "^1.9.17",
     "typescript": "^7.0.2",
+    "vite-plugin-solid": "^2.11.14",
     "vitest": "^5.0.3"
   },
   "keywords": [

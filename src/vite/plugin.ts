@@ -1,3 +1,4 @@
+import { compileJsx } from "./compiler";
 import { transformHmr } from "./hmr";
 import { createViteRpcMiddleware } from "./rpc-middleware";
 import type { VisagePluginOptions, VisageVitePlugin } from "./types";
@@ -67,6 +68,32 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     }
   };
 
+  const plugins: VisageVitePlugin[] = [configPlugin];
+
+  if (options.compiler) {
+    const compilerOpts = typeof options.compiler === "object" ? options.compiler : {};
+    plugins.push({
+      name: "visage:compiler",
+      enforce: "pre",
+      transform(code: string, id: string) {
+        if (!/\.[jt]sx($|\?)/.test(id) || id.includes("node_modules")) {
+          return null;
+        }
+        try {
+          const res = compileJsx(code, {
+            filename: id,
+            ...compilerOpts
+          });
+          return {
+            code: res.code
+          };
+        } catch {
+          return null;
+        }
+      }
+    });
+  }
+
   const transformPlugin: VisageVitePlugin = {
     name: "visage:transform",
     transform(code: string, id: string) {
@@ -100,7 +127,8 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     }
   };
 
-  return [configPlugin, transformPlugin, devServerPlugin];
+  plugins.push(transformPlugin, devServerPlugin);
+  return plugins;
 }
 
 export default visage;
