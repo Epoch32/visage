@@ -1,5 +1,11 @@
 import generator from "@babel/generator";
 import * as t from "@babel/types";
+import {
+  CLEAN_SPREAD_HELPER_AST,
+  SAFE_HTML_HELPER_AST,
+  SAFE_NAME_HELPER_AST,
+  SAFE_URL_HELPER_AST
+} from "./transforms/security";
 import type { CompilerContext } from "./types";
 
 const babelGenerator = (generator as any).default || generator;
@@ -23,8 +29,20 @@ export function generateCode(ast: t.File, context: CompilerContext): GenerateRes
     );
   }
 
-  // 2. Prepare delegated events registration call if any events were delegated
+  // 2. Prepare security helpers and delegated events registration call
   const initStatements: t.Statement[] = [];
+  if (context.securityHelpers.has("_safeUrl")) {
+    initStatements.push(t.cloneNode(SAFE_URL_HELPER_AST));
+  }
+  if (context.securityHelpers.has("_safeName")) {
+    initStatements.push(t.cloneNode(SAFE_NAME_HELPER_AST));
+  }
+  if (context.securityHelpers.has("_safeHtml")) {
+    initStatements.push(t.cloneNode(SAFE_HTML_HELPER_AST));
+  }
+  if (context.securityHelpers.has("_cleanSpread")) {
+    initStatements.push(t.cloneNode(CLEAN_SPREAD_HELPER_AST));
+  }
   if (context.delegatedEvents.size > 0) {
     initStatements.push(
       t.expressionStatement(

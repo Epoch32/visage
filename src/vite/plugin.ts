@@ -143,8 +143,18 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     });
   }
 
-  if (options.compiler) {
-    const compilerOpts = typeof options.compiler === "object" ? options.compiler : {};
+  const isSecureTransforms = Boolean(options.experimental?.secureTransforms);
+  const secureTransformsOpts =
+    typeof options.experimental?.secureTransforms === "object"
+      ? options.experimental.secureTransforms
+      : true;
+
+  if (options.compiler || isSecureTransforms) {
+    const compilerOpts: any = typeof options.compiler === "object" ? { ...options.compiler } : {};
+    if (isSecureTransforms) {
+      compilerOpts.security = secureTransformsOpts;
+    }
+
     plugins.push({
       name: "visage:compiler",
       enforce: "pre",

@@ -4,6 +4,23 @@ import { escapeHtml, escapeHtmlAttr, formatStaticElement } from "../template-bui
 import type { CompilerContext, DomNavStep, DynamicBinding } from "../types";
 import { transformAttribute } from "./attributes";
 import { getTagName, isComponentTag, transformComponentElement } from "./components";
+import { isEventAttribute } from "./events";
+import {
+  assertSafeClobberStatic,
+  assertSafeEventValue,
+  assertSafeHtmlStatic,
+  assertSafeStaticUrl,
+  isClobberAttribute,
+  isClobberShieldActive,
+  isEventShieldActive,
+  isHtmlAttribute,
+  isHtmlShieldActive,
+  isRelShieldActive,
+  isSpreadSanitizerActive,
+  isUrlAttribute,
+  isUrlShieldActive,
+  normalizeRel
+} from "./security";
 
 export function processElement(
   element: t.JSXElement,
@@ -21,6 +38,16 @@ export function processElement(
 
   const staticAttrs: string[] = [];
   const dynamicAttrs: (t.JSXAttribute | t.JSXSpreadAttribute)[] = [];
+  const sec = context.options.security;
+  const checkUrlShield = isUrlShieldActive(sec);
+  const checkRelShield = isRelShieldActive(sec);
+  const checkEventShield = isEventShieldActive(sec);
+  const checkClobberShield = isClobberShieldActive(sec);
+  const checkHtmlShield = isHtmlShieldActive(sec);
+
+  let targetBlankFound = false;
+  let relAttrIndex = -1;
+  let existingRelValue: string | undefined;
 
   for (const attr of element.openingElement.attributes) {
     if (t.isJSXSpreadAttribute(attr)) {
@@ -36,19 +63,72 @@ export function processElement(
       if (!attr.value) {
         staticAttrs.push(attrName);
       } else if (t.isStringLiteral(attr.value)) {
-        staticAttrs.push(`${attrName}="${escapeHtmlAttr(attr.value.value)}"`);
+        const strVal = attr.value.value;
+        if (checkEventShield && isEventAttribute(attrName)) {
+          assertSafeEventValue(attrName, strVal);
+        }
+        if (checkUrlShield && isUrlAttribute(attrName)) {
+          assertSafeStaticUrl(attrName, strVal);
+        }
+        if (checkClobberShield && isClobberAttribute(attrName)) {
+          assertSafeClobberStatic(attrName, strVal);
+        }
+        if (checkHtmlShield && isHtmlAttribute(attrName)) {
+          assertSafeHtmlStatic(attrName, strVal);
+        }
+        if (attrName === "target" && strVal === "_blank") {
+          targetBlankFound = true;
+        }
+        if (attrName === "rel") {
+          relAttrIndex = staticAttrs.length;
+          existingRelValue = strVal;
+        }
+        staticAttrs.push(`${attrName}="${escapeHtmlAttr(strVal)}"`);
       } else if (t.isJSXExpressionContainer(attr.value)) {
         const expr = attr.value.expression;
         if (t.isStringLiteral(expr) || t.isNumericLiteral(expr)) {
-          staticAttrs.push(`${attrName}="${String(expr.value)}"`);
+          const strVal = String(expr.value);
+          if (t.isStringLiteral(expr) && checkEventShield && isEventAttribute(attrName)) {
+            assertSafeEventValue(attrName, expr.value);
+          }
+          if (t.isStringLiteral(expr) && checkUrlShield && isUrlAttribute(attrName)) {
+            assertSafeStaticUrl(attrName, expr.value);
+          }
+          if (t.isStringLiteral(expr) && checkClobberShield && isClobberAttribute(attrName)) {
+            assertSafeClobberStatic(attrName, expr.value);
+          }
+          if (t.isStringLiteral(expr) && checkHtmlShield && isHtmlAttribute(attrName)) {
+            assertSafeHtmlStatic(attrName, expr.value);
+          }
+          if (attrName === "target" && strVal === "_blank") {
+            targetBlankFound = true;
+          }
+          if (attrName === "rel") {
+            relAttrIndex = staticAttrs.length;
+            existingRelValue = strVal;
+          }
+          staticAttrs.push(`${attrName}="${strVal}"`);
         } else if (t.isBooleanLiteral(expr)) {
           if (expr.value) {
             staticAttrs.push(attrName);
           }
         } else {
+          if (checkEventShield && isEventAttribute(attrName) && t.isTemplateLiteral(expr)) {
+            assertSafeEventValue(attrName, "[template literal]");
+          }
           dynamicAttrs.push(attr);
         }
       }
+    }
+  }
+
+  // Ensure rel="noopener noreferrer" on <a target="_blank">
+  if (checkRelShield && tagName.toLowerCase() === "a" && targetBlankFound) {
+    const safeRel = normalizeRel(existingRelValue);
+    if (relAttrIndex !== -1) {
+      staticAttrs[relAttrIndex] = `rel="${escapeHtmlAttr(safeRel)}"`;
+    } else {
+      staticAttrs.push(`rel="${escapeHtmlAttr(safeRel)}"`);
     }
   }
 
@@ -195,13 +275,20 @@ export function generateTemplateInstance(
     for (const attr of b.attributes) {
       if (t.isJSXSpreadAttribute(attr)) {
         context.requireHelper("setAttribute");
+        let spreadArg = attr.argument;
+        if (isSpreadSanitizerActive(context.options.security)) {
+          context.requireSecurityHelper("_cleanSpread");
+          context.requireSecurityHelper("_safeUrl");
+          context.requireSecurityHelper("_safeName");
+          spreadArg = t.callExpression(t.identifier("_cleanSpread"), [attr.argument]);
+        }
         statements.push(
           t.expressionStatement(
             t.callExpression(
               t.memberExpression(
                 t.callExpression(
                   t.memberExpression(t.identifier("Object"), t.identifier("entries")),
-                  [attr.argument]
+                  [spreadArg]
                 ),
                 t.identifier("forEach")
               ),

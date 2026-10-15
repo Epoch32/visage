@@ -6,6 +6,19 @@ import type {
 } from "../types";
 import { isTwoWayBindingAttribute, transformTwoWayBinding } from "./bindings";
 import { isEventAttribute, transformEventAttribute } from "./events";
+import {
+  assertSafeClobberStatic,
+  assertSafeEventValue,
+  assertSafeHtmlStatic,
+  assertSafeStaticUrl,
+  isClobberAttribute,
+  isClobberShieldActive,
+  isEventShieldActive,
+  isHtmlAttribute,
+  isHtmlShieldActive,
+  isUrlAttribute,
+  isUrlShieldActive
+} from "./security";
 
 export function transformAttribute(
   attrName: string,
@@ -35,6 +48,13 @@ export function transformAttribute(
 
   // 3. Event listeners (onClick, onInput, etc.)
   if (isEventAttribute(attrName)) {
+    if (isEventShieldActive(context.options.security)) {
+      if (t.isStringLiteral(valueExpr)) {
+        assertSafeEventValue(attrName, valueExpr.value);
+      } else if (t.isTemplateLiteral(valueExpr)) {
+        assertSafeEventValue(attrName, "[template literal]");
+      }
+    }
     return transformEventAttribute(ctx);
   }
 
@@ -142,13 +162,39 @@ export function transformAttribute(
 
   // 6. Generic attribute / property via setAttribute helper
   context.requireHelper("setAttribute");
+
+  let finalValueExpr = valueExpr;
+  const sec = context.options.security;
+  if (isUrlShieldActive(sec) && isUrlAttribute(attrName)) {
+    if (t.isStringLiteral(valueExpr)) {
+      assertSafeStaticUrl(attrName, valueExpr.value);
+    } else {
+      context.requireSecurityHelper("_safeUrl");
+      finalValueExpr = t.callExpression(t.identifier("_safeUrl"), [valueExpr]);
+    }
+  } else if (isClobberShieldActive(sec) && isClobberAttribute(attrName)) {
+    if (t.isStringLiteral(valueExpr)) {
+      assertSafeClobberStatic(attrName, valueExpr.value);
+    } else {
+      context.requireSecurityHelper("_safeName");
+      finalValueExpr = t.callExpression(t.identifier("_safeName"), [valueExpr]);
+    }
+  } else if (isHtmlShieldActive(sec) && isHtmlAttribute(attrName)) {
+    if (t.isStringLiteral(valueExpr)) {
+      assertSafeHtmlStatic(attrName, valueExpr.value);
+    } else {
+      context.requireSecurityHelper("_safeHtml");
+      finalValueExpr = t.callExpression(t.identifier("_safeHtml"), [valueExpr]);
+    }
+  }
+
   return {
     statements: [
       t.expressionStatement(
         t.callExpression(t.identifier("setAttribute"), [
           targetVar,
           t.stringLiteral(attrName),
-          valueExpr
+          finalValueExpr
         ])
       )
     ]

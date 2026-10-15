@@ -1,5 +1,43 @@
 import type * as t from "@babel/types";
 
+export interface SecureTransformsOptions {
+  /**
+   * Shield href, src, action, and formAction against dangerous script execution protocols
+   * @default true
+   */
+  urlShield?: boolean;
+
+  /**
+   * Automatically ensure rel="noopener noreferrer" on target="_blank" links
+   * @default true
+   */
+  relShield?: boolean;
+
+  /**
+   * Disallow string literals or string expressions on event handlers
+   * @default true
+   */
+  eventShield?: boolean;
+
+  /**
+   * Guard dynamic id and name attributes against DOM clobbering collisions
+   * @default true
+   */
+  clobberShield?: boolean;
+
+  /**
+   * Guard innerHTML and dangerouslySetInnerHTML bindings against script injection
+   * @default true
+   */
+  htmlShield?: boolean;
+
+  /**
+   * Clean props spread onto native HTML elements
+   * @default true
+   */
+  spreadSanitizer?: boolean;
+}
+
 export interface CompilerOptions {
   filename?: string;
   importSource?: string;
@@ -8,6 +46,7 @@ export interface CompilerOptions {
   devtools?: boolean;
   autoImport?: boolean;
   delegateEvents?: boolean;
+  security?: boolean | SecureTransformsOptions;
 }
 
 export type DomNavStep = "firstChild" | "nextSibling";
@@ -45,8 +84,10 @@ export interface CompilerContext {
   templateCounter: number;
   importedHelpers: Set<string>;
   delegatedEvents: Set<string>;
+  securityHelpers: Set<string>;
   plugins: CompilerPlugin[];
   registerTemplate(html: string): string;
   requireHelper(name: string): void;
+  requireSecurityHelper(name: string): void;
   requireDelegatedEvent(name: string): void;
 }

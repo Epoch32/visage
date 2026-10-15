@@ -5,6 +5,7 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
   const importedHelpers = new Set<string>();
   let templateCounter = 0;
   const delegatedEvents = new Set<string>();
+  const securityHelpers = new Set<string>();
   const plugins: CompilerPlugin[] = options.plugins ?? [];
 
   return {
@@ -18,6 +19,7 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
     },
     importedHelpers,
     delegatedEvents,
+    securityHelpers,
     plugins,
     registerTemplate(html: string): string {
       let id = templateMap.get(html);
@@ -29,6 +31,9 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
     },
     requireHelper(name: string): void {
       importedHelpers.add(name);
+    },
+    requireSecurityHelper(name: string): void {
+      securityHelpers.add(name);
     },
     requireDelegatedEvent(name: string): void {
       delegatedEvents.add(name);
