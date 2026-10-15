@@ -10,7 +10,9 @@ export default defineConfig({
           width: 1024,
           height: 768,
           scaffold: true
-        }
+        },
+        secureTransforms: true,
+        csp: true
       }
     })
   ],
