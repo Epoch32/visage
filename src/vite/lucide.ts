@@ -1,3 +1,4 @@
+import { createVisageLogger, pc } from "./logger";
 import type { VisageVitePlugin } from "./types";
 
 export interface VisageLucideOptions {
@@ -53,10 +54,22 @@ const RESOLVED_PREFIX = `\0${VIRTUAL_PREFIX}`;
 
 export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugin {
   const aliases = options.aliases ?? ["lucide-react", "lucide"];
+  const vLog = createVisageLogger();
 
   return {
     name: "visage:lucide",
     enforce: "pre",
+
+    configResolved(config) {
+      vLog.setViteLogger(config.logger);
+    },
+
+    buildStart() {
+      vLog.info(
+        "visage:lucide",
+        `Statically tree-shaken Lucide icons active ${pc.dim(`(aliases: ${aliases.join(", ")})`)}`
+      );
+    },
 
     config() {
       return {
@@ -92,6 +105,13 @@ export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugi
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean);
+
+        if (names.length > 0) {
+          vLog.info(
+            "visage:lucide",
+            `Compiled ${names.length} icon${names.length > 1 ? "s" : ""} into virtual module ${pc.dim(`(${names.join(", ")})`)}`
+          );
+        }
 
         const imports = names.map((n) => `${n} as __icon_node_${n}`).join(", ");
         const exports = names

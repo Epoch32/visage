@@ -53,6 +53,7 @@ export interface CompilerOptions {
   security?: boolean | SecureTransformsOptions;
   csp?: boolean | CSPOptions;
   detectedOrigins?: DetectedOrigins;
+  logger?: import("../logger").VisageLogger;
 }
 
 export type DomNavStep = "firstChild" | "nextSibling";

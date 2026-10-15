@@ -4,6 +4,7 @@ import { compileJsx } from "./compiler";
 import type { DetectedOrigins } from "./compiler/types";
 import { buildCspString, extractOriginFromUrl, injectCspMetaTag } from "./csp";
 import { transformHmr } from "./hmr";
+import { createVisageLogger, pc } from "./logger";
 import { scaffoldZigNative } from "./native-scaffold";
 import { createViteRpcMiddleware } from "./rpc-middleware";
 import type { CSPOptions, VisagePluginOptions, VisageVitePlugin } from "./types";
@@ -144,9 +145,25 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
   const isZigNative = Boolean(options.experimental?.zigNative);
   const zigOpts =
     typeof options.experimental?.zigNative === "object" ? options.experimental.zigNative : {};
+  const vLog = createVisageLogger();
 
   const configPlugin: VisageVitePlugin = {
     name: "visage:config",
+    configResolved(config) {
+      vLog.setViteLogger(config.logger);
+      if (options.ssr) {
+        vLog.info(
+          "visage:ssr",
+          `Server-Side Rendering pipeline active ${pc.dim("(streaming mode)")}`
+        );
+      }
+      if (options.extractCss !== false) {
+        vLog.debug(
+          "visage:config",
+          `Static CSS extraction active ${pc.dim("(CSS bundles enabled)")}`
+        );
+      }
+    },
     config(_userConfig, { command }) {
       const baseConfig: any = {
         esbuild: {
@@ -221,8 +238,9 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
       name: "visage:experimental-native",
       apply: "build",
       buildStart() {
-        console.log(
-          `[visage:experimental] Zig native compilation target active (window: "${zigOpts.title ?? "Visage Native"}").`
+        vLog.info(
+          "visage:native",
+          `Zig native desktop compilation target active ${pc.dim(`(window: "${zigOpts.title ?? "Visage Native"}")`)}`
         );
       },
       closeBundle() {
@@ -232,15 +250,21 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
             options.experimental?.csp,
             detectedOrigins
           );
+          vLog.info(
+            "visage:native",
+            `Inlined single-file HTML bundle for embedded webview distribution ${pc.dim("(dist/index.html)")}`
+          );
         }
         if (zigOpts.scaffold !== false && typeof process !== "undefined") {
           scaffoldZigNative(process.cwd(), zigOpts);
+          vLog.info("visage:native", "Synchronized native Zig scaffold and build configuration");
         }
       }
     });
   }
 
   const compilerOpts: any = typeof options.compiler === "object" ? { ...options.compiler } : {};
+  compilerOpts.logger = vLog;
   if (isSecureTransforms) {
     compilerOpts.security = secureTransformsOpts;
   }
@@ -253,6 +277,21 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     plugins.push({
       name: "visage:compiler",
       enforce: "pre",
+      buildStart() {
+        if (options.compiler) {
+          const target = options.ssr ? "ssr" : "client";
+          vLog.info(
+            "visage:compiler",
+            `AOT JSX template compiler armed ${pc.dim(`(target: ${target})`)}`
+          );
+        }
+        if (isSecureTransforms) {
+          vLog.info(
+            "visage:security",
+            `AST security transforms active ${pc.dim("(6 shields armed: URL, rel, clobber, HTML, events, spreads)")}`
+          );
+        }
+      },
       transform(code: string, id: string) {
         if (!/\.[jt]sx($|\?)/.test(id) || id.includes("node_modules")) {
           return null;
@@ -265,7 +304,10 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
           return {
             code: res.code
           };
-        } catch {
+        } catch (err: any) {
+          if (err?.message?.includes("[visage:security]")) {
+            vLog.error("visage:security", `${path.basename(id)}: ${err.message}`);
+          }
           return null;
         }
       }
@@ -278,6 +320,12 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
 
     plugins.push({
       name: "visage:csp",
+      buildStart() {
+        vLog.info(
+          "visage:csp",
+          `Content Security Policy generator armed ${pc.dim("(strict zero-trust)")}`
+        );
+      },
       configResolved(config) {
         if (config?.root) {
           projectRoot = config.root;
@@ -286,11 +334,40 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
       transformIndexHtml(html: string) {
         const shouldAutoDetect = typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
         if (shouldAutoDetect && !hasPreScanned) {
+          vLog.debug(
+            "visage:csp",
+            `Scanning project files for external resource origins ${pc.dim(`(${projectRoot})`)}`
+          );
           scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts);
           hasPreScanned = true;
+          const originCount =
+            detectedOrigins.connect.size +
+            detectedOrigins.img.size +
+            detectedOrigins.font.size +
+            detectedOrigins.style.size +
+            detectedOrigins.media.size +
+            detectedOrigins.frame.size;
+          if (originCount > 0) {
+            const originsSample = [
+              ...detectedOrigins.connect,
+              ...detectedOrigins.img,
+              ...detectedOrigins.font,
+              ...detectedOrigins.style,
+              ...detectedOrigins.media,
+              ...detectedOrigins.frame
+            ];
+            vLog.info(
+              "visage:csp",
+              `Auto-whitelisted ${originCount} external origin${originCount > 1 ? "s" : ""} from project scan ${pc.dim(`(${originsSample.slice(0, 3).join(", ")}${originCount > 3 ? ", ..." : ""})`)}`
+            );
+          }
         }
         extractOriginsFromHtml(html, detectedOrigins);
         const cspString = buildCspString(cspOpts, detectedOrigins);
+        vLog.info(
+          "visage:csp",
+          `Injected CSP meta tag into HTML shell ${pc.dim(`(${cspString.slice(0, 45)}...)`)}`
+        );
         return injectCspMetaTag(html, cspString);
       }
     });
@@ -298,6 +375,14 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
 
   const transformPlugin: VisageVitePlugin = {
     name: "visage:transform",
+    buildStart() {
+      if (options.hmr !== false && isDev) {
+        vLog.info(
+          "visage:hmr",
+          `Signal-preserving HMR boundary transformer active ${pc.dim("(fast refresh)")}`
+        );
+      }
+    },
     transform(code: string, id: string) {
       if (options.hmr !== false && isDev) {
         return transformHmr(code, id);
@@ -311,7 +396,18 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     apply: "serve",
     configureServer(server) {
       if (options.rpc) {
+        const endpoint = options.rpc.endpoint ?? "/api/rpc";
         server.middlewares.use(createViteRpcMiddleware(options.rpc));
+        vLog.info(
+          "visage:rpc",
+          `Type-safe full-stack RPC middleware mounted ${pc.dim(`(${endpoint})`)}`
+        );
+      }
+      if (options.devtools !== false && isDev) {
+        vLog.info(
+          "visage:devtools",
+          `DevTools instrumentation active ${pc.dim("(DOM inspector enabled)")}`
+        );
       }
     },
     transformIndexHtml(html: string) {
@@ -320,6 +416,7 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
       }
       // Inject DevTools hint meta
       if (!html.includes('name="visage-devtools"')) {
+        vLog.info("visage:devtools", "Injected DevTools runtime marker into HTML shell");
         return html.replace(
           "<head>",
           '<head>\n    <meta name="visage-devtools" content="enabled" />'

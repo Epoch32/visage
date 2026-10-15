@@ -36,6 +36,12 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
       if (!id) {
         id = `_tmpl$${++templateCounter}`;
         templateMap.set(html, id);
+        if (options.logger) {
+          options.logger.debug(
+            "visage:compiler",
+            `Registered template ${id}: ${html.slice(0, 30)}${html.length > 30 ? "..." : ""}`
+          );
+        }
       }
       return id;
     },
@@ -43,6 +49,9 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
       importedHelpers.add(name);
     },
     requireSecurityHelper(name: string): void {
+      if (!securityHelpers.has(name) && options.logger) {
+        options.logger.debug("visage:security", `Armed runtime AST security guard ${name}`);
+      }
       securityHelpers.add(name);
     },
     requireDelegatedEvent(name: string): void {
@@ -52,6 +61,12 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
     recordOrigin(category: keyof DetectedOrigins, url: string): void {
       const origin = extractOriginFromUrl(url);
       if (origin) {
+        if (!detectedOrigins[category].has(origin) && options.logger) {
+          options.logger.debug(
+            "visage:csp",
+            `Discovered origin [${category}]: ${origin}${options.filename ? ` in ${options.filename}` : ""}`
+          );
+        }
         detectedOrigins[category].add(origin);
       }
     }

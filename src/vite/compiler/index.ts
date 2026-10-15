@@ -82,7 +82,14 @@ export function compileJsx(code: string, options: CompilerOptions = {}): Generat
     }
   });
 
-  return generateCode(ast as any, context);
+  const result = generateCode(ast as any, context);
+  if (options.logger && context.templateMap.size > 0) {
+    options.logger.debug(
+      "visage:compiler",
+      `Compiled ${context.templateMap.size} hoisted template${context.templateMap.size > 1 ? "s" : ""}${options.filename ? ` in ${options.filename}` : ""}`
+    );
+  }
+  return result;
 }
 
 export default compileJsx;
