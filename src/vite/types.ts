@@ -137,6 +137,75 @@ export interface SecureTransformsOptions {
 }
 
 /**
+ * Options for Content Security Policy generation and injection
+ */
+export interface CSPOptions {
+  /**
+   * Allowed connection origins for fetch, WebSocket, etc. (connect-src)
+   * @default ["'self'"]
+   */
+  connectSrc?: string[];
+
+  /**
+   * Allowed image origins (img-src)
+   * @default ["'self'", "data:"]
+   */
+  imgSrc?: string[];
+
+  /**
+   * Allowed font origins (font-src)
+   * @default ["'self'", "data:"]
+   */
+  fontSrc?: string[];
+
+  /**
+   * Allowed style origins (style-src)
+   * @default ["'self'", "'unsafe-inline'"]
+   */
+  styleSrc?: string[];
+
+  /**
+   * Allowed script origins (script-src)
+   * @default ["'self'"]
+   */
+  scriptSrc?: string[];
+
+  /**
+   * Allowed media origins (media-src)
+   * @default ["'self'"]
+   */
+  mediaSrc?: string[];
+
+  /**
+   * Allowed frame/iframe origins (frame-src)
+   * @default ["'self'"]
+   */
+  frameSrc?: string[];
+
+  /**
+   * Automatically scan JSX static attributes for external origins and merge them into CSP
+   * @default true
+   */
+  autoDetectOrigins?: boolean;
+
+  /**
+   * Enforce HTTPS for all resource requests
+   * @default false
+   */
+  upgradeInsecureRequests?: boolean;
+
+  /**
+   * URI where the browser sends reports of policy violations
+   */
+  reportUri?: string;
+
+  /**
+   * Custom raw directives to append or override
+   */
+  directives?: Record<string, string[]>;
+}
+
+/**
  * Opt-in experimental compiler flags
  */
 export interface ExperimentalOptions {
@@ -157,6 +226,12 @@ export interface ExperimentalOptions {
    * @default false
    */
   secureTransforms?: boolean | SecureTransformsOptions;
+
+  /**
+   * Experimental Content Security Policy generator and injector (strictly disabled by default).
+   * @default false
+   */
+  csp?: boolean | CSPOptions;
 }
 
 /**

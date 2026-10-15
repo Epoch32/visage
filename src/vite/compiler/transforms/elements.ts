@@ -22,6 +22,71 @@ import {
   normalizeRel
 } from "./security";
 
+function recordStaticOrigin(
+  tagName: string,
+  attrName: string,
+  strVal: string,
+  element: t.JSXElement,
+  context: CompilerContext
+): void {
+  const csp = context.options.csp;
+  if (!csp) return;
+  if (typeof csp === "object" && csp.autoDetectOrigins === false) return;
+
+  const tag = tagName.toLowerCase();
+  const attr = attrName.toLowerCase();
+
+  if (attr === "src") {
+    if (tag === "img") {
+      context.recordOrigin("img", strVal);
+    } else if (tag === "video" || tag === "audio" || tag === "source" || tag === "track") {
+      context.recordOrigin("media", strVal);
+    } else if (tag === "iframe" || tag === "frame") {
+      context.recordOrigin("frame", strVal);
+    }
+  } else if (attr === "poster" && tag === "video") {
+    context.recordOrigin("img", strVal);
+  } else if (attr === "srcset" && (tag === "img" || tag === "source")) {
+    const candidates = strVal.split(",");
+    for (const cand of candidates) {
+      const url = cand.trim().split(/\s+/)[0];
+      if (url) {
+        context.recordOrigin("img", url);
+      }
+    }
+  } else if (attr === "href" && tag === "link") {
+    let relVal: string | undefined;
+    let asVal: string | undefined;
+    for (const a of element.openingElement.attributes) {
+      if (t.isJSXAttribute(a) && t.isJSXIdentifier(a.name)) {
+        const aName = a.name.name.toLowerCase();
+        if (aName === "rel") {
+          if (t.isStringLiteral(a.value)) {
+            relVal = a.value.value.toLowerCase();
+          } else if (t.isJSXExpressionContainer(a.value) && t.isStringLiteral(a.value.expression)) {
+            relVal = a.value.expression.value.toLowerCase();
+          }
+        } else if (aName === "as") {
+          if (t.isStringLiteral(a.value)) {
+            asVal = a.value.value.toLowerCase();
+          } else if (t.isJSXExpressionContainer(a.value) && t.isStringLiteral(a.value.expression)) {
+            asVal = a.value.expression.value.toLowerCase();
+          }
+        }
+      }
+    }
+    if (relVal === "stylesheet" || asVal === "style" || /\.css($|\?)/i.test(strVal)) {
+      context.recordOrigin("style", strVal);
+    } else if (asVal === "font" || /\.(?:woff2?|ttf|otf|eot)($|\?)/i.test(strVal)) {
+      context.recordOrigin("font", strVal);
+    } else if (relVal === "icon" || relVal === "shortcut icon" || asVal === "image") {
+      context.recordOrigin("img", strVal);
+    } else if (asVal === "fetch") {
+      context.recordOrigin("connect", strVal);
+    }
+  }
+}
+
 export function processElement(
   element: t.JSXElement,
   currentPath: DomNavStep[],
@@ -76,6 +141,7 @@ export function processElement(
         if (checkHtmlShield && isHtmlAttribute(attrName)) {
           assertSafeHtmlStatic(attrName, strVal);
         }
+        recordStaticOrigin(tagName, attrName, strVal, element, context);
         if (attrName === "target" && strVal === "_blank") {
           targetBlankFound = true;
         }
@@ -100,6 +166,9 @@ export function processElement(
           if (t.isStringLiteral(expr) && checkHtmlShield && isHtmlAttribute(attrName)) {
             assertSafeHtmlStatic(attrName, expr.value);
           }
+          if (t.isStringLiteral(expr)) {
+            recordStaticOrigin(tagName, attrName, expr.value, element, context);
+          }
           if (attrName === "target" && strVal === "_blank") {
             targetBlankFound = true;
           }
@@ -115,6 +184,12 @@ export function processElement(
         } else {
           if (checkEventShield && isEventAttribute(attrName) && t.isTemplateLiteral(expr)) {
             assertSafeEventValue(attrName, "[template literal]");
+          }
+          if (t.isTemplateLiteral(expr)) {
+            const leading = expr.quasis[0]?.value?.raw;
+            if (leading) {
+              recordStaticOrigin(tagName, attrName, leading, element, context);
+            }
           }
           dynamicAttrs.push(attr);
         }

@@ -38,6 +38,10 @@ export interface SecureTransformsOptions {
   spreadSanitizer?: boolean;
 }
 
+export type { CSPOptions } from "../types";
+
+import type { CSPOptions } from "../types";
+
 export interface CompilerOptions {
   filename?: string;
   importSource?: string;
@@ -47,6 +51,8 @@ export interface CompilerOptions {
   autoImport?: boolean;
   delegateEvents?: boolean;
   security?: boolean | SecureTransformsOptions;
+  csp?: boolean | CSPOptions;
+  detectedOrigins?: DetectedOrigins;
 }
 
 export type DomNavStep = "firstChild" | "nextSibling";
@@ -78,6 +84,15 @@ export interface CompilerPlugin {
   transformComponent?(element: t.JSXElement, context: CompilerContext): t.Expression | void;
 }
 
+export interface DetectedOrigins {
+  connect: Set<string>;
+  img: Set<string>;
+  font: Set<string>;
+  style: Set<string>;
+  media: Set<string>;
+  frame: Set<string>;
+}
+
 export interface CompilerContext {
   options: CompilerOptions;
   templateMap: Map<string, string>;
@@ -85,9 +100,11 @@ export interface CompilerContext {
   importedHelpers: Set<string>;
   delegatedEvents: Set<string>;
   securityHelpers: Set<string>;
+  detectedOrigins: DetectedOrigins;
   plugins: CompilerPlugin[];
   registerTemplate(html: string): string;
   requireHelper(name: string): void;
   requireSecurityHelper(name: string): void;
   requireDelegatedEvent(name: string): void;
+  recordOrigin(category: keyof DetectedOrigins, url: string): void;
 }

@@ -1,4 +1,5 @@
-import type { CompilerContext, CompilerOptions, CompilerPlugin } from "./types";
+import { extractOriginFromUrl } from "../csp";
+import type { CompilerContext, CompilerOptions, CompilerPlugin, DetectedOrigins } from "./types";
 
 export function createCompilerContext(options: CompilerOptions = {}): CompilerContext {
   const templateMap = new Map<string, string>();
@@ -7,6 +8,14 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
   const delegatedEvents = new Set<string>();
   const securityHelpers = new Set<string>();
   const plugins: CompilerPlugin[] = options.plugins ?? [];
+  const detectedOrigins: DetectedOrigins = options.detectedOrigins ?? {
+    connect: new Set<string>(),
+    img: new Set<string>(),
+    font: new Set<string>(),
+    style: new Set<string>(),
+    media: new Set<string>(),
+    frame: new Set<string>()
+  };
 
   return {
     options,
@@ -20,6 +29,7 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
     importedHelpers,
     delegatedEvents,
     securityHelpers,
+    detectedOrigins,
     plugins,
     registerTemplate(html: string): string {
       let id = templateMap.get(html);
@@ -38,6 +48,12 @@ export function createCompilerContext(options: CompilerOptions = {}): CompilerCo
     requireDelegatedEvent(name: string): void {
       delegatedEvents.add(name);
       importedHelpers.add("delegateEvents");
+    },
+    recordOrigin(category: keyof DetectedOrigins, url: string): void {
+      const origin = extractOriginFromUrl(url);
+      if (origin) {
+        detectedOrigins[category].add(origin);
+      }
     }
   };
 }

@@ -1,10 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { compileJsx } from "./compiler";
+import type { DetectedOrigins } from "./compiler/types";
+import { buildCspString, injectCspMetaTag } from "./csp";
 import { transformHmr } from "./hmr";
 import { scaffoldZigNative } from "./native-scaffold";
 import { createViteRpcMiddleware } from "./rpc-middleware";
-import type { VisagePluginOptions, VisageVitePlugin } from "./types";
+import type { CSPOptions, VisagePluginOptions, VisageVitePlugin } from "./types";
 
 /**
  * Official Visage Vite Plugin
@@ -26,11 +28,20 @@ import type { VisagePluginOptions, VisageVitePlugin } from "./types";
  */
 declare const process: any;
 
-function inlineSingleFileHtml(outDir: string): void {
+function inlineSingleFileHtml(
+  outDir: string,
+  csp?: boolean | CSPOptions,
+  detectedOrigins?: DetectedOrigins
+): void {
   const htmlPath = path.join(outDir, "index.html");
   if (!fs.existsSync(htmlPath)) return;
 
   let html = fs.readFileSync(htmlPath, "utf8");
+
+  if (csp) {
+    const cspString = buildCspString(csp, detectedOrigins);
+    html = injectCspMetaTag(html, cspString);
+  }
 
   // Remove modulepreload links to prevent failed fetches on data / memory origins
   html = html.replace(/<link\b[^>]*rel=["']modulepreload["'][^>]*>/gi, "");
@@ -123,6 +134,24 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
 
   const plugins: VisageVitePlugin[] = [configPlugin];
 
+  const isSecureTransforms = Boolean(options.experimental?.secureTransforms);
+  const secureTransformsOpts =
+    typeof options.experimental?.secureTransforms === "object"
+      ? options.experimental.secureTransforms
+      : true;
+
+  const isCsp = Boolean(options.experimental?.csp);
+  const cspOpts = typeof options.experimental?.csp === "object" ? options.experimental.csp : true;
+
+  const detectedOrigins: DetectedOrigins = {
+    connect: new Set<string>(),
+    img: new Set<string>(),
+    font: new Set<string>(),
+    style: new Set<string>(),
+    media: new Set<string>(),
+    frame: new Set<string>()
+  };
+
   if (isZigNative) {
     plugins.push({
       name: "visage:experimental-native",
@@ -134,7 +163,11 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
       },
       closeBundle() {
         if (typeof process !== "undefined") {
-          inlineSingleFileHtml(path.resolve(process.cwd(), "dist"));
+          inlineSingleFileHtml(
+            path.resolve(process.cwd(), "dist"),
+            options.experimental?.csp,
+            detectedOrigins
+          );
         }
         if (zigOpts.scaffold !== false && typeof process !== "undefined") {
           scaffoldZigNative(process.cwd(), zigOpts);
@@ -143,16 +176,14 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     });
   }
 
-  const isSecureTransforms = Boolean(options.experimental?.secureTransforms);
-  const secureTransformsOpts =
-    typeof options.experimental?.secureTransforms === "object"
-      ? options.experimental.secureTransforms
-      : true;
-
-  if (options.compiler || isSecureTransforms) {
+  if (options.compiler || isSecureTransforms || isCsp) {
     const compilerOpts: any = typeof options.compiler === "object" ? { ...options.compiler } : {};
     if (isSecureTransforms) {
       compilerOpts.security = secureTransformsOpts;
+    }
+    if (isCsp) {
+      compilerOpts.csp = cspOpts;
+      compilerOpts.detectedOrigins = detectedOrigins;
     }
 
     plugins.push({
@@ -173,6 +204,17 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
         } catch {
           return null;
         }
+      }
+    });
+  }
+
+  if (isCsp) {
+    plugins.push({
+      name: "visage:csp",
+      enforce: "pre",
+      transformIndexHtml(html: string) {
+        const cspString = buildCspString(cspOpts, detectedOrigins);
+        return injectCspMetaTag(html, cspString);
       }
     });
   }

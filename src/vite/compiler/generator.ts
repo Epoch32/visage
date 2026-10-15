@@ -13,6 +13,7 @@ const babelGenerator = (generator as any).default || generator;
 export interface GenerateResult {
   code: string;
   ast: t.File;
+  detectedOrigins: import("./types").DetectedOrigins;
 }
 
 export function generateCode(ast: t.File, context: CompilerContext): GenerateResult {
@@ -112,6 +113,7 @@ export function generateCode(ast: t.File, context: CompilerContext): GenerateRes
 
   return {
     code: generated.code,
-    ast
+    ast,
+    detectedOrigins: context.detectedOrigins
   };
 }
