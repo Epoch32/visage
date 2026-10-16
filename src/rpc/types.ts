@@ -204,7 +204,8 @@ export type ClientHeadersRule =
   | (() => Promise<Record<string, string>> | Record<string, string>);
 
 export interface ClientOptions {
-  baseUrl: string;
+  baseUrl?: string;
+  endpoint?: string;
   fetch?: typeof fetch;
   headers?:
     | Record<string, string>

@@ -52,7 +52,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
             callOpts?: { signal?: AbortSignal; headers?: Record<string, string> }
           ) => {
             const fetchFn = options.fetch ?? globalThis.fetch;
-            const baseUrl = options.baseUrl.replace(/\/+$/, "");
+            const baseUrl = (options.baseUrl ?? options.endpoint ?? "/api/rpc").replace(/\/+$/, "");
             const fullPath = path.join(".");
             let url = `${baseUrl}/${fullPath}`;
 
@@ -109,7 +109,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
             callOpts?: { signal?: AbortSignal; headers?: Record<string, string> }
           ) => {
             const fetchFn = options.fetch ?? globalThis.fetch;
-            const baseUrl = options.baseUrl.replace(/\/+$/, "");
+            const baseUrl = (options.baseUrl ?? options.endpoint ?? "/api/rpc").replace(/\/+$/, "");
             const fullPath = path.join(".");
             const url = `${baseUrl}/${fullPath}`;
 
@@ -160,7 +160,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
         if (prop === "subscribe") {
           return (input: unknown, callbacks: SubscriptionCallbacks): SubscriptionHandle => {
             const fetchFn = options.fetch ?? globalThis.fetch;
-            const baseUrl = options.baseUrl.replace(/\/+$/, "");
+            const baseUrl = (options.baseUrl ?? options.endpoint ?? "/api/rpc").replace(/\/+$/, "");
             const fullPath = path.join(".");
             let url = `${baseUrl}/${fullPath}`;
 
@@ -311,7 +311,11 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
 }
 
 export function createClient<TRouter extends Router<any, any>>(
-  options: ClientOptions
+  options: ClientOptions = {}
 ): ClientRouter<TRouter> {
-  return createProxyPath(options, []) as ClientRouter<TRouter>;
+  const normalizedOpts: ClientOptions = {
+    ...options,
+    baseUrl: (options.baseUrl ?? options.endpoint ?? "/api/rpc").replace(/\/+$/, "")
+  };
+  return createProxyPath(normalizedOpts, []) as ClientRouter<TRouter>;
 }
