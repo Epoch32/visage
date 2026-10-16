@@ -30,7 +30,7 @@ Visage combines fine-grained reactivity, compiler optimizations, and integrated 
 
 ### Simple App
 
-```
+```tsx
 import { render, signal, computed, Show } from "@epoch32/visage";
 
 function Counter() {
@@ -55,7 +55,7 @@ render(() => <Counter />, document.getElementById("app")!);
 
 ### Vite Configuration
 
-```
+```tsx
 import { defineConfig } from "vite";
 import { visage } from "@epoch32/visage/vite";
 
