@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/Epoch32/visage/compare/visage-v1.9.1...visage-v1.10.0) (2026-10-16)
+
+
+### Features
+
+* **rpc:** support both function shorthand and options object with resolve in query/mutation ([86c0b57](https://github.com/Epoch32/visage/commit/86c0b572be7d3ef4e9b68fcfe2368be2f8a3d404))
+
 ## [1.9.1](https://github.com/Epoch32/visage/compare/visage-v1.9.0...visage-v1.9.1) (2026-10-16)
 
 
