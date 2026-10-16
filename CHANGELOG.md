@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.9.0](https://github.com/Epoch32/visage/compare/visage-v1.8.1...visage-v1.9.0) (2026-10-16)
+
+
+### Features
+
+* **compiler:** add experimental security transforms suite ([0948961](https://github.com/Epoch32/visage/commit/094896198c9b83edda88665fae41a07dc19fc249))
+* **native:** add experimental zig desktop compilation target and native ipc bridge ([6fc38bd](https://github.com/Epoch32/visage/commit/6fc38bd70cce05145cc7ae0f6585a68786d9dc20))
+* **vite:** add experimental Content Security Policy generator and injector ([f0c1ed8](https://github.com/Epoch32/visage/commit/f0c1ed8086c361f45ad75a20108f08e247760a01))
+* **vite:** add picocolors standardized subsystem logging to compiler and plugins ([90ab0ee](https://github.com/Epoch32/visage/commit/90ab0ee8cbbe5c28589aad798327d4003c06471a))
+* **vite:** support explicit virtualOrigin and exact script hashing in CSP for native webviews ([3a6d27a](https://github.com/Epoch32/visage/commit/3a6d27ae73837e568bf80a6ea33ffd154e09d701))
+
+
+### Bug Fixes
+
+* **charts:** prevent duplicate series registration and add benchmark showcase ([06b09ee](https://github.com/Epoch32/visage/commit/06b09ee051f4399a5c465c628de42161de7b4481))
+* **vite:** pre-scan project JSX and HTML for CSP origins and update native demo ([d7457a1](https://github.com/Epoch32/visage/commit/d7457a145c0117edfb496ed83463967adc17ce75))
+
 ## [1.8.1](https://github.com/Epoch32/visage/compare/visage-v1.8.0...visage-v1.8.1) (2026-10-14)
 
 
