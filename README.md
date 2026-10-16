@@ -5,7 +5,6 @@ Visage started as a research project by Epoch32. The original concept, explored 
 
 Since then, Visage has grown into much more. With the release of [v1.0.0](https://github.com/Epoch32/visage/releases/tag/visage-v1.0.0), which introduced two Vite plugins, developer tools, streamlined CSS authoring, and our signals engine, we realized that the project had the potential to become more than a research experiment. We took it a step further, evolving Visage into what it is today: a full-stack web toolkit built on a fine-grained reactivity architecture.
 
-----------
 
 ## Why use Visage?
 
@@ -26,7 +25,6 @@ In [v1.8.0](https://github.com/Epoch32/visage/releases/tag/visage-v1.8.0), Visag
 
 Visage combines fine-grained reactivity, compiler optimizations, and integrated development tooling to provide the performance and capabilities needed to build responsive web applications.
 
----
 
 ## Examples
 
@@ -80,7 +78,6 @@ export default defineConfig({
 
 The compiler also supports server-side rendering, while experimental integrations include Zig-based native WebView scaffolding, security transforms, and Content Security Policy generation.
 
----
 
 ## Contributing
 
