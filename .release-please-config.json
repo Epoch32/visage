@@ -4,7 +4,7 @@
     ".": {
       "release-type": "node",
       "package-name": "@epoch32/visage",
-      "component": "",
+      "include-component-in-tag": false,
       "pull-request-title-pattern": "chore: release ${version}",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
