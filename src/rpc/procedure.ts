@@ -9,15 +9,20 @@ export function createProcedure<
   TContext = any
 >(
   type: TType,
-  options: ProcedureOptions<TInput, TOutput, TContext>,
+  options: ProcedureOptions<TInput, TOutput, TContext> | ((opts: any) => any),
   middlewares: MiddlewareFn<any, any>[] = []
 ): Procedure<TType, TInput, TOutput, TContext> {
+  const isFn = typeof options === "function";
+  const resolve = isFn ? options : options?.resolve;
+  const inputSchema = isFn ? undefined : options?.input;
+  const outputSchema = isFn ? undefined : options?.output;
+
   return {
     type,
-    inputSchema: options.input,
-    outputSchema: options.output,
+    inputSchema,
+    outputSchema,
     middlewares: [...middlewares],
-    resolve: options.resolve as any
+    resolve: resolve as any
   };
 }
 

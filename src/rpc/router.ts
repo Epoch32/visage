@@ -87,19 +87,19 @@ export function createRouter<
 }
 
 export function query<TInput = any, TOutput = any, TContext = any>(
-  options: ProcedureOptions<TInput, TOutput, TContext>
+  options: ProcedureOptions<TInput, TOutput, TContext> | ((opts: any) => any)
 ): Procedure<"query", TInput, TOutput, TContext> {
-  return createProcedure("query", options);
+  return createProcedure("query", options as any);
 }
 
 export function mutation<TInput = any, TOutput = any, TContext = any>(
-  options: ProcedureOptions<TInput, TOutput, TContext>
+  options: ProcedureOptions<TInput, TOutput, TContext> | ((opts: any) => any)
 ): Procedure<"mutation", TInput, TOutput, TContext> {
-  return createProcedure("mutation", options);
+  return createProcedure("mutation", options as any);
 }
 
 export function subscription<TInput = any, TOutput = any, TContext = any>(
-  options: ProcedureOptions<TInput, TOutput, TContext>
+  options: ProcedureOptions<TInput, TOutput, TContext> | ((opts: any) => any)
 ): Procedure<"subscription", TInput, TOutput, TContext> {
-  return createProcedure("subscription", options);
+  return createProcedure("subscription", options as any);
 }
