@@ -4,6 +4,8 @@
     ".": {
       "release-type": "node",
       "package-name": "@epoch32/visage",
+      "component": "",
+      "pull-request-title-pattern": "chore: release ${version}",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false
