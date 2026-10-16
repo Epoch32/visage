@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.1](https://github.com/Epoch32/visage/compare/visage-v1.9.0...visage-v1.9.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* **build:** add external node:* flag to preserve Node.js builtins in bundled Vite plugin ([d38168c](https://github.com/Epoch32/visage/commit/d38168cacf77437a7e08d69d5b0a6533ac2f95e2))
+* **rpc:** gracefully fallback baseUrl to endpoint or default /api/rpc in createClient ([41f22ae](https://github.com/Epoch32/visage/commit/41f22ae3897f77bf941869ac977dc7d744a4452d))
+
 ## [1.9.0](https://github.com/Epoch32/visage/compare/visage-v1.8.1...visage-v1.9.0) (2026-10-16)
 
 
