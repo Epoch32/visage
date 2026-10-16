@@ -62,6 +62,20 @@ export function buildCspString(
     set.add(source);
   };
 
+  // Merge virtual origin if explicitly configured
+  if (opts.virtualOrigin) {
+    const vo = opts.virtualOrigin.replace(/\/+$/, "");
+    addSource("default-src", vo);
+    addSource("script-src", vo);
+    addSource("style-src", vo);
+    addSource("img-src", vo);
+    addSource("font-src", vo);
+    addSource("connect-src", vo);
+    addSource("media-src", vo);
+    addSource("frame-src", vo);
+    directives["base-uri"] = new Set(["'self'", vo]);
+  }
+
   // Merge configured origin lists
   if (opts.connectSrc) {
     for (const src of opts.connectSrc) addSource("connect-src", src);

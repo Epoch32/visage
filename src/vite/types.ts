@@ -93,6 +93,12 @@ export interface ZigNativeOptions {
    * @default true
    */
   scaffold?: boolean;
+
+  /**
+   * Explicit virtual origin scheme and host for embedded webviews
+   * @default "visage://localhost"
+   */
+  virtualOrigin?: string;
 }
 
 /**
@@ -140,6 +146,12 @@ export interface SecureTransformsOptions {
  * Options for Content Security Policy generation and injection
  */
 export interface CSPOptions {
+  /**
+   * Explicitly enable or disable Content Security Policy generation
+   * @default true
+   */
+  enabled?: boolean;
+
   /**
    * Allowed connection origins for fetch, WebSocket, etc. (connect-src)
    * @default ["'self'"]
@@ -203,6 +215,12 @@ export interface CSPOptions {
    * Custom raw directives to append or override
    */
   directives?: Record<string, string[]>;
+
+  /**
+   * Explicit virtual origin scheme and host for embedded webviews and desktop targets
+   * (e.g. "visage://localhost", "app://localhost", or "https://app.localhost")
+   */
+  virtualOrigin?: string;
 }
 
 /**

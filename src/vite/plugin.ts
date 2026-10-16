@@ -1,3 +1,4 @@
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { compileJsx } from "./compiler";
@@ -96,17 +97,13 @@ declare const process: any;
 function inlineSingleFileHtml(
   outDir: string,
   csp?: boolean | CSPOptions,
-  detectedOrigins?: DetectedOrigins
+  detectedOrigins?: DetectedOrigins,
+  virtualOrigin?: string
 ): void {
   const htmlPath = path.join(outDir, "index.html");
   if (!fs.existsSync(htmlPath)) return;
 
   let html = fs.readFileSync(htmlPath, "utf8");
-
-  if (csp) {
-    const cspString = buildCspString(csp, detectedOrigins);
-    html = injectCspMetaTag(html, cspString);
-  }
 
   // Remove modulepreload links to prevent failed fetches on data / memory origins
   html = html.replace(/<link\b[^>]*rel=["']modulepreload["'][^>]*>/gi, "");
@@ -124,18 +121,47 @@ function inlineSingleFileHtml(
     }
   );
 
-  // Inline script tags
+  // Inline script tags and capture SHA-256 hashes for CSP
+  const scriptHashes: string[] = [];
   html = html.replace(
     /<script\b[^>]*src=["'](?:\.\/)?assets\/([^"']+)["'][^>]*><\/script>/gi,
     (match, file) => {
       const assetPath = path.join(outDir, "assets", file);
       if (fs.existsSync(assetPath)) {
         const content = fs.readFileSync(assetPath, "utf8");
-        return `<script type="module">\n${content}\n</script>`;
+        const scriptCode = content.trim();
+        try {
+          const hash = crypto.createHash("sha256").update(scriptCode).digest("base64");
+          scriptHashes.push(`'sha256-${hash}'`);
+        } catch {
+          // Ignore hash failure if crypto unavailable
+        }
+        return `<script type="module">${scriptCode}</script>`;
       }
       return match;
     }
   );
+
+  // If virtualOrigin is set, ensure <base href="${virtualOrigin}/"> is present
+  if (virtualOrigin && !/<base\b/i.test(html)) {
+    const voBase = virtualOrigin.endsWith("/") ? virtualOrigin : `${virtualOrigin}/`;
+    html = html.replace(/(<head\b[^>]*>)/i, `$1\n    <base href="${voBase}">`);
+  }
+
+  if (csp) {
+    const mergedCspOpts: CSPOptions = typeof csp === "object" ? { ...csp } : {};
+    if (virtualOrigin) {
+      mergedCspOpts.virtualOrigin = virtualOrigin;
+    }
+    if (scriptHashes.length > 0) {
+      const scriptSrc = new Set(mergedCspOpts.scriptSrc ?? ["'self'"]);
+      for (const h of scriptHashes) scriptSrc.add(h);
+      if (virtualOrigin) scriptSrc.add(virtualOrigin.replace(/\/+$/, ""));
+      mergedCspOpts.scriptSrc = Array.from(scriptSrc);
+    }
+    const cspString = buildCspString(mergedCspOpts, detectedOrigins);
+    html = injectCspMetaTag(html, cspString);
+  }
 
   fs.writeFileSync(htmlPath, html, "utf8");
 }
@@ -221,8 +247,25 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
       ? options.experimental.secureTransforms
       : true;
 
-  const isCsp = Boolean(options.experimental?.csp);
-  const cspOpts = typeof options.experimental?.csp === "object" ? options.experimental.csp : true;
+  const isCsp =
+    Boolean(options.experimental?.csp) &&
+    (typeof options.experimental?.csp !== "object" ||
+      (options.experimental.csp as any).enabled !== false);
+  const cspOpts: any =
+    typeof options.experimental?.csp === "object"
+      ? { ...options.experimental.csp }
+      : isCsp
+        ? {}
+        : false;
+
+  const virtualOrigin =
+    (typeof cspOpts === "object" ? cspOpts.virtualOrigin : undefined) ||
+    (typeof zigOpts === "object" ? zigOpts.virtualOrigin : undefined) ||
+    (isZigNative ? "visage://localhost" : undefined);
+
+  if (virtualOrigin && typeof cspOpts === "object") {
+    cspOpts.virtualOrigin = virtualOrigin;
+  }
 
   const detectedOrigins: DetectedOrigins = {
     connect: new Set<string>(),
@@ -240,15 +283,16 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
       buildStart() {
         vLog.info(
           "visage:native",
-          `Zig native desktop compilation target active ${pc.dim(`(window: "${zigOpts.title ?? "Visage Native"}")`)}`
+          `Zig native desktop compilation target active ${pc.dim(`(window: "${zigOpts.title ?? "Visage Native"}", origin: ${virtualOrigin})`)}`
         );
       },
       closeBundle() {
         if (typeof process !== "undefined") {
           inlineSingleFileHtml(
             path.resolve(process.cwd(), "dist"),
-            options.experimental?.csp,
-            detectedOrigins
+            cspOpts,
+            detectedOrigins,
+            virtualOrigin
           );
           vLog.info(
             "visage:native",
@@ -256,7 +300,7 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
           );
         }
         if (zigOpts.scaffold !== false && typeof process !== "undefined") {
-          scaffoldZigNative(process.cwd(), zigOpts);
+          scaffoldZigNative(process.cwd(), { ...zigOpts, virtualOrigin });
           vLog.info("visage:native", "Synchronized native Zig scaffold and build configuration");
         }
       }
@@ -320,24 +364,19 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
 
     plugins.push({
       name: "visage:csp",
-      buildStart() {
-        vLog.info(
-          "visage:csp",
-          `Content Security Policy generator armed ${pc.dim("(strict zero-trust)")}`
-        );
-      },
       configResolved(config) {
         if (config?.root) {
           projectRoot = config.root;
         }
       },
-      transformIndexHtml(html: string) {
+      buildStart() {
+        const voDetail = virtualOrigin ? `, origin: ${virtualOrigin}` : "";
+        vLog.info(
+          "visage:csp",
+          `Content Security Policy generator armed ${pc.dim(`(strict zero-trust${voDetail})`)}`
+        );
         const shouldAutoDetect = typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
         if (shouldAutoDetect && !hasPreScanned) {
-          vLog.debug(
-            "visage:csp",
-            `Scanning project files for external resource origins ${pc.dim(`(${projectRoot})`)}`
-          );
           scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts);
           hasPreScanned = true;
           const originCount =
@@ -362,13 +401,28 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
             );
           }
         }
+      },
+      transformIndexHtml(html: string) {
+        const shouldAutoDetect = typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
+        if (shouldAutoDetect && !hasPreScanned) {
+          scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts);
+          hasPreScanned = true;
+        }
         extractOriginsFromHtml(html, detectedOrigins);
+        let transformedHtml = html;
+        if (virtualOrigin && !/<base\b/i.test(transformedHtml)) {
+          const voBase = virtualOrigin.endsWith("/") ? virtualOrigin : `${virtualOrigin}/`;
+          transformedHtml = transformedHtml.replace(
+            /(<head\b[^>]*>)/i,
+            `$1\n    <base href="${voBase}">`
+          );
+        }
         const cspString = buildCspString(cspOpts, detectedOrigins);
-        vLog.info(
+        vLog.debug(
           "visage:csp",
           `Injected CSP meta tag into HTML shell ${pc.dim(`(${cspString.slice(0, 45)}...)`)}`
         );
-        return injectCspMetaTag(html, cspString);
+        return injectCspMetaTag(transformedHtml, cspString);
       }
     });
   }

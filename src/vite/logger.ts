@@ -28,6 +28,13 @@ export function formatTag(tag: string): string {
   return pc.bold(colorFn(`[${normalizedTag}]`));
 }
 
+function clearCurrentLine(): void {
+  if (typeof process !== "undefined" && process.stdout?.isTTY && !process.env?.CI) {
+    process.stdout.clearLine?.(0);
+    process.stdout.cursorTo?.(0);
+  }
+}
+
 export function createVisageLogger(viteLogger?: any): VisageLogger {
   let currentLogger = viteLogger;
 
@@ -36,6 +43,7 @@ export function createVisageLogger(viteLogger?: any): VisageLogger {
       currentLogger = logger;
     },
     info(tag: string, message: string) {
+      clearCurrentLine();
       const formatted = `${formatTag(tag)} ${message}`;
       if (currentLogger?.info) {
         currentLogger.info(formatted, { timestamp: true });
@@ -44,6 +52,7 @@ export function createVisageLogger(viteLogger?: any): VisageLogger {
       }
     },
     warn(tag: string, message: string) {
+      clearCurrentLine();
       const formatted = `${formatTag(tag)} ${pc.yellow(message)}`;
       if (currentLogger?.warn) {
         currentLogger.warn(formatted, { timestamp: true });
@@ -52,6 +61,7 @@ export function createVisageLogger(viteLogger?: any): VisageLogger {
       }
     },
     error(tag: string, message: string) {
+      clearCurrentLine();
       const formatted = `${formatTag(tag)} ${pc.red(message)}`;
       if (currentLogger?.error) {
         currentLogger.error(formatted, { timestamp: true });

@@ -14,6 +14,7 @@ pub const WindowConfig = struct {
     pub const height: c_int = {{WINDOW_HEIGHT}};
     pub const resizable: bool = {{WINDOW_RESIZABLE}};
     pub const debug: bool = {{WINDOW_DEBUG}};
+    pub const virtual_origin: [:0]const u8 = "{{VIRTUAL_ORIGIN}}";
 };
 
 var global_webview: ?*Webview = null;
@@ -56,6 +57,7 @@ pub fn main() !void {
     try w.addInitScript(
         \\window.__visage_native = true;
         \\window.__visage_native_platform = "linux";
+        \\window.__visage_virtual_origin = "{{VIRTUAL_ORIGIN}}";
     );
 
     // Bind native IPC call handler

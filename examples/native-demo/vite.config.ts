@@ -9,7 +9,8 @@ export default defineConfig({
           title: "Visage Native Demo",
           width: 1024,
           height: 768,
-          scaffold: true
+          scaffold: true,
+          virtualOrigin: "visage://localhost"
         },
         secureTransforms: true,
         csp: true

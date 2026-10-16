@@ -103,12 +103,14 @@ export function scaffoldZigNative(projectRoot: string, options: ZigNativeOptions
   const mainZigPath = path.join(outputDir, "main.zig");
   if (!fs.existsSync(mainZigPath)) {
     const template = loadTemplate("main.zig");
+    const virtualOrigin = options.virtualOrigin ?? "visage://localhost";
     const mainZigContent = template
       .replace("{{WINDOW_TITLE}}", title)
       .replace("{{WINDOW_WIDTH}}", String(width))
       .replace("{{WINDOW_HEIGHT}}", String(height))
       .replace("{{WINDOW_RESIZABLE}}", String(resizable))
-      .replace("{{WINDOW_DEBUG}}", String(debug));
+      .replace("{{WINDOW_DEBUG}}", String(debug))
+      .replaceAll("{{VIRTUAL_ORIGIN}}", virtualOrigin);
     fs.writeFileSync(mainZigPath, mainZigContent, "utf8");
   }
 
