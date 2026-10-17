@@ -18,6 +18,14 @@ export default function RootLayout(props: LayoutProps) {
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif'
       }}
     >
+      <style>{`
+        * { box-sizing: border-box; }
+        html, body {
+          margin: 0;
+          padding: 0;
+          background-color: #0d1117;
+        }
+      `}</style>
       <header
         style={{
           borderBottom: "1px solid #30363d",

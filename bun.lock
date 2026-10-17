@@ -78,7 +78,7 @@
       "name": "example-mpa-pages",
       "version": "1.0.0",
       "dependencies": {
-        "@epoch32/visage": "^1.13.0",
+        "@epoch32/visage": "^1.13.1",
       },
       "devDependencies": {
         "typescript": "^7.0.2",
@@ -186,7 +186,7 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.15", "", { "os": "win32", "cpu": "x64" }, "sha512-yAzh4UqEImV6Hcy0zjUqNfJAsUhoD64FBQCdTG8Md/Z2wQeVP/ZmJ3XRYAs1g8J9fjTFyl2fCtc5FB5til47+g=="],
 
-    "@epoch32/visage": ["@epoch32/visage@1.13.0", "", {}, "sha512-uKFVnLcEtuppxRZN6T7zU8FireJIbKkSFdXYt3G7fD7KqRL4/sbe9+yT3dSMPt+3uT5zAaGlmatHlPtHK3Uefg=="],
+    "@epoch32/visage": ["@epoch32/visage@1.13.1", "", {}, "sha512-QVBYsaJbYPNyvILGnE/OREsraMlwYi3yp6sbrRxxpeNBxlzhxyFHP66v7TPvRMya0qF/QRmlYN/7+/cBPt1yMQ=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.21.5", "", { "os": "aix", "cpu": "ppc64" }, "sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ=="],
 
