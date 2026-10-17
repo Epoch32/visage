@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { For, Index, render, Show } from "../src";
+import { For, Index, render, Show, setAttribute } from "../src";
 import { signal } from "../src/signals";
 
 describe("Visage JSX & Direct DOM", () => {
@@ -347,5 +347,41 @@ describe("Visage JSX & Direct DOM", () => {
     expect(container.querySelector("#index-0")?.textContent).toBe("0: Restored A");
 
     unmount();
+  });
+
+  it("prevents listener leaks on non-delegated event updates and cleanups", () => {
+    const el = document.createElement("div");
+    let runs1 = 0;
+    let runs2 = 0;
+    const handler1 = () => {
+      runs1++;
+    };
+    const handler2 = () => {
+      runs2++;
+    };
+
+    // Initial attach
+    setAttribute(el, "onScroll", handler1);
+    el.dispatchEvent(new Event("scroll"));
+    expect(runs1).toBe(1);
+    expect(runs2).toBe(0);
+
+    // Update to handler2 (stable listener reused, handler1 not invoked again)
+    setAttribute(el, "onScroll", handler2);
+    el.dispatchEvent(new Event("scroll"));
+    expect(runs1).toBe(1);
+    expect(runs2).toBe(1);
+
+    // Remove listener with null
+    setAttribute(el, "onScroll", null);
+    el.dispatchEvent(new Event("scroll"));
+    expect(runs1).toBe(1);
+    expect(runs2).toBe(1); // neither called
+  });
+
+  it("handles non-event props starting with on as attributes", () => {
+    const el = document.createElement("div");
+    setAttribute(el, "only", "sidebar");
+    expect(el.getAttribute("only")).toBe("sidebar");
   });
 });

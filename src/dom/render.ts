@@ -61,24 +61,55 @@ export function render(fn: () => Child, container: HTMLElement | DocumentFragmen
  * Bind dynamic or static attributes, properties, styles, and events to an Element
  */
 export function setAttribute(el: HTMLElement | SVGElement, key: string, value: any): void {
-  // Event listeners (e.g. onClick, onInput, onclick)
-  if (
+  // Event listeners (e.g. onClick, onInput, onScroll, onCaptureClick)
+  const isCapture = key.startsWith("onCapture") && key.length > 9;
+  const eventName = isCapture ? key.slice(9).toLowerCase() : key.slice(2).toLowerCase();
+  const isFn =
+    typeof value === "function" || (Array.isArray(value) && typeof value[0] === "function");
+  const isEventProp =
     key.startsWith("on") &&
-    (typeof value === "function" || (Array.isArray(value) && typeof value[0] === "function"))
-  ) {
-    const isCapture = key.startsWith("onCapture");
-    const eventName = isCapture ? key.slice(9).toLowerCase() : key.slice(2).toLowerCase();
+    key.length > 2 &&
+    (isFn ||
+      (el as any)[`__${eventName}`] !== undefined ||
+      (el as any)[`__on_${eventName}`] !== undefined ||
+      (el as any)[`__onCapture_${eventName}`] !== undefined ||
+      (key.charAt(2) >= "A" && key.charAt(2) <= "Z") ||
+      DELEGATED_EVENTS.has(eventName));
 
+  if (isEventProp) {
     if (!isCapture && DELEGATED_EVENTS.has(eventName)) {
-      delegateEvents([eventName]);
-      (el as any)[`__${eventName}`] = value;
+      if (isFn) {
+        delegateEvents([eventName]);
+        (el as any)[`__${eventName}`] = value;
+      } else {
+        (el as any)[`__${eventName}`] = null;
+      }
       return;
     }
 
-    const handler =
-      typeof value === "function" ? value : (e: Event) => (value as any)[0]((value as any)[1], e);
+    // Non-delegated or capture event
+    const propKey = isCapture ? `__onCapture_${eventName}` : `__on_${eventName}`;
+    const listenerKey = isCapture ? `__onCapture_l_${eventName}` : `__on_l_${eventName}`;
 
-    el.addEventListener(eventName, handler as EventListener, isCapture);
+    (el as any)[propKey] = isFn ? value : null;
+
+    if (isFn) {
+      if (!(el as any)[listenerKey]) {
+        const listener: EventListener = (e: Event) => {
+          const handler = (el as any)[propKey];
+          if (typeof handler === "function") {
+            handler(e);
+          } else if (Array.isArray(handler) && typeof handler[0] === "function") {
+            handler[0](handler[1], e);
+          }
+        };
+        (el as any)[listenerKey] = listener;
+        el.addEventListener(eventName, listener, isCapture);
+      }
+    } else if ((el as any)[listenerKey]) {
+      el.removeEventListener(eventName, (el as any)[listenerKey], isCapture);
+      (el as any)[listenerKey] = null;
+    }
     return;
   }
 
