@@ -1,4 +1,5 @@
 import * as t from "@babel/types";
+import { formatStyleProp } from "../../../style/scale";
 import { buildNavExpression, computeChildPath } from "../path-walker";
 import { escapeHtml, escapeHtmlAttr, formatStaticElement } from "../template-builder";
 import type { CompilerContext, DomNavStep, DynamicBinding } from "../types";
@@ -85,6 +86,36 @@ function recordStaticOrigin(
       context.recordOrigin("connect", strVal);
     }
   }
+}
+
+function tryFormatStaticStyle(expr: t.ObjectExpression): string | null {
+  const styles: string[] = [];
+  for (const prop of expr.properties) {
+    if (!t.isObjectProperty(prop) || prop.computed) return null;
+    let key: string;
+    if (t.isIdentifier(prop.key)) {
+      key = prop.key.name;
+    } else if (t.isStringLiteral(prop.key)) {
+      key = prop.key.value;
+    } else {
+      return null;
+    }
+
+    let val: string | number;
+    if (t.isStringLiteral(prop.value)) {
+      val = prop.value.value;
+    } else if (t.isNumericLiteral(prop.value)) {
+      val = prop.value.value;
+    } else {
+      return null;
+    }
+
+    const formattedVal = formatStyleProp(key, val);
+    if (!formattedVal) continue;
+    const kebab = key.startsWith("--") ? key : key.replace(/([A-Z])/g, "-$1").toLowerCase();
+    styles.push(`${kebab}: ${formattedVal}`);
+  }
+  return styles.join("; ");
 }
 
 export function processElement(
@@ -180,6 +211,15 @@ export function processElement(
         } else if (t.isBooleanLiteral(expr)) {
           if (expr.value) {
             staticAttrs.push(attrName);
+          }
+        } else if (attrName === "style" && t.isObjectExpression(expr)) {
+          const staticStyle = tryFormatStaticStyle(expr);
+          if (staticStyle !== null) {
+            if (staticStyle) {
+              staticAttrs.push(`style="${escapeHtmlAttr(staticStyle)}"`);
+            }
+          } else {
+            dynamicAttrs.push(attr);
           }
         } else {
           if (checkEventShield && isEventAttribute(attrName) && t.isTemplateLiteral(expr)) {

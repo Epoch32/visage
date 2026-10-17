@@ -36,6 +36,19 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain('data-count=\\"42\\"');
   });
 
+  it("inlines static style object expressions into HTML templates at compile time", () => {
+    const input = `
+      function Box() {
+        return <div style={{ color: "red", fontSize: 16, marginTop: 8 }} />;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+    expect(code).toContain('style=\\"color: red; font-size: 16px; margin-top: 8px\\"');
+    // Verify it doesn't emit dynamic setAttribute
+    expect(code).not.toContain('setAttribute(_el$, "style"');
+  });
+
   it("compiles dynamic event listeners with high-performance event delegation", () => {
     const input = `
       function Button() {
