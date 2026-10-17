@@ -20,14 +20,19 @@ export class StyleManager {
       this._styles.set(id, entry);
 
       if (typeof document !== "undefined") {
-        const target = document.head || document.documentElement || document.body;
-        if (target) {
-          const styleEl = document.createElement("style");
-          styleEl.id = `visage-style-${id}`;
-          styleEl.setAttribute("data-visage-scope", id);
-          styleEl.textContent = css;
-          target.appendChild(styleEl);
-          entry.element = styleEl;
+        const existing = document.getElementById(`visage-style-${id}`) as HTMLStyleElement | null;
+        if (existing) {
+          entry.element = existing;
+        } else {
+          const target = document.head || document.documentElement || document.body;
+          if (target) {
+            const styleEl = document.createElement("style");
+            styleEl.id = `visage-style-${id}`;
+            styleEl.setAttribute("data-visage-scope", id);
+            styleEl.textContent = css;
+            target.appendChild(styleEl);
+            entry.element = styleEl;
+          }
         }
       }
       this._ssrStyles.add(css);

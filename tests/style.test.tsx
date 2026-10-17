@@ -231,5 +231,27 @@ describe("Visage Scoped Styles & CSS Engine (visage/style)", () => {
       expect(ssrOutput).toContain("data-visage-ssr");
       expect(ssrOutput).toContain(".serverCard_");
     });
+
+    it("adopts existing SSR style tags in the document without creating duplicates", () => {
+      styleManager.clear();
+
+      // Simulate SSR pre-rendered style tag in head
+      const ssrTag = document.createElement("style");
+      ssrTag.id = "visage-style-v-ssr-test";
+      ssrTag.textContent = ".card { color: red; }";
+      document.head.appendChild(ssrTag);
+
+      const beforeCount = document.head.querySelectorAll("#visage-style-v-ssr-test").length;
+      expect(beforeCount).toBe(1);
+
+      // Client injects matching style
+      const uninject = styleManager.inject("v-ssr-test", ".card { color: red; }");
+
+      // Verify no duplicate tag was appended
+      const afterCount = document.head.querySelectorAll("#visage-style-v-ssr-test").length;
+      expect(afterCount).toBe(1);
+
+      uninject();
+    });
   });
 });
