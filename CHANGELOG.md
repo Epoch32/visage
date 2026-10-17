@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.12.0](https://github.com/Epoch32/visage/compare/v1.11.0...v1.12.0) (2026-10-17)
+
+
+### Features
+
+* **compiler:** inline static class arrays/objects into HTML templates and omit null attributes ([8c8499b](https://github.com/Epoch32/visage/commit/8c8499b002cb1fa854d1761bab23a92dae97abcc))
+* **compiler:** inline static style objects into HTML templates at compile time ([5b1b66f](https://github.com/Epoch32/visage/commit/5b1b66f8563ae3709028e04fa84e467d3f01b4ed))
+* **compiler:** normalize JSX attribute aliases and format boolean and aria/data attributes ([c00af9d](https://github.com/Epoch32/visage/commit/c00af9d4c839114c86692cd280fe81621d7d6d73))
+* **server:** implement true DOM hydration adopting server-rendered nodes ([5f105f9](https://github.com/Epoch32/visage/commit/5f105f99302157498303b37330b59264daf6b3bb))
+
+
+### Bug Fixes
+
+* **compiler:** escape static string and number expression values in static attributes ([83a98de](https://github.com/Epoch32/visage/commit/83a98de60b5bd902021cac85a6b5fb9c4b5e7d54))
+* **compiler:** support arbitrary nesting depth in component member expressions ([4bb4383](https://github.com/Epoch32/visage/commit/4bb4383b4d7f0d066156b5197161c1316e2eccbd))
+* **dom:** prevent event listener leaks and support listener updates in setAttribute ([943d298](https://github.com/Epoch32/visage/commit/943d298bff3ebfaf324cdb5102e2ff91478be65f))
+* **router:** escape regex characters, cache compiled routes, and unregister on unmount ([e5453d3](https://github.com/Epoch32/visage/commit/e5453d3e3061654ad4533e674df936c95db33cb5))
+* **style:** adopt existing SSR style tags in styleManager to eliminate duplicate injections ([1c88fe0](https://github.com/Epoch32/visage/commit/1c88fe022c80584a571634b72d0b72ded4a2ced6))
+* **template:** support SVG elements and table sections in template parsing ([e8ff8f6](https://github.com/Epoch32/visage/commit/e8ff8f67e426c89335aca1528760d620a9ea969b))
+* **types:** install @types/bun, configure tsconfig types, and accept FetchFn in client options ([fb9fc68](https://github.com/Epoch32/visage/commit/fb9fc68918dc17de4895f667cc27a15ea804a2b9))
+
+
+### Performance Improvements
+
+* **compiler:** inline return block statements to eliminate IIFE wrapper closures ([77de293](https://github.com/Epoch32/visage/commit/77de293d55aa3a46fd655055bded00ecb5011a91))
+* **query:** fast-path primitive query key serialization and avoid reduce allocations in hashKey ([4020317](https://github.com/Epoch32/visage/commit/4020317c85f2a0a60b7053bb44a84db55d0f4e18))
+* **signals:** apply inline slot optimization to Computed dependencies and subscribers ([4cec314](https://github.com/Epoch32/visage/commit/4cec314780ba2454ca0aa78e3c621748b6633fcb))
+* **signals:** eliminate transient Set allocations in createSelector cleanup ([1b07ffb](https://github.com/Epoch32/visage/commit/1b07ffb36fe0948d8bd6f09f8e65e04bb232aa98))
+* **ui:** memoize DataTable queries with computed and key rows by getRowId in For ([5f77df4](https://github.com/Epoch32/visage/commit/5f77df4afc2dafe28ef24d4cbb605af6aec7a131))
+* **virtual:** eliminate reactive cell style closures and support getItemKey in VirtualGrid ([69d3877](https://github.com/Epoch32/visage/commit/69d38772186c062d3ebbeefd4e07a0fdec96d865))
+* **virtual:** key VirtualList rows by item key to preserve DOM elements across scrolling ([2000c8d](https://github.com/Epoch32/visage/commit/2000c8dc27d205bfb8035cc50a28f820b98cccec))
+* **vite:** bypass heavy AST compilation for files without URL patterns during CSP origin scan ([af42cab](https://github.com/Epoch32/visage/commit/af42cab548f57674c87550d6e9d51b28f6dee158))
+
 ## [1.11.0](https://github.com/Epoch32/visage/compare/v1.10.0...v1.11.0) (2026-10-16)
 
 
