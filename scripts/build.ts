@@ -16,16 +16,16 @@ const startTime = performance.now();
 const rootDir = resolve(import.meta.dir, "..");
 const distDir = resolve(rootDir, "dist");
 
-console.log("\n📦 Visage Production Build\n" + "━".repeat(50));
+console.log("\nVisage Production Build\n" + "-".repeat(50));
 
 // Step 1: Clean dist directory
 const cleanStart = performance.now();
-console.log("\n[1/4] 🧹 Cleaning dist/ directory...");
+console.log("\n[1/4] Cleaning dist/ directory...");
 await rm(distDir, { recursive: true, force: true });
 console.log(`  └─ dist/ removed in ${formatDuration(performance.now() - cleanStart)}`);
 
 // Step 2: Bundle JavaScript entrypoints using Bun's native bundler
-console.log("\n[2/4] ⚡ Bundling JavaScript entrypoints (Bun.build)...");
+console.log("\n[2/4] Bundling JavaScript entrypoints (Bun.build)...");
 const rawEntrypoints = [
   "src/index.ts",
   "src/signals/index.ts",
@@ -51,7 +51,7 @@ const rawEntrypoints = [
 
 console.log(`  ├─ ${rawEntrypoints.length} entrypoints targeted:`);
 for (const ep of rawEntrypoints) {
-  console.log(`  │   • ${ep}`);
+  console.log(`  │   - ${ep}`);
 }
 
 const bundleStart = performance.now();
@@ -64,7 +64,7 @@ const buildResult = await Bun.build({
 });
 
 if (!buildResult.success) {
-  console.error("\n❌ Bundling failed with errors:");
+  console.error("\nError: Bundling failed with errors:");
   for (const log of buildResult.logs) {
     console.error(log);
   }
@@ -93,11 +93,11 @@ chunkOutputs.sort((a, b) => a.name.localeCompare(b.name));
 
 console.log("  │   [Entrypoints]");
 for (const { name, size } of entryOutputs) {
-  console.log(`  │     • ${name.padEnd(28)} ${size.padStart(10)}`);
+  console.log(`  │     - ${name.padEnd(28)} ${size.padStart(10)}`);
 }
 console.log(`  │   [Shared Chunks: ${chunkOutputs.length} files]`);
 for (const { name, size } of chunkOutputs.slice(0, 8)) {
-  console.log(`  │     • ${name.padEnd(28)} ${size.padStart(10)}`);
+  console.log(`  │     - ${name.padEnd(28)} ${size.padStart(10)}`);
 }
 if (chunkOutputs.length > 8) {
   console.log(`  │     ... and ${chunkOutputs.length - 8} more chunks`);
@@ -105,7 +105,7 @@ if (chunkOutputs.length > 8) {
 console.log(`  └─ Total JS bundle size: ${formatBytes(buildResult.outputs.reduce((acc, o) => acc + o.size, 0))}`);
 
 // Step 3: Generate TypeScript declaration files
-console.log("\n[3/4] 📘 Generating TypeScript declaration files (tsc)...");
+console.log("\n[3/4] Generating TypeScript declaration files (tsc)...");
 const tscStart = performance.now();
 const tscProc = Bun.spawn(["bun", "x", "tsc", "-p", "tsconfig.build.json"], {
   cwd: rootDir,
@@ -115,13 +115,13 @@ const tscProc = Bun.spawn(["bun", "x", "tsc", "-p", "tsconfig.build.json"], {
 
 const tscExit = await tscProc.exited;
 if (tscExit !== 0) {
-  console.error(`❌ TypeScript declaration generation failed with code ${tscExit}`);
+  console.error(`Error: TypeScript declaration generation failed with code ${tscExit}`);
   process.exit(tscExit);
 }
 console.log(`  └─ Declarations emitted in ${formatDuration(performance.now() - tscStart)}`);
 
 // Step 4: Copy static declarations and Vite scaffolding templates
-console.log("\n[4/4] 📋 Copying static assets & template files...");
+console.log("\n[4/4] Copying static assets & template files...");
 const copyStart = performance.now();
 
 const jsxTypesSrc = resolve(rootDir, "src/jsx-runtime/jsx.d.ts");
@@ -138,5 +138,5 @@ console.log(`  └─ Assets copied in ${formatDuration(performance.now() - copy
 
 // Final Summary
 const totalElapsed = performance.now() - startTime;
-console.log("\n" + "━".repeat(50));
-console.log(`✨ Visage built successfully in ${formatDuration(totalElapsed)}!\n`);
+console.log("\n" + "-".repeat(50));
+console.log(`Visage built successfully in ${formatDuration(totalElapsed)}.\n`);
