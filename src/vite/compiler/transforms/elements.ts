@@ -176,7 +176,7 @@ export function processElement(
             relAttrIndex = staticAttrs.length;
             existingRelValue = strVal;
           }
-          staticAttrs.push(`${attrName}="${strVal}"`);
+          staticAttrs.push(`${attrName}="${escapeHtmlAttr(strVal)}"`);
         } else if (t.isBooleanLiteral(expr)) {
           if (expr.value) {
             staticAttrs.push(attrName);

@@ -24,6 +24,18 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain("return _tmpl$1();");
   });
 
+  it("escapes special characters in static JSX expression attributes", () => {
+    const input = `
+      function Banner() {
+        return <div title={"Hello & \\"Goodbye\\""} data-count={42} />;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+    expect(code).toContain('title=\\"Hello &amp; &quot;Goodbye&quot;\\"');
+    expect(code).toContain('data-count=\\"42\\"');
+  });
+
   it("compiles dynamic event listeners with high-performance event delegation", () => {
     const input = `
       function Button() {
