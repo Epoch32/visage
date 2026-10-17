@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.13.1](https://github.com/Epoch32/visage/compare/v1.13.0...v1.13.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** remove tsconfig from api-showcase so unit test SSR uses root path mappings ([067cb9c](https://github.com/Epoch32/visage/commit/067cb9c47fbf0dc255f494eca955112603db4aff))
+* **test:** update jsxImportSource to @epoch32/visage and use real package in api-showcase App ([511c60d](https://github.com/Epoch32/visage/commit/511c60dbcfaccc242a150c96e20e8a1f01c99953))
+* **vite:** use function invocations instead of raw JSX in pages entry generator ([4cc957d](https://github.com/Epoch32/visage/commit/4cc957dc5e64c7d8650f425e1bf29cdad73942a9))
+
 ## [1.13.0](https://github.com/Epoch32/visage/compare/v1.12.0...v1.13.0) (2026-10-17)
 
 
