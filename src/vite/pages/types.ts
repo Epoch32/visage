@@ -15,6 +15,11 @@ export interface PagesOptions {
   title?: string;
 
   /**
+   * Additional HTML tags or styles injected into the document <head>
+   */
+  headTags?: string;
+
+  /**
    * Enable Static Site Generation (SSG) at build time
    * Pre-renders discovered pages and outputs physical static HTML files into dist/
    * @default true

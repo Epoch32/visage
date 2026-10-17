@@ -1,4 +1,4 @@
-import { createSignal } from "@epoch32/visage";
+import { createSignal, Link } from "@epoch32/visage";
 
 interface BlogPostProps {
   params: {
@@ -13,8 +13,9 @@ export default function BlogPostPage(props: BlogPostProps) {
   return (
     <article style={{ maxWidth: "720px", margin: "0 auto" }}>
       <div style={{ marginBottom: "24px" }}>
-        <a
+        <Link
           href="/blog"
+          prefetch="hover"
           style={{
             fontSize: "13px",
             color: "#58a6ff",
@@ -24,7 +25,7 @@ export default function BlogPostPage(props: BlogPostProps) {
           }}
         >
           &larr; Back to Blog
-        </a>
+        </Link>
         <div style={{ fontSize: "12px", color: "#8b949e", textTransform: "uppercase", letterSpacing: "0.05em" }}>
           Dynamic Route: /blog/[slug].tsx
         </div>

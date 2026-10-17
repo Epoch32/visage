@@ -1,3 +1,5 @@
+import { Link } from "@epoch32/visage";
+
 export default function AboutPage() {
   return (
     <div style={{ maxWidth: "680px", margin: "0 auto" }}>
@@ -36,9 +38,9 @@ export default function AboutPage() {
       </ul>
 
       <p style={{ marginTop: "32px" }}>
-        <a href="/" style={{ color: "#58a6ff", textDecoration: "none", fontWeight: 600 }}>
+        <Link href="/" prefetch="hover" style={{ color: "#58a6ff", textDecoration: "none", fontWeight: 600 }}>
           &larr; Return to Homepage
-        </a>
+        </Link>
       </p>
     </div>
   );

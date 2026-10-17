@@ -112,7 +112,8 @@ export function createPagesPlugin(
           const rawHtml = generateHtmlShell({
             title: options.title,
             rootId,
-            clientEntryUrl
+            clientEntryUrl,
+            headTags: options.headTags
           });
 
           try {
@@ -135,7 +136,8 @@ export function createPagesPlugin(
           const rawHtml = generateHtmlShell({
             title: "404 - Not Found",
             rootId,
-            clientEntryUrl
+            clientEntryUrl,
+            headTags: options.headTags
           });
 
           const html = await server.transformIndexHtml(req.url, rawHtml);
@@ -235,7 +237,8 @@ export function createPagesPlugin(
         const html = generateHtmlShell({
           title: options.title,
           rootId,
-          clientEntryUrl
+          clientEntryUrl,
+          headTags: options.headTags
         });
 
         fs.writeFileSync(targetHtmlPath, html, "utf8");
@@ -249,7 +252,8 @@ export function createPagesPlugin(
         const html = generateHtmlShell({
           title: "404 - Not Found",
           rootId,
-          clientEntryUrl
+          clientEntryUrl,
+          headTags: options.headTags
         });
         fs.writeFileSync(notFoundPath, html, "utf8");
         generatedCount++;

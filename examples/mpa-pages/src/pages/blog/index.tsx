@@ -1,3 +1,5 @@
+import { Link } from "@epoch32/visage";
+
 const posts = [
   {
     slug: "signals-zero-vdom",
@@ -46,12 +48,13 @@ export default function BlogIndexPage() {
               {post.date}
             </div>
             <h2 style={{ fontSize: "18px", margin: "0 0 8px 0" }}>
-              <a
+              <Link
                 href={`/blog/${post.slug}`}
+                prefetch="hover"
                 style={{ color: "#58a6ff", textDecoration: "none", fontWeight: 600 }}
               >
                 {post.title}
-              </a>
+              </Link>
             </h2>
             <p style={{ color: "#8b949e", fontSize: "14px", margin: 0, lineHeight: "1.5" }}>
               {post.summary}

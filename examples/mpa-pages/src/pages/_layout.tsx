@@ -1,4 +1,4 @@
-import type { Child } from "@epoch32/visage";
+import { type Child, Link } from "@epoch32/visage";
 
 interface LayoutProps {
   children: Child;
@@ -6,6 +6,18 @@ interface LayoutProps {
 }
 
 export default function RootLayout(props: LayoutProps) {
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
+  const getLinkStyle = (href: string) => {
+    const active = currentPath === href || (href !== "/" && currentPath.startsWith(href));
+    return {
+      color: active ? "#58a6ff" : "#c9d1d9",
+      textDecoration: "none",
+      borderBottom: active ? "2px solid #58a6ff" : "2px solid transparent",
+      paddingBottom: "4px",
+      transition: "color 0.2s, border-color 0.2s"
+    };
+  };
+
   return (
     <div
       style={{
@@ -37,8 +49,9 @@ export default function RootLayout(props: LayoutProps) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <a
+          <Link
             href="/"
+            prefetch="hover"
             style={{
               fontSize: "18px",
               fontWeight: 700,
@@ -50,7 +63,7 @@ export default function RootLayout(props: LayoutProps) {
             }}
           >
             <span style={{ fontSize: "22px" }}>⚡</span> Visage MPA
-          </a>
+          </Link>
           <span
             style={{
               fontSize: "11px",
@@ -66,21 +79,21 @@ export default function RootLayout(props: LayoutProps) {
         </div>
 
         <nav style={{ display: "flex", gap: "18px", fontSize: "14px", fontWeight: 500 }}>
-          <a href="/" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+          <Link href="/" prefetch="hover" style={getLinkStyle("/")}>
             Home
-          </a>
-          <a href="/about" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+          </Link>
+          <Link href="/about" prefetch="hover" style={getLinkStyle("/about")}>
             About
-          </a>
-          <a href="/blog" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+          </Link>
+          <Link href="/blog" prefetch="hover" style={getLinkStyle("/blog")}>
             Blog
-          </a>
-          <a href="/contact" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+          </Link>
+          <Link href="/contact" prefetch="hover" style={getLinkStyle("/contact")}>
             Contact
-          </a>
-          <a href="/docs/guide/overview" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+          </Link>
+          <Link href="/docs/guide/overview" prefetch="hover" style={getLinkStyle("/docs/guide/overview")}>
             Docs
-          </a>
+          </Link>
         </nav>
       </header>
 

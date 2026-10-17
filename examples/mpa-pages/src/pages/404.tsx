@@ -1,3 +1,5 @@
+import { Link } from "@epoch32/visage";
+
 export default function CustomNotFoundPage() {
   return (
     <div style={{ textAlign: "center", padding: "60px 20px" }}>
@@ -20,8 +22,9 @@ export default function CustomNotFoundPage() {
       <p style={{ color: "#8b949e", fontSize: "16px", maxWidth: "420px", margin: "0 auto 24px auto" }}>
         Custom 404 component at <code>src/pages/404.tsx</code>. In production builds, Visage outputs this as <code>dist/404.html</code>.
       </p>
-      <a
+      <Link
         href="/"
+        prefetch="hover"
         style={{
           display: "inline-block",
           backgroundColor: "#21262d",
@@ -35,7 +38,7 @@ export default function CustomNotFoundPage() {
         }}
       >
         Return to Homepage
-      </a>
+      </Link>
     </div>
   );
 }

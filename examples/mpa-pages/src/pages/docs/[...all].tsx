@@ -1,3 +1,5 @@
+import { Link } from "@epoch32/visage";
+
 interface DocsCatchAllProps {
   params: {
     all: string;
@@ -56,8 +58,9 @@ export default function DocsCatchAllPage(props: DocsCatchAllProps) {
       </div>
 
       <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-        <a
+        <Link
           href="/docs/guide/overview"
+          prefetch="hover"
           style={{
             backgroundColor: "#21262d",
             color: "#58a6ff",
@@ -69,9 +72,10 @@ export default function DocsCatchAllPage(props: DocsCatchAllProps) {
           }}
         >
           Try /docs/guide/overview
-        </a>
-        <a
+        </Link>
+        <Link
           href="/docs/api/signals/computed"
+          prefetch="hover"
           style={{
             backgroundColor: "#21262d",
             color: "#58a6ff",
@@ -83,7 +87,7 @@ export default function DocsCatchAllPage(props: DocsCatchAllProps) {
           }}
         >
           Try /docs/api/signals/computed
-        </a>
+        </Link>
       </div>
     </div>
   );
