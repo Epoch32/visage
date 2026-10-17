@@ -70,13 +70,38 @@ describe("Visage AOT JSX Compiler", () => {
   it("omits static null and undefined attributes from template and dynamic attributes", () => {
     const input = `
       function Clean() {
-        return <div title={null} id={undefined} aria-hidden={false} />;
+        return <div title={null} id={undefined} disabled={false} />;
       }
     `;
 
     const { code } = compileJsx(input);
     expect(code).toContain('template("<div></div>")');
     expect(code).not.toContain("setAttribute");
+  });
+
+  it("normalizes JSX attribute aliases and handles static booleans and aria/data attributes", () => {
+    const input = `
+      function Form() {
+        return (
+          <div className="form-group" data-active={true} data-selected={false}>
+            <label htmlFor="user-input" aria-hidden={false}>Username</label>
+            <input id="user-input" disabled={true} readOnly={false} required />
+          </div>
+        );
+      }
+    `;
+
+    const { code } = compileJsx(input);
+    expect(code).toContain('class=\\"form-group\\"');
+    expect(code).not.toContain("className");
+    expect(code).toContain('for=\\"user-input\\"');
+    expect(code).not.toContain("htmlFor");
+    expect(code).toContain('data-active=\\"true\\"');
+    expect(code).toContain('data-selected=\\"false\\"');
+    expect(code).toContain('aria-hidden=\\"false\\"');
+    expect(code).toContain("disabled");
+    expect(code).toContain("required");
+    expect(code).not.toContain("readOnly");
   });
 
   it("compiles dynamic event listeners with high-performance event delegation", () => {

@@ -88,6 +88,12 @@ function recordStaticOrigin(
   }
 }
 
+export function normalizeAttributeName(name: string): string {
+  if (name === "className") return "class";
+  if (name === "htmlFor") return "for";
+  return name;
+}
+
 function tryFormatStaticStyle(expr: t.ObjectExpression): string | null {
   const styles: string[] = [];
   for (const prop of expr.properties) {
@@ -203,9 +209,10 @@ export function processElement(
     }
 
     if (t.isJSXAttribute(attr)) {
-      const attrName = t.isJSXNamespacedName(attr.name)
+      const rawAttrName = t.isJSXNamespacedName(attr.name)
         ? `${attr.name.namespace.name}:${attr.name.name.name}`
         : attr.name.name;
+      const attrName = normalizeAttributeName(rawAttrName);
 
       if (!attr.value) {
         staticAttrs.push(attrName);
@@ -260,7 +267,9 @@ export function processElement(
           }
           staticAttrs.push(`${attrName}="${escapeHtmlAttr(strVal)}"`);
         } else if (t.isBooleanLiteral(expr)) {
-          if (expr.value) {
+          if (attrName.startsWith("aria-") || attrName.startsWith("data-")) {
+            staticAttrs.push(`${attrName}="${expr.value}"`);
+          } else if (expr.value) {
             staticAttrs.push(attrName);
           }
         } else if (attrName === "style" && t.isObjectExpression(expr)) {
@@ -488,9 +497,10 @@ export function generateTemplateInstance(
         continue;
       }
 
-      const attrName = t.isJSXNamespacedName(attr.name)
+      const rawAttrName = t.isJSXNamespacedName(attr.name)
         ? `${attr.name.namespace.name}:${attr.name.name.name}`
         : attr.name.name;
+      const attrName = normalizeAttributeName(rawAttrName);
 
       const valExpr = (attr.value as t.JSXExpressionContainer).expression as t.Expression;
       const res = transformAttribute(attrName, valExpr, targetVar, context);
