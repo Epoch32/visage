@@ -37,12 +37,8 @@ if (target) {
   render(() => {
     ${
       layoutImportPath
-        ? `return (
-      <RootLayout params={params}>
-        <PageComponent params={params} />
-      </RootLayout>
-    );`
-        : `return <PageComponent params={params} />;`
+        ? `return RootLayout({ params, children: PageComponent({ params }) });`
+        : `return PageComponent({ params });`
     }
   }, target);
 }
@@ -59,7 +55,7 @@ import NotFoundComponent from ${JSON.stringify(notFoundFilePath)};
 
 const target = document.getElementById(${JSON.stringify(rootId)});
 if (target) {
-  render(() => <NotFoundComponent />, target);
+  render(() => NotFoundComponent({}), target);
 }
 `.trim();
 }
