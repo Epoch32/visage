@@ -25,6 +25,7 @@ export function createPagesPlugin(
   let special: PageSpecialFiles = {};
   let isDev = true;
   let basePrefix = "/";
+  let outDir = path.resolve(projectRoot, "dist");
 
   function refreshRoutes() {
     if (pagesDir) {
@@ -66,6 +67,13 @@ export function createPagesPlugin(
               : route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
           input[`page-${name}`] = `virtual:visage-pages-entry:${route.path}`;
         }
+        if (options.staticPaths && Array.isArray(options.staticPaths)) {
+          for (const sp of options.staticPaths) {
+            const cleanSp = sp.startsWith("/") ? sp : `/${sp}`;
+            const name = cleanSp.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
+            input[`page-${name}`] = `virtual:visage-pages-entry:${cleanSp}`;
+          }
+        }
         if (special.notFound) {
           input["page-404"] = "virtual:visage-pages-entry:404";
         }
@@ -77,6 +85,7 @@ export function createPagesPlugin(
             : input;
 
         return {
+          appType: "mpa",
           build: {
             rollupOptions: {
               input: mergedInput
@@ -90,6 +99,7 @@ export function createPagesPlugin(
       projectRoot = config.root;
       isDev = config.command === "serve";
       basePrefix = config.base || "/";
+      outDir = path.resolve(projectRoot, config.build?.outDir || "dist");
       pagesDir = resolvePagesDir(projectRoot, options.dir);
 
       if (options.layout && fs.existsSync(path.resolve(projectRoot, options.layout))) {
@@ -153,8 +163,13 @@ export function createPagesPlugin(
           return next();
         }
 
+        let routeUrl = req.url;
+        if (basePrefix && basePrefix !== "/" && routeUrl.startsWith(basePrefix)) {
+          routeUrl = routeUrl.slice(basePrefix.length - 1);
+        }
+
         // Match against discovered page routes
-        const match = matchRoute(routes, req.url);
+        const match = matchRoute(routes, routeUrl);
         if (match) {
           const rootId = options.rootId || "visage-root";
           const clientEntryUrl = `/@visage-pages-entry?file=${encodeURIComponent(match.route.filePath)}&params=${encodeURIComponent(JSON.stringify(match.params))}`;
@@ -206,6 +221,62 @@ export function createPagesPlugin(
       });
     },
 
+    configurePreviewServer(server: any) {
+      if (!pagesDir) return;
+
+      server.middlewares.use((req: any, res: any, next: any) => {
+        if (!req.url || req.method !== "GET") return next();
+
+        const [pathname, queryString] = req.url.split("?");
+        const query = queryString ? `?${queryString}` : "";
+
+        // Pass through Vite internals, node_modules, and files with static extensions
+        if (
+          pathname.startsWith("/@") ||
+          pathname.startsWith("/node_modules") ||
+          /\.[a-zA-Z0-9_-]+$/.test(pathname)
+        ) {
+          return next();
+        }
+
+        let cleanPath = pathname;
+        if (basePrefix && basePrefix !== "/" && cleanPath.startsWith(basePrefix)) {
+          cleanPath = cleanPath.slice(basePrefix.length - 1);
+        }
+        cleanPath = cleanPath.replace(/^\/+|\/+$/g, "");
+
+        // Root path is handled by sirv (dist/index.html)
+        if (!cleanPath) {
+          return next();
+        }
+
+        // 1. Check directory index HTML: dist/about/index.html
+        const dirIndexPath = path.join(outDir, cleanPath, "index.html");
+        if (fs.existsSync(dirIndexPath)) {
+          req.url = `/${cleanPath}/index.html${query}`;
+          return next();
+        }
+
+        // 2. Check clean HTML file: dist/about.html
+        const cleanHtmlPath = path.join(outDir, `${cleanPath}.html`);
+        if (fs.existsSync(cleanHtmlPath)) {
+          req.url = `/${cleanPath}.html${query}`;
+          return next();
+        }
+
+        // 3. Fallback to 404.html if exists
+        const notFoundPath = path.join(outDir, "404.html");
+        if (fs.existsSync(notFoundPath)) {
+          res.statusCode = 404;
+          res.setHeader("Content-Type", "text/html; charset=utf-8");
+          res.end(fs.readFileSync(notFoundPath));
+          return;
+        }
+
+        next();
+      });
+    },
+
     resolveId(id: string) {
       if (id.startsWith("/@visage-pages-entry") || id.startsWith("virtual:visage-pages-entry")) {
         return `\0${id}`;
@@ -228,12 +299,12 @@ export function createPagesPlugin(
         const routePath = id.slice("\0virtual:visage-pages-entry:".length);
 
         if (routePath === "404" && special.notFound) {
-          return generateNotFoundEntry(special.notFound, rootId);
+          return generateNotFoundEntry(special.notFound, rootId, special);
         }
 
-        const matchedRoute = routes.find((r) => r.path === routePath);
-        if (matchedRoute) {
-          return generateClientEntry(matchedRoute, {}, special, rootId);
+        const match = matchRoute(routes, routePath);
+        if (match) {
+          return generateClientEntry(match.route, match.params, special, rootId);
         }
       }
 
@@ -248,7 +319,7 @@ export function createPagesPlugin(
       const params: Record<string, string> = rawParams ? JSON.parse(rawParams) : {};
 
       if (isNotFound && filePath) {
-        return generateNotFoundEntry(filePath, rootId);
+        return generateNotFoundEntry(filePath, rootId, special);
       }
 
       if (filePath) {
@@ -289,14 +360,28 @@ export function createPagesPlugin(
 
       let generatedCount = 0;
 
+      const allPathsToRender: { path: string; name: string }[] = [];
       for (const route of routes) {
-        if (route.isDynamic || route.isCatchAll) continue;
+        if (!route.isDynamic && !route.isCatchAll) {
+          const name =
+            route.path === "/"
+              ? "index"
+              : route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
+          allPathsToRender.push({ path: route.path, name });
+        }
+      }
+      if (options.staticPaths && Array.isArray(options.staticPaths)) {
+        for (const sp of options.staticPaths) {
+          const cleanSp = sp.startsWith("/") ? sp : `/${sp}`;
+          const name = cleanSp.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
+          if (!allPathsToRender.some((p) => p.path === cleanSp)) {
+            allPathsToRender.push({ path: cleanSp, name });
+          }
+        }
+      }
 
-        const name =
-          route.path === "/"
-            ? "index"
-            : route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
-        const chunk = entryChunks.get(`page-${name}`);
+      for (const item of allPathsToRender) {
+        const chunk = entryChunks.get(`page-${item.name}`);
         if (!chunk) continue;
 
         const clientEntryUrl = `${base}/${chunk.fileName}`;
@@ -311,7 +396,7 @@ export function createPagesPlugin(
 
         const headTags = (options.headTags || "") + cssTags;
         const targetHtmlPath =
-          route.path === "/" ? "index.html" : `${route.path.replace(/^\/+/, "")}/index.html`;
+          item.path === "/" ? "index.html" : `${item.path.replace(/^\/+/, "")}/index.html`;
 
         const html = generateHtmlShell({
           title: options.title,
@@ -327,6 +412,16 @@ export function createPagesPlugin(
           source: html
         });
         generatedCount++;
+
+        if (item.path !== "/") {
+          const cleanHtmlPath = `${item.path.replace(/^\/+/, "")}.html`;
+          this.emitFile({
+            type: "asset",
+            fileName: cleanHtmlPath,
+            source: html
+          });
+          generatedCount++;
+        }
       }
 
       if (special.notFound) {

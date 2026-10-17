@@ -190,7 +190,7 @@ describe("Visage File-System MPA Pages Router (visage/pages)", () => {
       expect(html).toContain("<title>Test Page</title>");
       expect(html).toContain('<div id="custom-root"></div>');
       expect(html).toContain(
-        '<script type="module" src="/@visage-pages-entry?file=page.tsx"></script>'
+        '<script type="module" data-visage-entry="true" src="/@visage-pages-entry?file=page.tsx"></script>'
       );
     });
 
@@ -284,6 +284,69 @@ describe("Visage File-System MPA Pages Router (visage/pages)", () => {
       expect(body).toContain('<div id="visage-root"></div>');
       expect(body).toContain("/@visage-pages-entry");
       expect(body).toContain("about.tsx");
+    });
+
+    it("rewrites clean URLs to index.html in preview server middleware", async () => {
+      const plugin = visagePages({ dir: tmpPagesDir });
+
+      const mockDist = path.join(tmpPagesDir, "dist");
+      fs.mkdirSync(path.join(mockDist, "about"), { recursive: true });
+      fs.writeFileSync(path.join(mockDist, "about", "index.html"), "<h1>About</h1>");
+      fs.writeFileSync(path.join(mockDist, "contact.html"), "<h1>Contact</h1>");
+      fs.writeFileSync(path.join(mockDist, "404.html"), "<h1>Custom 404</h1>");
+
+      (plugin as any).configResolved({
+        root: tmpPagesDir,
+        command: "serve",
+        build: { outDir: "dist" }
+      });
+
+      let previewMiddleware: any;
+      const mockPreviewServer = {
+        middlewares: {
+          use: (fn: any) => {
+            previewMiddleware = fn;
+          }
+        }
+      };
+
+      (plugin as any).configurePreviewServer(mockPreviewServer);
+      expect(previewMiddleware).toBeDefined();
+
+      // Test directory index rewrite: /about -> /about/index.html
+      const reqAbout = { url: "/about", method: "GET" };
+      let nextCalled = false;
+      await previewMiddleware(reqAbout, {}, () => {
+        nextCalled = true;
+      });
+      expect(reqAbout.url).toBe("/about/index.html");
+      expect(nextCalled).toBe(true);
+
+      // Test clean HTML rewrite: /contact -> /contact.html
+      const reqContact = { url: "/contact?foo=bar", method: "GET" };
+      nextCalled = false;
+      await previewMiddleware(reqContact, {}, () => {
+        nextCalled = true;
+      });
+      expect(reqContact.url).toBe("/contact.html?foo=bar");
+      expect(nextCalled).toBe(true);
+
+      // Test fallback 404
+      let status = 0;
+      let body = "";
+      const reqNotFound = { url: "/nonexistent", method: "GET" };
+      const mockRes = {
+        set statusCode(code: number) {
+          status = code;
+        },
+        setHeader: () => {},
+        end: (d: any) => {
+          body = d ? String(d) : "";
+        }
+      };
+      await previewMiddleware(reqNotFound, mockRes, () => {});
+      expect(status).toBe(404);
+      expect(body).toContain("Custom 404");
     });
   });
 });

@@ -59,6 +59,12 @@ export interface PagesOptions {
    * @default true
    */
   viewTransitions?: boolean;
+
+  /**
+   * Additional static paths to pre-render at build time for dynamic or catch-all routes.
+   * Example: `["/blog/my-post", "/docs/guide/overview"]`
+   */
+  staticPaths?: string[];
 }
 
 /**

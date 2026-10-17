@@ -30,17 +30,33 @@ import { render } from "@epoch32/visage";
 import PageComponent from ${pageImportPath};
 ${layoutImportPath ? `import RootLayout from ${layoutImportPath};` : ""}
 
-const params = ${serializedParams};
-const target = document.getElementById(${JSON.stringify(rootId)});
-
-if (target) {
-  render(() => {
-    ${
-      layoutImportPath
-        ? `return RootLayout({ params, children: PageComponent({ params }) });`
-        : `return PageComponent({ params });`
+export function mount() {
+  const params = ${serializedParams};
+  const target = document.getElementById(${JSON.stringify(rootId)});
+  if (target) {
+    if (typeof window !== "undefined" && window.__visage_page_dispose) {
+      try {
+        window.__visage_page_dispose();
+      } catch {}
+      window.__visage_page_dispose = null;
     }
-  }, target);
+    target.replaceChildren();
+    const dispose = render(() => {
+      ${
+        layoutImportPath
+          ? `return RootLayout({ params, children: PageComponent({ params }) });`
+          : `return PageComponent({ params });`
+      }
+    }, target);
+    if (typeof window !== "undefined") {
+      window.__visage_page_dispose = dispose;
+    }
+    return dispose;
+  }
+}
+
+if (typeof document !== "undefined") {
+  mount();
 }
 `.trim();
 }
@@ -48,14 +64,44 @@ if (target) {
 /**
  * Generates the synthesized client mount script for a custom 404 page
  */
-export function generateNotFoundEntry(notFoundFilePath: string, rootId: string): string {
+export function generateNotFoundEntry(
+  notFoundFilePath: string,
+  rootId: string,
+  special?: PageSpecialFiles
+): string {
+  const layoutImportPath = special?.layout ? JSON.stringify(special.layout) : null;
+
   return `
 import { render } from "@epoch32/visage";
 import NotFoundComponent from ${JSON.stringify(notFoundFilePath)};
+${layoutImportPath ? `import RootLayout from ${layoutImportPath};` : ""}
 
-const target = document.getElementById(${JSON.stringify(rootId)});
-if (target) {
-  render(() => NotFoundComponent({}), target);
+export function mount() {
+  const target = document.getElementById(${JSON.stringify(rootId)});
+  if (target) {
+    if (typeof window !== "undefined" && window.__visage_page_dispose) {
+      try {
+        window.__visage_page_dispose();
+      } catch {}
+      window.__visage_page_dispose = null;
+    }
+    target.replaceChildren();
+    const dispose = render(() => {
+      ${
+        layoutImportPath
+          ? `return RootLayout({ params: {}, children: NotFoundComponent({}) });`
+          : `return NotFoundComponent({});`
+      }
+    }, target);
+    if (typeof window !== "undefined") {
+      window.__visage_page_dispose = dispose;
+    }
+    return dispose;
+  }
+}
+
+if (typeof document !== "undefined") {
+  mount();
 }
 `.trim();
 }
@@ -81,6 +127,17 @@ export const softNavScript = `
       const updateDom = async () => {
         document.title = nextDoc.title;
 
+        for (const meta of nextDoc.head.querySelectorAll("meta[name], meta[property]")) {
+          const key = meta.getAttribute("name") ? "name" : "property";
+          const val = meta.getAttribute(key);
+          const existing = document.head.querySelector("meta[" + key + "=\\"" + val + "\\"]");
+          if (existing) {
+            existing.setAttribute("content", meta.getAttribute("content") || "");
+          } else {
+            document.head.appendChild(meta.cloneNode(true));
+          }
+        }
+
         for (const el of nextDoc.head.querySelectorAll("link[rel='stylesheet'], style")) {
           const href = el.getAttribute("href");
           const devId = el.getAttribute("data-vite-dev-id");
@@ -94,7 +151,10 @@ export const softNavScript = `
           }
         }
 
-        const nextScript = nextDoc.querySelector("script[type='module']");
+        const nextScript =
+          nextDoc.querySelector("script[data-visage-entry]") ||
+          nextDoc.querySelector("script[src*='@visage-pages-entry']") ||
+          nextDoc.querySelector("body script[type='module']");
         const nextScriptSrc = nextScript ? nextScript.getAttribute("src") : null;
 
         if (!isPopState) {
@@ -102,7 +162,12 @@ export const softNavScript = `
         }
 
         if (nextScriptSrc) {
-          await import(/* @vite-ignore */ nextScriptSrc);
+          const mod = await import(/* @vite-ignore */ nextScriptSrc);
+          if (mod && typeof mod.mount === "function") {
+            mod.mount();
+          } else {
+            await import(/* @vite-ignore */ nextScriptSrc + (nextScriptSrc.includes("?") ? "&" : "?") + "_t=" + Date.now());
+          }
         }
 
         window.scrollTo(0, 0);
@@ -169,7 +234,7 @@ export function generateHtmlShell(options: {
   </head>
   <body>
     <div id="${escapeHtml(rootId)}"></div>
-    <script type="module" src="${clientEntryUrl}"></script>
+    <script type="module" data-visage-entry="true" src="${clientEntryUrl}"></script>
     ${viewTransitions ? `<script>${softNavScript}</script>` : ""}
   </body>
 </html>`;

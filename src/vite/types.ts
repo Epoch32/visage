@@ -381,6 +381,7 @@ export interface VisageVitePlugin {
   config?: (config: any, env: any) => any;
   configResolved?: (config: any) => void;
   configureServer?: (server: any) => void | Promise<void>;
+  configurePreviewServer?: (server: any) => void | Promise<void>;
   resolveId?: (
     source: string,
     importer?: string,
