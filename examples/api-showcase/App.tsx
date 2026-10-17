@@ -1,5 +1,5 @@
-import { computed, For, Show, signal, VisageDevTools } from "visage";
-import { createApiClient } from "visage/api";
+import { computed, For, Show, signal, VisageDevTools } from "@epoch32/visage";
+import { createApiClient } from "@epoch32/visage/api";
 
 const api = createApiClient({
   baseUrl: "/api"

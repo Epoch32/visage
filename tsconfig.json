@@ -13,7 +13,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "visage",
+    "jsxImportSource": "@epoch32/visage",
     "paths": {
       "@epoch32/visage": ["./src/index.ts"],
       "@epoch32/visage/jsx-runtime": ["./src/jsx-runtime/index.ts"],
