@@ -14,11 +14,12 @@ describe("Visage Vite Plugin (visage/vite)", () => {
     expect(names).toContain("visage:server");
   });
 
-  it("configures esbuild for automatic Visage JSX runtime and dependencies deduplication", () => {
+  it("configures oxc for automatic Visage JSX runtime and dependencies deduplication", () => {
     const [configPlugin] = visage();
     expect(configPlugin?.config).not.toBeNull();
 
     const config = configPlugin!.config!({}, { command: "serve", mode: "development" });
+    expect(config.esbuild).toBeUndefined();
     expect(config.oxc?.jsx?.runtime).toBe("automatic");
     expect(config.oxc?.jsx?.importSource).toBe("visage");
     expect(config.oxc?.jsx?.development).toBe(true);
