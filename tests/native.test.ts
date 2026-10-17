@@ -246,10 +246,16 @@ describe("Zig Native Project Scaffolding", () => {
     });
 
     const mainZigPath = path.join(tempDir, "src-native", "main.zig");
+    const utilZigPath = path.join(tempDir, "src-native", "util.zig");
+    const platformZigPath = path.join(tempDir, "src-native", "platform.zig");
+    const ipcZigPath = path.join(tempDir, "src-native", "ipc.zig");
     const buildZigPath = path.join(tempDir, "build.zig");
     const buildZonPath = path.join(tempDir, "build.zig.zon");
 
     expect(fs.existsSync(mainZigPath)).toBe(true);
+    expect(fs.existsSync(utilZigPath)).toBe(true);
+    expect(fs.existsSync(platformZigPath)).toBe(true);
+    expect(fs.existsSync(ipcZigPath)).toBe(true);
     expect(fs.existsSync(buildZigPath)).toBe(true);
     expect(fs.existsSync(buildZonPath)).toBe(true);
 
@@ -292,9 +298,9 @@ describe("Zig Native Project Scaffolding", () => {
     expect(mainZigContent).toContain('border_color: ?[:0]const u8 = "#3b82f6"');
     expect(mainZigContent).toContain("border_width: c_int = 3");
     expect(mainZigContent).toContain("border_radius: c_int = 12");
-    expect(mainZigContent).toContain("linux.gtk_window_set_decorated(gtk_win, 0);");
+    expect(mainZigContent).toContain("platform.setDecorations(win, false);");
     expect(mainZigContent).toContain(
-      "linux.applyBorder(color, WindowConfig.border_width, WindowConfig.border_radius);"
+      "platform.applyBorder(color, WindowConfig.border_width, WindowConfig.border_radius);"
     );
   });
 });

@@ -132,7 +132,10 @@ console.log(`  ├─ Copied JSX definitions: dist/jsx-runtime/jsx.d.ts (${forma
 
 const templatesSrc = resolve(rootDir, "src/vite/templates");
 const templatesDest = resolve(distDir, "vite/templates");
-await cp(templatesSrc, templatesDest, { recursive: true });
+await cp(templatesSrc, templatesDest, {
+  recursive: true,
+  filter: (src) => !src.includes(".zig-cache")
+});
 console.log(`  ├─ Copied Vite scaffolding templates: dist/vite/templates/`);
 console.log(`  └─ Assets copied in ${formatDuration(performance.now() - copyStart)}`);
 

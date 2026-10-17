@@ -99,7 +99,17 @@ export function scaffoldZigNative(projectRoot: string, options: ZigNativeOptions
     fs.writeFileSync(buildZigPath, buildZigContent, "utf8");
   }
 
-  // 3. Generate src-native/main.zig if it does not already exist
+  // 3. Generate auxiliary Zig modules (util.zig, platform.zig, ipc.zig) if they do not exist
+  const supportingModules = ["util.zig", "platform.zig", "ipc.zig"];
+  for (const mod of supportingModules) {
+    const modPath = path.join(outputDir, mod);
+    if (!fs.existsSync(modPath)) {
+      const modContent = loadTemplate(mod);
+      fs.writeFileSync(modPath, modContent, "utf8");
+    }
+  }
+
+  // 4. Generate src-native/main.zig if it does not already exist
   const mainZigPath = path.join(outputDir, "main.zig");
   if (!fs.existsSync(mainZigPath)) {
     const template = loadTemplate("main.zig");
