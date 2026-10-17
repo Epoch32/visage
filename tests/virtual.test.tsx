@@ -149,4 +149,45 @@ describe("Visage Virtualization (visage/virtual)", () => {
     // index 1 start offset should shift from 40 to 100
     expect(updatedItems[1]?.start).toBe(100);
   });
+
+  it("preserves row DOM element identity for visible items across scroll changes", () => {
+    const items = Array.from({ length: 100 }, (_, i) => ({
+      id: i,
+      name: `Row #${i}`
+    }));
+
+    const scrollEl = document.createElement("div") as any;
+    Object.defineProperty(scrollEl, "clientHeight", { value: 200, configurable: true });
+    scrollEl.scrollTop = 0;
+
+    const unmount = render(
+      () => (
+        <VirtualList each={items} itemHeight={40} height={200} overscan={2}>
+          {(item, index) => (
+            <div class="test-row" data-id={item.id} data-index={index}>
+              {item.name}
+            </div>
+          )}
+        </VirtualList>
+      ),
+      container
+    );
+
+    const firstRowBefore = container.querySelector('.test-row[data-id="1"]');
+    expect(firstRowBefore).not.toBeNull();
+
+    // Trigger scroll in container
+    const scrollContainer = container.querySelector("div");
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 20;
+      scrollContainer.dispatchEvent(new Event("scroll"));
+    }
+
+    const firstRowAfter = container.querySelector('.test-row[data-id="1"]');
+    expect(firstRowAfter).not.toBeNull();
+    // Element identity must be preserved by keyed reconciliation!
+    expect(firstRowAfter).toBe(firstRowBefore);
+
+    unmount();
+  });
 });

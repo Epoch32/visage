@@ -66,7 +66,7 @@ export function VirtualList<T>(props: VirtualListProps<T>) {
           pointerEvents: "none"
         })}
       >
-        <For each={() => virtualizer.virtualItems()}>
+        <For each={() => virtualizer.virtualItems()} by={(vItem) => vItem.key}>
           {(vItem) => {
             const itemData = computed(() => getItems()[vItem.index]);
             return (
@@ -154,9 +154,9 @@ export function VirtualGrid<T>(props: VirtualGridProps<T>) {
           position: "relative"
         })}
       >
-        <For each={() => rowVirtualizer.virtualItems()}>
+        <For each={() => rowVirtualizer.virtualItems()} by={(r) => r.key}>
           {(r) => (
-            <For each={() => colVirtualizer.virtualItems()}>
+            <For each={() => colVirtualizer.virtualItems()} by={(c) => c.key}>
               {(c) => {
                 const rowData = getData()[r.index];
                 const item = rowData ? rowData[c.index] : undefined;
