@@ -11,6 +11,7 @@ import {
 import { hasReactiveClass, normalizeClass } from "../style/cx";
 import { formatStyleProp } from "../style/scale";
 import { DELEGATED_EVENTS, delegateEvents } from "./events";
+import { isHydrating } from "./hydration";
 
 export type ReactiveValue<T> = T | ReadonlySignal<T> | (() => T);
 export type Child =
@@ -400,7 +401,7 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
           parent.firstChild !== null &&
           parent.firstChild === parent.lastChild &&
           parent.firstChild.nodeType === Node.TEXT_NODE &&
-          (parent.firstChild as Text).data === " "
+          (isHydrating() || (parent.firstChild as Text).data === " ")
         ) {
           textNode = parent.firstChild as Text;
         } else {

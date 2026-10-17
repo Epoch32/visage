@@ -82,6 +82,8 @@ describe("Visage Server-Side Rendering (SSR)", () => {
 
     // Simulate server rendered HTML
     container.innerHTML = '<div>Count: <span class="num">0</span></div>';
+    const divBefore = container.firstElementChild;
+    const spanBefore = container.querySelector(".num");
 
     // Hydrate
     const unmount = hydrate(
@@ -93,10 +95,43 @@ describe("Visage Server-Side Rendering (SSR)", () => {
       container
     );
 
+    // Verify existing DOM elements were preserved and not replaced
+    expect(container.firstElementChild).toBe(divBefore);
+    expect(container.querySelector(".num")).toBe(spanBefore);
+
     // Mutate signal on client
     count.set(5);
     expect(container.querySelector(".num")?.textContent).toBe("5");
 
     unmount();
+  });
+
+  it("attaches event listeners to existing server-rendered elements during hydration", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    container.innerHTML = '<button class="btn">Click me</button>';
+    const btnBefore = container.firstElementChild as HTMLButtonElement;
+
+    let clicked = false;
+    const unmount = hydrate(
+      () => (
+        <button
+          class="btn"
+          onClick={() => {
+            clicked = true;
+          }}
+        >
+          Click me
+        </button>
+      ),
+      container
+    );
+
+    expect(container.firstElementChild).toBe(btnBefore);
+    btnBefore.click();
+    expect(clicked).toBe(true);
+
+    unmount();
+    document.body.removeChild(container);
   });
 });

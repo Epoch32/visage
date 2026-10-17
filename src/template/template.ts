@@ -1,3 +1,4 @@
+import { getNextTemplateHydrationElement, isHydrating } from "../dom/hydration";
 import { insertChild, setAttribute } from "../dom/render";
 
 const nodeCache = new Map<string, Node>();
@@ -42,6 +43,11 @@ export function template<T extends HTMLElement | SVGElement = HTMLElement>(
         cachedNode = templateEl.content.firstElementChild!;
       }
       nodeCache.set(htmlString, cachedNode);
+    }
+
+    if (isHydrating()) {
+      const el = getNextTemplateHydrationElement();
+      if (el) return el as T;
     }
 
     return cachedNode.cloneNode(true) as T;

@@ -1,4 +1,12 @@
-import { type Child, insertChild, resolveValue, setAttribute } from "../dom";
+import {
+  type Child,
+  getNextHydrationElement,
+  insertChild,
+  isHydrating,
+  isReactive,
+  resolveValue,
+  setAttribute
+} from "../dom";
 import { formatStyleProp } from "../style/scale";
 
 export type { JSX } from "./jsx";
@@ -133,7 +141,14 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
 
     // Browser / JSDOM Environment
     const isSvg = SVG_TAGS.has(type);
-    const element = isSvg ? document.createElementNS(SVG_NS, type) : document.createElement(type);
+    let element: HTMLElement | SVGElement | null = null;
+    if (isHydrating()) {
+      element = getNextHydrationElement(type) as HTMLElement | SVGElement | null;
+    }
+    const isAdopted = element !== null;
+    if (!element) {
+      element = isSvg ? document.createElementNS(SVG_NS, type) : document.createElement(type);
+    }
 
     // Apply attributes and event listeners
     for (const propName in restProps) {
@@ -142,7 +157,11 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
 
     // Insert children
     if (children !== undefined) {
-      insertChild(element, children);
+      if (!isAdopted) {
+        insertChild(element, children);
+      } else if (isReactive(children)) {
+        insertChild(element, children);
+      }
     }
 
     return element;

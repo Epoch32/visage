@@ -28,6 +28,12 @@ export {
   delegateEvents
 } from "./events";
 export {
+  getNextHydrationElement,
+  getNextTemplateHydrationElement,
+  isHydrating,
+  runInHydration
+} from "./hydration";
+export {
   type Child,
   insertChild,
   isReactive,
