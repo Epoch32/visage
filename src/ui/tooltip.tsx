@@ -11,6 +11,7 @@ export interface TooltipContextValue {
   closeDelay: number;
   tooltipId: string;
   triggerRef: { current: HTMLElement | null };
+  anchorName: string;
 }
 
 export const TooltipContext = createContext<TooltipContextValue | null>(null);
@@ -27,6 +28,7 @@ export interface TooltipProps {
   closeDelay?: number;
   content?: Child | (() => Child);
   side?: "top" | "bottom" | "left" | "right";
+  anchorName?: string;
   triggerClass?: any;
   triggerAs?: string;
   contentClass?: any;
@@ -43,6 +45,7 @@ export function TooltipRoot(props: TooltipProps): Child {
   });
 
   const tooltipId = createId("tooltip");
+  const anchorName = props.anchorName ?? `--tooltip-${tooltipId}`;
   const triggerRef: { current: HTMLElement | null } = { current: null };
 
   const ctx: TooltipContextValue = {
@@ -51,7 +54,8 @@ export function TooltipRoot(props: TooltipProps): Child {
     openDelay: props.openDelay ?? 150,
     closeDelay: props.closeDelay ?? 100,
     tooltipId,
-    triggerRef
+    triggerRef,
+    anchorName
   };
 
   if (props.content !== undefined) {
@@ -99,6 +103,7 @@ export interface TooltipTriggerProps {
   as?: string;
   class?: any;
   style?: any;
+  anchorName?: string;
   onMouseEnter?: (e: MouseEvent) => void;
   onMouseLeave?: (e: MouseEvent) => void;
   onFocus?: (e: FocusEvent) => void;
@@ -164,8 +169,21 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
     onBlur,
     class: className,
     style,
+    anchorName: triggerAnchor,
     ...rest
   } = props;
+
+  const resolvedAnchor = triggerAnchor ?? ctx?.anchorName;
+
+  const triggerStyle = () => {
+    const baseStyle = typeof style === "function" ? style() : style;
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      ...(resolvedAnchor ? { anchorName: resolvedAnchor } : {}),
+      ...baseStyle
+    };
+  };
 
   return (
     <Tag
@@ -177,7 +195,7 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
       aria-describedby={ctx?.tooltipId}
       data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
-      style={{ display: "inline-flex", alignItems: "center", ...style }}
+      style={triggerStyle}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onFocus={handleFocus}
@@ -205,6 +223,11 @@ export interface TooltipContentProps {
   as?: string;
   class?: any;
   style?: any;
+  side?: "top" | "bottom" | "left" | "right";
+  positionArea?: string;
+  positionAnchor?: string;
+  positionTryFallbacks?: string;
+  popover?: "auto" | "manual" | "hint" | boolean;
   children: Child | (() => Child);
   [key: string]: any;
 }
@@ -221,17 +244,57 @@ export function TooltipContent(props: TooltipContentProps): Child {
     style,
     portalled = true,
     mount,
+    side,
+    positionArea,
+    positionAnchor,
+    positionTryFallbacks,
+    popover: popoverProp,
     ...rest
   } = props;
+
+  const useNativePopover = popoverProp !== undefined;
+  const popoverMode = typeof popoverProp === "string" ? popoverProp : "hint";
+
+  const resolveAnchorStyles = () => {
+    const resolvedAnchor = positionAnchor ?? ctx?.anchorName;
+    if (!resolvedAnchor && !side && !positionArea) return {};
+
+    const sideAreaMap: Record<string, string> = {
+      top: "block-start span-inline-end",
+      bottom: "block-end span-inline-end",
+      left: "inline-start",
+      right: "inline-end"
+    };
+
+    const area = positionArea ?? (side ? sideAreaMap[side] : undefined);
+    const fallbacks = positionTryFallbacks ?? "flip-block, flip-inline";
+
+    return {
+      ...(resolvedAnchor ? { positionAnchor: resolvedAnchor } : {}),
+      ...(area ? { positionArea: area } : {}),
+      ...(area ? { positionTryFallbacks: fallbacks } : {}),
+      ...(area ? { inset: "auto" } : {})
+    };
+  };
+
+  const computedStyle = () => {
+    const baseStyle = typeof style === "function" ? style() : style;
+    return {
+      pointerEvents: "none",
+      ...resolveAnchorStyles(),
+      ...baseStyle
+    };
+  };
 
   const content = forceMount ? (
     <Tag
       id={ctx?.tooltipId}
+      popover={useNativePopover ? popoverMode : undefined}
       role="tooltip"
       data-state={() => (isOpen() ? "open" : "closed")}
       hidden={() => !isOpen()}
       class={className}
-      style={{ pointerEvents: "none", ...style }}
+      style={computedStyle}
       {...rest}
     >
       {children}
@@ -240,10 +303,11 @@ export function TooltipContent(props: TooltipContentProps): Child {
     <Show when={isOpen}>
       <Tag
         id={ctx?.tooltipId}
+        popover={useNativePopover ? popoverMode : undefined}
         role="tooltip"
         data-state="open"
         class={className}
-        style={{ pointerEvents: "none", ...style }}
+        style={computedStyle}
         {...rest}
       >
         {children}

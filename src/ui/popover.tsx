@@ -11,6 +11,8 @@ export interface PopoverContextValue {
   triggerRef: { current: HTMLElement | null };
   contentRef: { current: HTMLElement | null };
   contentId: string;
+  anchorName: string;
+  native: boolean;
 }
 
 export const PopoverContext = createContext<PopoverContextValue | null>(null);
@@ -28,6 +30,8 @@ export interface PopoverProps {
   triggerClass?: any;
   contentClass?: any;
   portalled?: boolean;
+  anchorName?: string;
+  native?: boolean;
   children?: Child | (() => Child);
 }
 
@@ -41,13 +45,17 @@ export function PopoverRoot(props: PopoverProps): Child {
   const triggerRef: { current: HTMLElement | null } = { current: null };
   const contentRef: { current: HTMLElement | null } = { current: null };
   const contentId = createId("popover-content");
+  const anchorName = props.anchorName ?? `--popover-${contentId}`;
+  const native = props.native ?? false;
 
   const ctx: PopoverContextValue = {
     open,
     setOpen,
     triggerRef,
     contentRef,
-    contentId
+    contentId,
+    anchorName,
+    native
   };
 
   if (props.trigger !== undefined || props.content !== undefined) {
@@ -79,6 +87,7 @@ export interface PopoverTriggerProps {
   as?: string;
   class?: any;
   style?: any;
+  anchorName?: string;
   onClick?: (e: MouseEvent) => void;
   children: Child | (() => Child);
   [key: string]: any;
@@ -94,7 +103,25 @@ export function PopoverTrigger(props: PopoverTriggerProps): Child {
     }
   };
 
-  const { as: Tag = "button", children, onClick, class: className, style, ...rest } = props;
+  const {
+    as: Tag = "button",
+    children,
+    onClick,
+    class: className,
+    style,
+    anchorName: triggerAnchor,
+    ...rest
+  } = props;
+
+  const resolvedAnchor = triggerAnchor ?? ctx?.anchorName;
+
+  const triggerStyle = () => {
+    const baseStyle = typeof style === "function" ? style() : style;
+    if (resolvedAnchor) {
+      return { anchorName: resolvedAnchor, ...baseStyle };
+    }
+    return baseStyle;
+  };
 
   return (
     <Tag
@@ -102,12 +129,14 @@ export function PopoverTrigger(props: PopoverTriggerProps): Child {
         if (ctx) ctx.triggerRef.current = el;
       }}
       type={Tag === "button" ? "button" : undefined}
+      popovertarget={ctx?.native ? ctx.contentId : undefined}
+      popovertargetaction={ctx?.native ? "toggle" : undefined}
       aria-haspopup="dialog"
       aria-expanded={() => ctx?.open() ?? false}
       aria-controls={ctx?.contentId}
       data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
-      style={style}
+      style={triggerStyle}
       onClick={handleClick}
       {...rest}
     >
@@ -131,6 +160,11 @@ export interface PopoverContentProps {
   mount?: HTMLElement | null;
   class?: any;
   style?: any;
+  popover?: "auto" | "manual" | boolean;
+  side?: "top" | "bottom" | "left" | "right";
+  positionArea?: string;
+  positionAnchor?: string;
+  positionTryFallbacks?: string;
   onKeyDown?: (e: KeyboardEvent) => void;
   children: Child | (() => Child);
   [key: string]: any;
@@ -139,8 +173,12 @@ export interface PopoverContentProps {
 export function PopoverContent(props: PopoverContentProps): Child {
   const ctx = useContext(PopoverContext);
 
+  const useNativePopover =
+    props.popover !== undefined ? Boolean(props.popover) : (ctx?.native ?? false);
+  const popoverMode = typeof props.popover === "string" ? props.popover : "auto";
+
   const dismiss = useDismiss(() => ctx?.contentRef.current, {
-    enabled: () => ctx?.open() ?? false,
+    enabled: () => (ctx?.open() ?? false) && !useNativePopover,
     onDismiss: () => ctx?.setOpen(false),
     escapeKey: true,
     outsidePointer: true,
@@ -156,12 +194,16 @@ export function PopoverContent(props: PopoverContentProps): Child {
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (props.onKeyDown) props.onKeyDown(e);
-    dismiss.handleKeyDown(e);
+    if (!useNativePopover) {
+      dismiss.handleKeyDown(e);
+    }
   };
 
   const handleClick = (e: MouseEvent) => {
     if (props.onClick) props.onClick(e);
-    dismiss.handleClick(e);
+    if (!useNativePopover) {
+      dismiss.handleClick(e);
+    }
   };
 
   const {
@@ -173,8 +215,35 @@ export function PopoverContent(props: PopoverContentProps): Child {
     style,
     portalled = true,
     mount,
+    popover: _popoverProp,
+    side,
+    positionArea,
+    positionAnchor,
+    positionTryFallbacks,
     ...rest
   } = props;
+
+  const resolveAnchorStyles = () => {
+    const resolvedAnchor = positionAnchor ?? ctx?.anchorName;
+    if (!resolvedAnchor && !side && !positionArea) return {};
+
+    const sideAreaMap: Record<string, string> = {
+      top: "block-start span-inline-end",
+      bottom: "block-end span-inline-end",
+      left: "inline-start",
+      right: "inline-end"
+    };
+
+    const area = positionArea ?? (side ? sideAreaMap[side] : undefined);
+    const fallbacks = positionTryFallbacks ?? "flip-block, flip-inline, flip-block flip-inline";
+
+    return {
+      ...(resolvedAnchor ? { positionAnchor: resolvedAnchor } : {}),
+      ...(area ? { positionArea: area } : {}),
+      ...(area ? { positionTryFallbacks: fallbacks } : {}),
+      ...(area ? { inset: "auto" } : {})
+    };
+  };
 
   const content = (
     <Tag
@@ -182,15 +251,47 @@ export function PopoverContent(props: PopoverContentProps): Child {
         if (ctx) {
           ctx.contentRef.current = el;
         }
+        if (el && useNativePopover) {
+          const onToggle = (e: any) => {
+            const newState = e.newState ?? (el.matches?.(":popover-open") ? "open" : "closed");
+            if (newState === "closed" && ctx?.open()) {
+              ctx?.setOpen(false);
+            } else if (newState === "open" && !ctx?.open()) {
+              ctx?.setOpen(true);
+            }
+          };
+          el.addEventListener("toggle", onToggle);
+        }
       }}
       id={ctx?.contentId}
+      popover={useNativePopover ? popoverMode : undefined}
       role="dialog"
       data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
-      style={() => ({
-        display: ctx?.open() ? undefined : "none",
-        ...style
-      })}
+      style={() => {
+        const baseStyle = typeof style === "function" ? style() : style;
+        const anchorStyles = resolveAnchorStyles();
+        const isOpen = ctx?.open() ?? false;
+
+        const el = ctx?.contentRef.current;
+        if (el && useNativePopover && typeof (el as any).showPopover === "function") {
+          try {
+            if (isOpen) {
+              (el as any).showPopover();
+            } else {
+              (el as any).hidePopover();
+            }
+          } catch {
+            // Handled
+          }
+        }
+
+        return {
+          display: useNativePopover ? undefined : isOpen ? undefined : "none",
+          ...anchorStyles,
+          ...baseStyle
+        };
+      }}
       onKeyDown={handleKeyDown}
       onClick={handleClick}
       tabIndex={-1}

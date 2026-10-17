@@ -34,6 +34,27 @@ export function setupDOM() {
     g.requestAnimationFrame = window.requestAnimationFrame.bind(window);
     g.cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
 
+    // Provide standard HTML Popover API stubs on HTMLElement prototype
+    const elementProto = (window as any).HTMLElement?.prototype;
+    if (elementProto && !elementProto.showPopover) {
+      elementProto.showPopover = function () {
+        const wasOpen = this.__popoverOpen === true;
+        this.__popoverOpen = true;
+        const ev = new (window as any).Event("toggle");
+        (ev as any).oldState = wasOpen ? "open" : "closed";
+        (ev as any).newState = "open";
+        this.dispatchEvent(ev);
+      };
+      elementProto.hidePopover = function () {
+        const wasOpen = this.__popoverOpen === true;
+        this.__popoverOpen = false;
+        const ev = new (window as any).Event("toggle");
+        (ev as any).oldState = wasOpen ? "open" : "closed";
+        (ev as any).newState = "closed";
+        this.dispatchEvent(ev);
+      };
+    }
+
     // Teach happy-dom's CSS parser about modern dynamic viewport units (dvh, dvw, lvh, svh)
     const styleProto = (window as any).CSSStyleDeclaration?.prototype;
     if (styleProto) {

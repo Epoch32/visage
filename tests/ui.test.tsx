@@ -414,6 +414,79 @@ describe("Visage UI Component Primitives", () => {
 
       unmount();
     });
+
+    it("configures native HTML Popover API and synchronizes toggle state", () => {
+      const unmount = render(
+        () => (
+          <Popover native={true}>
+            {() => (
+              <>
+                <PopoverTrigger class="native-trigger">Open Actions</PopoverTrigger>
+                <PopoverPortal>
+                  <PopoverContent class="native-panel">Action Menu</PopoverContent>
+                </PopoverPortal>
+              </>
+            )}
+          </Popover>
+        ),
+        container
+      );
+
+      const trigger = container.querySelector(".native-trigger") as HTMLButtonElement;
+      const content = document.body.querySelector(".native-panel") as HTMLElement;
+
+      expect(trigger.getAttribute("popovertarget")).toBe(content.id);
+      expect(trigger.getAttribute("popovertargetaction")).toBe("toggle");
+      expect(content.getAttribute("popover")).toBe("auto");
+
+      // Trigger click invokes showPopover and updates signal
+      trigger.click();
+      expect(trigger.getAttribute("data-state")).toBe("open");
+      expect((content as any).__popoverOpen).toBe(true);
+
+      // Browser native light-dismiss emits toggle event to close popover
+      const toggleEv = new Event("toggle");
+      (toggleEv as any).oldState = "open";
+      (toggleEv as any).newState = "closed";
+      content.dispatchEvent(toggleEv);
+
+      expect(trigger.getAttribute("data-state")).toBe("closed");
+
+      unmount();
+    });
+
+    it("applies CSS Anchor Positioning properties and position-try-fallbacks", () => {
+      const unmount = render(
+        () => (
+          <Popover anchorName="--action-anchor">
+            {() => (
+              <>
+                <PopoverTrigger class="anchor-trigger">Trigger</PopoverTrigger>
+                <PopoverPortal>
+                  <PopoverContent side="bottom" class="anchor-content">
+                    Anchored Content
+                  </PopoverContent>
+                </PopoverPortal>
+              </>
+            )}
+          </Popover>
+        ),
+        container
+      );
+
+      const trigger = container.querySelector(".anchor-trigger") as HTMLButtonElement;
+      const content = document.body.querySelector(".anchor-content") as HTMLElement;
+
+      expect(trigger.style.anchorName).toBe("--action-anchor");
+      expect(content.style.positionAnchor).toBe("--action-anchor");
+      expect(content.style.positionArea).toBe("block-end span-inline-end");
+      expect(content.style.positionTryFallbacks).toBe(
+        "flip-block, flip-inline, flip-block flip-inline"
+      );
+      expect(content.style.inset).toBe("auto");
+
+      unmount();
+    });
   });
 
   describe("Tooltip", () => {
@@ -436,6 +509,38 @@ describe("Visage UI Component Primitives", () => {
 
       const trigger = container.querySelector(".tip-trigger") as HTMLButtonElement;
       expect(trigger.getAttribute("aria-describedby")).toContain("tooltip-");
+
+      unmount();
+    });
+
+    it("applies CSS Anchor Positioning and native popover hint to Tooltip", () => {
+      const unmount = render(
+        () => (
+          <Tooltip openDelay={0} closeDelay={0} defaultOpen={true}>
+            {() => (
+              <>
+                <TooltipTrigger class="anchor-tip-trigger">Help</TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent side="top" popover="hint" class="anchor-tip-content">
+                    Top Help
+                  </TooltipContent>
+                </TooltipPortal>
+              </>
+            )}
+          </Tooltip>
+        ),
+        container
+      );
+
+      const trigger = container.querySelector(".anchor-tip-trigger") as HTMLButtonElement;
+      const content = document.body.querySelector(".anchor-tip-content") as HTMLElement;
+
+      expect(trigger.style.anchorName).toContain("--tooltip-tooltip-");
+      expect(content.getAttribute("popover")).toBe("hint");
+      expect(content.style.positionAnchor).toBe(trigger.style.anchorName);
+      expect(content.style.positionArea).toBe("block-start span-inline-end");
+      expect(content.style.positionTryFallbacks).toBe("flip-block, flip-inline");
+      expect(content.style.inset).toBe("auto");
 
       unmount();
     });
