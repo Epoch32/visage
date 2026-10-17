@@ -10,14 +10,39 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
  * Deterministic JSON stringifier for consistent query key hashing
  */
 export function hashKey(queryKey: unknown): string {
+  if (
+    typeof queryKey === "string" ||
+    typeof queryKey === "number" ||
+    typeof queryKey === "boolean" ||
+    queryKey === null ||
+    queryKey === undefined
+  ) {
+    return JSON.stringify(queryKey);
+  }
+
+  if (Array.isArray(queryKey)) {
+    let hasComplex = false;
+    for (let i = 0; i < queryKey.length; i++) {
+      const item = queryKey[i];
+      if (item !== null && typeof item === "object") {
+        hasComplex = true;
+        break;
+      }
+    }
+    if (!hasComplex) {
+      return JSON.stringify(queryKey);
+    }
+  }
+
   return JSON.stringify(queryKey, (_key, val) => {
     if (isPlainObject(val)) {
-      return Object.keys(val)
-        .sort()
-        .reduce((result: Record<string, unknown>, k) => {
-          result[k] = val[k];
-          return result;
-        }, {});
+      const sortedKeys = Object.keys(val).sort();
+      const result: Record<string, unknown> = {};
+      for (let i = 0; i < sortedKeys.length; i++) {
+        const k = sortedKeys[i]!;
+        result[k] = val[k];
+      }
+      return result;
     }
     return val;
   });
