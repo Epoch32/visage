@@ -144,6 +144,85 @@ describe("Visage Native IPC Bridge (visage/native)", () => {
       { cmd: "window:startDrag", payload: { button: 1, screenX: 150, screenY: 200 } }
     ]);
   });
+
+  it("invokes native dialog functions (open, save, message)", async () => {
+    (globalThis as any).window = {};
+    const calls: { cmd: string; payload: any }[] = [];
+
+    (globalThis as any).window.__visage_native_call = async (
+      _id: string,
+      cmd: string,
+      payload: any
+    ) => {
+      calls.push({ cmd, payload });
+      if (cmd === "dialog:open") return "/home/user/document.txt";
+      if (cmd === "dialog:save") return "/home/user/saved.txt";
+      if (cmd === "dialog:message") return true;
+      return null;
+    };
+
+    const openRes = await native.dialog.open({ title: "Select File", multiple: false });
+    const saveRes = await native.dialog.save({ title: "Save Project", defaultName: "app.visage" });
+    const msgRes = await native.dialog.message({
+      title: "Confirm",
+      message: "Are you sure?",
+      level: "question",
+      buttons: "yesNo"
+    });
+
+    expect(openRes).toBe("/home/user/document.txt");
+    expect(saveRes).toBe("/home/user/saved.txt");
+    expect(msgRes).toBe(true);
+
+    expect(calls).toEqual([
+      { cmd: "dialog:open", payload: { title: "Select File", multiple: false } },
+      { cmd: "dialog:save", payload: { title: "Save Project", defaultName: "app.visage" } },
+      {
+        cmd: "dialog:message",
+        payload: {
+          title: "Confirm",
+          message: "Are you sure?",
+          level: "question",
+          buttons: "yesNo"
+        }
+      }
+    ]);
+  });
+
+  it("invokes native notification functions (send, isSupported)", async () => {
+    (globalThis as any).window = {};
+    const calls: { cmd: string; payload: any }[] = [];
+
+    (globalThis as any).window.__visage_native_call = async (
+      _id: string,
+      cmd: string,
+      payload: any
+    ) => {
+      calls.push({ cmd, payload });
+      if (cmd === "notification:isSupported") return true;
+      return { success: true };
+    };
+
+    await native.notification.send({
+      title: "Build Complete",
+      body: "Native executable ready in zig-out/bin/",
+      urgency: "normal"
+    });
+    const supported = await native.notification.isSupported();
+
+    expect(supported).toBe(true);
+    expect(calls).toEqual([
+      {
+        cmd: "notification:send",
+        payload: {
+          title: "Build Complete",
+          body: "Native executable ready in zig-out/bin/",
+          urgency: "normal"
+        }
+      },
+      { cmd: "notification:isSupported", payload: undefined }
+    ]);
+  });
 });
 
 describe("Zig Native Project Scaffolding", () => {

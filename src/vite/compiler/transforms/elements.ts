@@ -355,6 +355,7 @@ export function processElement(
       expr: singleChild.expression as t.Expression
     });
   } else {
+    let lastChildWasText = false;
     for (let i = 0; i < element.children.length; i++) {
       const child = element.children[i]!;
 
@@ -362,12 +363,16 @@ export function processElement(
         if (/[\r\n]/.test(child.value) && child.value.trim() === "") {
           continue;
         }
-        const trimmed = child.value.replace(/\s+/g, " ");
+        const trimmed = child.value.replace(/\s+/g, " ").trim();
         if (trimmed) {
-          childrenHtml += escapeHtml(trimmed.trim());
-          childDomIndex++;
+          childrenHtml += escapeHtml(trimmed);
+          if (!lastChildWasText) {
+            childDomIndex++;
+            lastChildWasText = true;
+          }
         }
       } else if (t.isJSXElement(child)) {
+        lastChildWasText = false;
         const childTag = getTagName(child);
         if (isComponentTag(childTag)) {
           childrenHtml += "<!--visage-c-->";
@@ -385,9 +390,16 @@ export function processElement(
         if (!t.isJSXEmptyExpression(child.expression)) {
           const expr = child.expression as t.Expression;
           if (t.isStringLiteral(expr) || t.isNumericLiteral(expr)) {
-            childrenHtml += escapeHtml(String(expr.value));
-            childDomIndex++;
+            const staticText = String(expr.value);
+            if (staticText) {
+              childrenHtml += escapeHtml(staticText);
+              if (!lastChildWasText) {
+                childDomIndex++;
+                lastChildWasText = true;
+              }
+            }
           } else {
+            lastChildWasText = false;
             childrenHtml += "<!--visage-b-->";
             dynamicChildren.push({
               index: childDomIndex,

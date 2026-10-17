@@ -23,6 +23,28 @@ pub const WindowConfig = struct {
 
 var global_webview: ?*Webview = null;
 
+const BufferWriter = struct {
+    buf: []u8,
+    idx: usize = 0,
+
+    pub fn writeByte(self: *BufferWriter, b: u8) void {
+        if (self.idx < self.buf.len) {
+            self.buf[self.idx] = b;
+            self.idx += 1;
+        }
+    }
+
+    pub fn writeSlice(self: *BufferWriter, s: []const u8) void {
+        for (s) |b| {
+            self.writeByte(b);
+        }
+    }
+
+    pub fn getWritten(self: *const BufferWriter) []const u8 {
+        return self.buf[0..self.idx];
+    }
+};
+
 const linux = if (builtin.os.tag == .linux) struct {
     extern fn gtk_window_set_decorated(window: ?*anyopaque, setting: c_int) void;
     extern fn gtk_window_get_decorated(window: ?*anyopaque) c_int;
@@ -32,6 +54,32 @@ const linux = if (builtin.os.tag == .linux) struct {
     extern fn gdk_screen_get_default() ?*anyopaque;
     extern fn gtk_style_context_add_provider_for_screen(screen: ?*anyopaque, provider: ?*anyopaque, priority: c_uint) void;
     extern fn g_object_unref(object: ?*anyopaque) void;
+
+    // File Chooser Dialog
+    extern fn gtk_file_chooser_dialog_new(title: ?[*:0]const u8, parent: ?*anyopaque, action: c_int, first_button: ?*anyopaque) ?*anyopaque;
+    extern fn gtk_dialog_add_button(dialog: ?*anyopaque, button_text: [*:0]const u8, response_id: c_int) ?*anyopaque;
+    extern fn gtk_dialog_run(dialog: ?*anyopaque) c_int;
+    extern fn gtk_widget_destroy(widget: ?*anyopaque) void;
+    extern fn gtk_file_chooser_get_filename(chooser: ?*anyopaque) ?[*:0]const u8;
+    extern fn gtk_file_chooser_set_current_name(chooser: ?*anyopaque, name: [*:0]const u8) void;
+    extern fn gtk_file_chooser_set_select_multiple(chooser: ?*anyopaque, select_multiple: c_int) void;
+    extern fn gtk_file_chooser_set_current_folder(chooser: ?*anyopaque, filename: [*:0]const u8) c_int;
+    extern fn g_free(mem: ?*anyopaque) void;
+
+    pub const GSList = extern struct {
+        data: ?*anyopaque,
+        next: ?*GSList,
+    };
+    extern fn gtk_file_chooser_get_filenames(chooser: ?*anyopaque) ?*GSList;
+    extern fn g_slist_free(list: ?*GSList) void;
+
+    // Message Dialog
+    extern fn gtk_message_dialog_new(parent: ?*anyopaque, flags: c_int, msg_type: c_int, buttons: c_int, message_format: ?*anyopaque) ?*anyopaque;
+    extern fn gtk_message_dialog_set_markup(message_dialog: ?*anyopaque, str: [*:0]const u8) void;
+    extern fn gtk_window_set_title(window: ?*anyopaque, title: [*:0]const u8) void;
+
+    // System libc invocation for desktop notification
+    extern fn system(cmd: [*:0]const u8) c_int;
 
     pub fn applyBorder(color: []const u8, width: c_int, radius: c_int) void {
         const provider = gtk_css_provider_new() orelse return;
@@ -52,7 +100,78 @@ const linux = if (builtin.os.tag == .linux) struct {
             }
         }
     }
+
+    pub fn sendNotification(app_name: []const u8, title: []const u8, body: []const u8, urgency: []const u8, icon: []const u8) void {
+        var cmd_buf: [2048]u8 = undefined;
+        var bw = BufferWriter{ .buf = &cmd_buf };
+
+        bw.writeSlice("notify-send");
+        if (app_name.len > 0) {
+            bw.writeSlice(" -a '");
+            for (app_name) |c| {
+                if (c == '\'') bw.writeSlice("'\\''")
+                else bw.writeByte(c);
+            }
+            bw.writeSlice("'");
+        }
+        if (urgency.len > 0) {
+            bw.writeSlice(" -u '");
+            bw.writeSlice(urgency);
+            bw.writeSlice("'");
+        }
+        if (icon.len > 0) {
+            bw.writeSlice(" -i '");
+            bw.writeSlice(icon);
+            bw.writeSlice("'");
+        }
+        bw.writeSlice(" '");
+        for (title) |c| {
+            if (c == '\'') bw.writeSlice("'\\''")
+            else bw.writeByte(c);
+        }
+        bw.writeSlice("'");
+
+        if (body.len > 0) {
+            bw.writeSlice(" '");
+            for (body) |c| {
+                if (c == '\'') bw.writeSlice("'\\''")
+                else bw.writeByte(c);
+            }
+            bw.writeSlice("'");
+        }
+
+        const written = bw.getWritten();
+        if (written.len < cmd_buf.len) {
+            cmd_buf[written.len] = 0;
+            const cmd_z: [*:0]const u8 = @ptrCast(cmd_buf[0..written.len]);
+            _ = system(cmd_z);
+        }
+    }
 } else struct {};
+
+fn getJsonStringField(req: []const u8, key: []const u8) ?[]const u8 {
+    var search_buf: [64]u8 = undefined;
+    const search_key = std.fmt.bufPrint(&search_buf, "\"{s}\":", .{key}) catch return null;
+    const idx = std.mem.indexOf(u8, req, search_key) orelse return null;
+    const rest = req[idx + search_key.len ..];
+    const start_quote = std.mem.indexOf(u8, rest, "\"") orelse return null;
+    const val_rest = rest[start_quote + 1 ..];
+    const end_quote = std.mem.indexOf(u8, val_rest, "\"") orelse return null;
+    return val_rest[0..end_quote];
+}
+
+fn getJsonBoolField(req: []const u8, key: []const u8) bool {
+    var search_buf: [64]u8 = undefined;
+    const search_key = std.fmt.bufPrint(&search_buf, "\"{s}\":", .{key}) catch return false;
+    const idx = std.mem.indexOf(u8, req, search_key) orelse return false;
+    const rest = req[idx + search_key.len ..];
+    var i: usize = 0;
+    while (i < rest.len and (rest[i] == ' ' or rest[i] == '\t')) : (i += 1) {}
+    if (i + 4 <= rest.len and std.mem.eql(u8, rest[i .. i + 4], "true")) {
+        return true;
+    }
+    return false;
+}
 
 fn handleNativeCall(id: [:0]const u8, req: [:0]const u8, arg: ?*anyopaque) void {
     _ = arg;
@@ -116,14 +235,8 @@ fn handleNativeCall(id: [:0]const u8, req: [:0]const u8, arg: ?*anyopaque) void 
             var width: c_int = 1;
             var radius: c_int = 0;
 
-            if (std.mem.indexOf(u8, req, "\"color\":")) |idx| {
-                const rest = req[idx + 8 ..];
-                if (std.mem.indexOf(u8, rest, "\"")) |start_quote| {
-                    const val_rest = rest[start_quote + 1 ..];
-                    if (std.mem.indexOf(u8, val_rest, "\"")) |end_quote| {
-                        color = val_rest[0..end_quote];
-                    }
-                }
+            if (getJsonStringField(req, "color")) |c| {
+                color = c;
             }
             if (std.mem.indexOf(u8, req, "\"width\":")) |idx| {
                 const rest = req[idx + 8 ..];
@@ -145,6 +258,230 @@ fn handleNativeCall(id: [:0]const u8, req: [:0]const u8, arg: ?*anyopaque) void 
             linux.applyBorder(color, width, radius);
         }
         w.respond(id, .ok, "{\"success\": true}") catch {};
+    } else if (std.mem.indexOf(u8, req, "dialog:open") != null) {
+        if (builtin.os.tag == .linux) {
+            const gtk_win = w.getWindow();
+            var title_buf: [256:0]u8 = undefined;
+            const title_str = getJsonStringField(req, "title") orelse "Open File";
+            const title_z = std.fmt.bufPrintZ(&title_buf, "{s}", .{title_str}) catch "Open File";
+
+            const is_dir = getJsonBoolField(req, "directory");
+            const is_multiple = getJsonBoolField(req, "multiple");
+            const action: c_int = if (is_dir) 2 else 0; // 2 = SELECT_FOLDER, 0 = OPEN
+
+            const dialog = linux.gtk_file_chooser_dialog_new(title_z, gtk_win, action, null);
+            if (dialog != null) {
+                defer linux.gtk_widget_destroy(dialog);
+
+                _ = linux.gtk_dialog_add_button(dialog, "_Cancel", -6); // GTK_RESPONSE_CANCEL
+                _ = linux.gtk_dialog_add_button(dialog, "_Open", -3);   // GTK_RESPONSE_ACCEPT
+
+                if (is_multiple) {
+                    linux.gtk_file_chooser_set_select_multiple(dialog, 1);
+                }
+
+                if (getJsonStringField(req, "defaultPath")) |def_path| {
+                    var def_buf: [512:0]u8 = undefined;
+                    if (std.fmt.bufPrintZ(&def_buf, "{s}", .{def_path})) |def_z| {
+                        _ = linux.gtk_file_chooser_set_current_folder(dialog, def_z);
+                    } else |_| {}
+                }
+
+                const response = linux.gtk_dialog_run(dialog);
+                if (response == -3) { // GTK_RESPONSE_ACCEPT
+                    if (is_multiple) {
+                        var json_buf: [4096]u8 = undefined;
+                        var bw = BufferWriter{ .buf = &json_buf };
+                        bw.writeByte('[');
+
+                        var list = linux.gtk_file_chooser_get_filenames(dialog);
+                        const orig_list = list;
+                        var first = true;
+                        while (list != null) {
+                            if (list.?.data) |d| {
+                                const filename: [*:0]const u8 = @ptrCast(d);
+                                const slice = std.mem.span(filename);
+                                if (!first) {
+                                    bw.writeByte(',');
+                                }
+                                first = false;
+                                bw.writeByte('"');
+                                for (slice) |c| {
+                                    if (c == '"') bw.writeSlice("\\\"")
+                                    else if (c == '\\') bw.writeSlice("\\\\")
+                                    else bw.writeByte(c);
+                                }
+                                bw.writeByte('"');
+                                linux.g_free(@ptrCast(@constCast(filename)));
+                            }
+                            list = list.?.next;
+                        }
+                        if (orig_list != null) {
+                            linux.g_slist_free(orig_list);
+                        }
+                        bw.writeByte(']');
+                        const res_slice = bw.getWritten();
+                        var final_buf: [4096:0]u8 = undefined;
+                        const final_z = std.fmt.bufPrintZ(&final_buf, "{s}", .{res_slice}) catch "[]";
+                        w.respond(id, .ok, final_z) catch {};
+                        return;
+                    } else {
+                        if (linux.gtk_file_chooser_get_filename(dialog)) |filename| {
+                            defer linux.g_free(@ptrCast(@constCast(filename)));
+                            const slice = std.mem.span(filename);
+                            var path_buf: [1024]u8 = undefined;
+                            var bw = BufferWriter{ .buf = &path_buf };
+                            bw.writeByte('"');
+                            for (slice) |c| {
+                                if (c == '"') bw.writeSlice("\\\"")
+                                else if (c == '\\') bw.writeSlice("\\\\")
+                                else bw.writeByte(c);
+                            }
+                            bw.writeByte('"');
+                            const written = bw.getWritten();
+                            var final_buf: [1024:0]u8 = undefined;
+                            const final_z = std.fmt.bufPrintZ(&final_buf, "{s}", .{written}) catch "null";
+                            w.respond(id, .ok, final_z) catch {};
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        w.respond(id, .ok, "null") catch {};
+    } else if (std.mem.indexOf(u8, req, "dialog:save") != null) {
+        if (builtin.os.tag == .linux) {
+            const gtk_win = w.getWindow();
+            var title_buf: [256:0]u8 = undefined;
+            const title_str = getJsonStringField(req, "title") orelse "Save File";
+            const title_z = std.fmt.bufPrintZ(&title_buf, "{s}", .{title_str}) catch "Save File";
+
+            const dialog = linux.gtk_file_chooser_dialog_new(title_z, gtk_win, 1, null); // 1 = SAVE
+            if (dialog != null) {
+                defer linux.gtk_widget_destroy(dialog);
+
+                _ = linux.gtk_dialog_add_button(dialog, "_Cancel", -6);
+                _ = linux.gtk_dialog_add_button(dialog, "_Save", -3);
+
+                if (getJsonStringField(req, "defaultName")) |def_name| {
+                    var name_buf: [256:0]u8 = undefined;
+                    if (std.fmt.bufPrintZ(&name_buf, "{s}", .{def_name})) |name_z| {
+                        linux.gtk_file_chooser_set_current_name(dialog, name_z);
+                    } else |_| {}
+                }
+
+                if (getJsonStringField(req, "defaultPath")) |def_path| {
+                    var def_buf: [512:0]u8 = undefined;
+                    if (std.fmt.bufPrintZ(&def_buf, "{s}", .{def_path})) |def_z| {
+                        _ = linux.gtk_file_chooser_set_current_folder(dialog, def_z);
+                    } else |_| {}
+                }
+
+                const response = linux.gtk_dialog_run(dialog);
+                if (response == -3) { // GTK_RESPONSE_ACCEPT
+                    if (linux.gtk_file_chooser_get_filename(dialog)) |filename| {
+                        defer linux.g_free(@ptrCast(@constCast(filename)));
+                        const slice = std.mem.span(filename);
+                        var path_buf: [1024]u8 = undefined;
+                        var bw = BufferWriter{ .buf = &path_buf };
+                        bw.writeByte('"');
+                        for (slice) |c| {
+                            if (c == '"') bw.writeSlice("\\\"")
+                            else if (c == '\\') bw.writeSlice("\\\\")
+                            else bw.writeByte(c);
+                        }
+                        bw.writeByte('"');
+                        const written = bw.getWritten();
+                        var final_buf: [1024:0]u8 = undefined;
+                        const final_z = std.fmt.bufPrintZ(&final_buf, "{s}", .{written}) catch "null";
+                        w.respond(id, .ok, final_z) catch {};
+                        return;
+                    }
+                }
+            }
+        }
+        w.respond(id, .ok, "null") catch {};
+    } else if (std.mem.indexOf(u8, req, "dialog:message") != null) {
+        if (builtin.os.tag == .linux) {
+            const gtk_win = w.getWindow();
+            const msg_str = getJsonStringField(req, "message") orelse "Message";
+            var msg_buf: [2048]u8 = undefined;
+            var bw = BufferWriter{ .buf = &msg_buf };
+            var mi: usize = 0;
+            while (mi < msg_str.len) {
+                if (std.mem.startsWith(u8, msg_str[mi..], "<br></br>")) {
+                    bw.writeByte('\n');
+                    mi += 9;
+                } else if (std.mem.startsWith(u8, msg_str[mi..], "<br />")) {
+                    bw.writeByte('\n');
+                    mi += 6;
+                } else if (std.mem.startsWith(u8, msg_str[mi..], "<br/>")) {
+                    bw.writeByte('\n');
+                    mi += 5;
+                } else if (std.mem.startsWith(u8, msg_str[mi..], "<br>")) {
+                    bw.writeByte('\n');
+                    mi += 4;
+                } else if (std.mem.startsWith(u8, msg_str[mi..], "\\n")) {
+                    bw.writeByte('\n');
+                    mi += 2;
+                } else {
+                    bw.writeByte(msg_str[mi]);
+                    mi += 1;
+                }
+            }
+            const normalized_msg = bw.getWritten();
+            var final_msg_buf: [2048:0]u8 = undefined;
+            const msg_z = std.fmt.bufPrintZ(&final_msg_buf, "{s}", .{normalized_msg}) catch "Message";
+
+            const level_str = getJsonStringField(req, "level") orelse "info";
+            const msg_type: c_int = if (std.mem.eql(u8, level_str, "warning")) 1
+                else if (std.mem.eql(u8, level_str, "question")) 2
+                else if (std.mem.eql(u8, level_str, "error")) 3
+                else 0; // 0 = GTK_MESSAGE_INFO
+
+            const btn_str = getJsonStringField(req, "buttons") orelse "ok";
+            const buttons: c_int = if (std.mem.eql(u8, btn_str, "yesNo")) 4 // GTK_BUTTONS_YES_NO
+                else if (std.mem.eql(u8, btn_str, "okCancel")) 5 // GTK_BUTTONS_OK_CANCEL
+                else 1; // GTK_BUTTONS_OK
+
+            const dialog = linux.gtk_message_dialog_new(gtk_win, 1, msg_type, buttons, null);
+            if (dialog != null) {
+                defer linux.gtk_widget_destroy(dialog);
+                if (getJsonStringField(req, "title")) |title_str| {
+                    var title_buf: [256:0]u8 = undefined;
+                    if (std.fmt.bufPrintZ(&title_buf, "{s}", .{title_str})) |title_z| {
+                        linux.gtk_window_set_title(dialog, title_z);
+                    } else |_| {}
+                }
+                linux.gtk_message_dialog_set_markup(dialog, msg_z);
+
+                const response = linux.gtk_dialog_run(dialog);
+                // GTK_RESPONSE_OK = -5, GTK_RESPONSE_YES = -8, GTK_RESPONSE_ACCEPT = -3
+                if (response == -5 or response == -8 or response == -3) {
+                    w.respond(id, .ok, "true") catch {};
+                    return;
+                } else {
+                    w.respond(id, .ok, "false") catch {};
+                    return;
+                }
+            }
+        }
+        w.respond(id, .ok, "false") catch {};
+    } else if (std.mem.indexOf(u8, req, "notification:send") != null) {
+        if (builtin.os.tag == .linux) {
+            const title = getJsonStringField(req, "title") orelse WindowConfig.title;
+            const body = getJsonStringField(req, "body") orelse "";
+            const urgency = getJsonStringField(req, "urgency") orelse "normal";
+            const icon = getJsonStringField(req, "icon") orelse "dialog-information";
+            linux.sendNotification(WindowConfig.title, title, body, urgency, icon);
+        }
+        w.respond(id, .ok, "{\"success\": true}") catch {};
+    } else if (std.mem.indexOf(u8, req, "notification:isSupported") != null) {
+        if (builtin.os.tag == .linux) {
+            w.respond(id, .ok, "true") catch {};
+        } else {
+            w.respond(id, .ok, "false") catch {};
+        }
     } else {
         w.respond(id, .ok, "{\"ok\": true}") catch {};
     }

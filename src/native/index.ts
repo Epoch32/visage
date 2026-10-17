@@ -196,6 +196,41 @@ export function invoke<T = any>(command: string, payload?: any): Promise<T> {
         `[visage:native] Running in standard browser mode. Mocking native command: "${command}"`
       );
     }
+
+    if (command === "dialog:open") {
+      resolve(
+        (payload?.multiple
+          ? ["/mock/documents/sample.txt"]
+          : "/mock/documents/sample.txt") as unknown as T
+      );
+      return;
+    }
+    if (command === "dialog:save") {
+      resolve("/mock/documents/saved-file.txt" as unknown as T);
+      return;
+    }
+    if (command === "dialog:message") {
+      const confirmed =
+        typeof window !== "undefined" && typeof window.confirm === "function"
+          ? window.confirm(payload?.message || "")
+          : true;
+      resolve(confirmed as unknown as T);
+      return;
+    }
+    if (command === "notification:send") {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification(payload?.title || "Visage", { body: payload?.body });
+      } else {
+        console.info(`[visage:notification] ${payload?.title}: ${payload?.body || ""}`);
+      }
+      resolve(undefined as unknown as T);
+      return;
+    }
+    if (command === "notification:isSupported") {
+      resolve(true as unknown as T);
+      return;
+    }
+
     resolve({ ok: true, mock: true, command } as unknown as T);
   });
 }
@@ -303,6 +338,86 @@ export const windowControls = {
   startDrag
 };
 
+export interface OpenDialogOptions {
+  title?: string;
+  defaultPath?: string;
+  multiple?: boolean;
+  directory?: boolean;
+}
+
+export interface SaveDialogOptions {
+  title?: string;
+  defaultPath?: string;
+  defaultName?: string;
+}
+
+export interface MessageDialogOptions {
+  title?: string;
+  message: string;
+  level?: "info" | "warning" | "error" | "question";
+  buttons?: "ok" | "okCancel" | "yesNo";
+}
+
+export interface NotificationOptions {
+  title: string;
+  body?: string;
+  icon?: string;
+  urgency?: "low" | "normal" | "critical";
+}
+
+/**
+ * Open native OS file or directory picker dialog.
+ */
+export function openDialog(options?: OpenDialogOptions): Promise<string[] | string | null> {
+  return invoke("dialog:open", options);
+}
+
+/**
+ * Open native OS file save dialog.
+ */
+export function saveDialog(options?: SaveDialogOptions): Promise<string | null> {
+  return invoke("dialog:save", options);
+}
+
+/**
+ * Show a native OS message / confirmation dialog.
+ * Returns true if confirmed (OK / Yes), false if cancelled (Cancel / No).
+ */
+export function messageDialog(options: MessageDialogOptions): Promise<boolean> {
+  return invoke("dialog:message", options);
+}
+
+/**
+ * Send a native desktop notification.
+ */
+export function sendNotification(options: NotificationOptions): Promise<void> {
+  return invoke("notification:send", options);
+}
+
+/**
+ * Check if desktop notifications are supported by the host.
+ */
+export function isNotificationSupported(): Promise<boolean> {
+  return invoke("notification:isSupported");
+}
+
+/**
+ * Dialog functions namespace
+ */
+export const dialog = {
+  open: openDialog,
+  save: saveDialog,
+  message: messageDialog
+};
+
+/**
+ * Desktop notification functions namespace
+ */
+export const notification = {
+  send: sendNotification,
+  isSupported: isNotificationSupported
+};
+
 /**
  * Default native namespace export
  */
@@ -316,7 +431,9 @@ export const native = {
   setDecorations,
   setBorder,
   startDrag,
-  window: windowControls
+  window: windowControls,
+  dialog,
+  notification
 };
 
 export default native;

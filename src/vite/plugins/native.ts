@@ -38,6 +38,7 @@ export function inlineSingleFileHtml(
 
   // Inline script tags and capture SHA-256 hashes for CSP
   const scriptHashes: string[] = [];
+  const inlinedScripts: string[] = [];
   html = html.replace(
     /<script\b[^>]*src=["'](?:\.\/)?assets\/([^"']+)["'][^>]*><\/script>/gi,
     (match, file) => {
@@ -51,11 +52,21 @@ export function inlineSingleFileHtml(
         } catch {
           // Ignore hash failure if crypto unavailable
         }
-        return `<script type="module">${scriptCode}</script>`;
+        inlinedScripts.push(`<script type="module">${scriptCode}</script>`);
+        return "";
       }
       return match;
     }
   );
+
+  if (inlinedScripts.length > 0) {
+    const scriptsBlock = inlinedScripts.join("\n");
+    if (html.includes("</body>")) {
+      html = html.replace("</body>", `  ${scriptsBlock}\n</body>`);
+    } else {
+      html += `\n${scriptsBlock}`;
+    }
+  }
 
   // If virtualOrigin is set, ensure <base href="${virtualOrigin}/"> is present
   if (virtualOrigin && !/<base\b/i.test(html)) {
