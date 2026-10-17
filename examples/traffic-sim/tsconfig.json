@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "visage",
+    "types": ["vite/client"],
+    "paths": {
+      "visage": ["../../src/index.ts"],
+      "visage/jsx-runtime": ["../../src/jsx-runtime/index.ts"],
+      "visage/jsx-dev-runtime": ["../../src/jsx-runtime/index.ts"],
+      "visage/ui": ["../../src/ui/index.ts"],
+      "visage/charts": ["../../src/charts/index.ts"],
+      "visage/vite": ["../../src/vite/index.ts"],
+      "visage/*": ["../../src/*"]
+    },
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src", "sim.ts"]
+}

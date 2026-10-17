@@ -129,7 +129,8 @@
     "example:charts": "vite examples/charts-showcase",
     "example:auth": "vite examples/enterprise-auth",
     "example:api": "bun examples/api-showcase/server.ts",
-    "example:benchmark": "vite examples/benchmark-showcase"
+    "example:benchmark": "vite examples/benchmark-showcase",
+    "example:sim": "vite examples/traffic-sim"
   },
   "devDependencies": {
     "@babel/core": "^8.0.7",
