@@ -108,14 +108,14 @@ export function createSelector<T, U = T>(
         const prevDep = map.get(prevValue as any);
         if (prevDep) {
           prevDep.notify();
-          if (prevDep.subscribers.size === 0) {
+          if (prevDep.size === 0) {
             map.delete(prevValue as any);
           }
         }
         const nextDep = map.get(nextValue as any);
         if (nextDep) {
           nextDep.notify();
-          if (nextDep.subscribers.size === 0) {
+          if (nextDep.size === 0) {
             map.delete(nextValue as any);
           }
         }
@@ -125,7 +125,7 @@ export function createSelector<T, U = T>(
           const isMatch = eq(key, nextValue);
           if (wasMatch !== isMatch) {
             dep.notify();
-            if (dep.subscribers.size === 0) {
+            if (dep.size === 0) {
               map.delete(key);
             }
           }
