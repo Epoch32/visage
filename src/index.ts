@@ -206,11 +206,13 @@ export {
 } from "./query";
 // Router Primitives
 export {
+  clearPrefetchCache,
   Link,
   type LinkProps,
   type LocationState,
   type MatchedRoute,
   type NavigateOptions,
+  prefetch,
   Route,
   type RouteDefinition,
   type RouteProps,
@@ -222,6 +224,7 @@ export {
   useLocation,
   useNavigate,
   useParams,
+  usePrefetch,
   useSearchParams
 } from "./router";
 // Type-Safe Wire RPC & APIs

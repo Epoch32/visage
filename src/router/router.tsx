@@ -23,12 +23,62 @@ export interface NavigateOptions {
 export interface RouterContextValue {
   location: LocationState;
   navigate: (to: string, options?: NavigateOptions) => void;
+  prefetchDefault?: boolean | "hover" | "render";
   params: ReadonlySignal<Record<string, string>>;
   base: string;
   matchedRoute: ReadonlySignal<MatchedRoute | null>;
   routes: RouteDefinition[];
   registerRoute: (route: RouteDefinition) => void;
   unregisterRoute: (route: RouteDefinition) => void;
+}
+
+const prefetchedUrls = new Set<string>();
+
+/**
+ * Clear the internal prefetch URL cache (primarily for testing)
+ */
+export function clearPrefetchCache(): void {
+  prefetchedUrls.clear();
+}
+
+/**
+ * Speculatively prefetch a URL using the Speculation Rules API when supported,
+ * falling back to <link rel="prefetch">.
+ */
+export function prefetch(url: string): void {
+  if (typeof document === "undefined" || !url || prefetchedUrls.has(url)) return;
+  if (
+    url.startsWith("#") ||
+    url.startsWith("javascript:") ||
+    url.startsWith("mailto:") ||
+    url.startsWith("tel:")
+  ) {
+    return;
+  }
+  prefetchedUrls.add(url);
+
+  if (
+    typeof HTMLScriptElement !== "undefined" &&
+    typeof (HTMLScriptElement as any).supports === "function" &&
+    (HTMLScriptElement as any).supports("speculationrules")
+  ) {
+    const script = document.createElement("script");
+    script.type = "speculationrules";
+    script.textContent = JSON.stringify({
+      prefetch: [
+        {
+          source: "list",
+          urls: [url]
+        }
+      ]
+    });
+    document.head.appendChild(script);
+  } else if (typeof document.createElement === "function") {
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.href = url;
+    document.head.appendChild(link);
+  }
 }
 
 export interface MatchedRoute {
@@ -102,6 +152,7 @@ export interface RouterProps {
   base?: string;
   mode?: "history" | "hash";
   viewTransitions?: boolean;
+  prefetch?: boolean | "hover" | "render";
   children: Child;
 }
 
@@ -217,6 +268,7 @@ export function Router(props: RouterProps): Child {
   const routerValue: RouterContextValue = {
     location: { pathname, search, hash },
     navigate,
+    prefetchDefault: props.prefetch,
     params,
     base,
     matchedRoute,
@@ -301,12 +353,13 @@ export interface LinkProps {
   activeClass?: string;
   replace?: boolean;
   viewTransition?: boolean;
+  prefetch?: boolean | "hover" | "render";
   children: Child;
   [key: string]: any;
 }
 
 /**
- * Accessible client-side navigation Link with active state highlighting
+ * Accessible client-side navigation Link with active state highlighting and speculative prefetching
  */
 export function Link(props: LinkProps): Child {
   const router = useContext(RouterContext);
@@ -317,10 +370,36 @@ export function Link(props: LinkProps): Child {
     activeClass = "active",
     replace,
     viewTransition,
+    prefetch: prefetchProp,
+    onPointerEnter,
+    onFocus,
     children,
     ...rest
   } = props;
   const rawClass = classProp ?? classNameProp;
+
+  const prefetchMode = prefetchProp ?? router?.prefetchDefault;
+  if (prefetchMode === "render") {
+    prefetch(href);
+  }
+
+  const handlePointerEnter = (e: any) => {
+    if (prefetchMode === true || prefetchMode === "hover") {
+      prefetch(href);
+    }
+    if (typeof onPointerEnter === "function") {
+      onPointerEnter(e);
+    }
+  };
+
+  const handleFocus = (e: any) => {
+    if (prefetchMode === true || prefetchMode === "hover") {
+      prefetch(href);
+    }
+    if (typeof onFocus === "function") {
+      onFocus(e);
+    }
+  };
 
   const handleClick = (e: MouseEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
@@ -350,7 +429,14 @@ export function Link(props: LinkProps): Child {
   });
 
   return (
-    <a href={href} class={computedClass} onClick={handleClick} {...rest}>
+    <a
+      href={href}
+      class={computedClass}
+      onClick={handleClick}
+      onPointerEnter={handlePointerEnter}
+      onFocus={handleFocus}
+      {...rest}
+    >
       {children}
     </a>
   );
@@ -372,6 +458,13 @@ export function useNavigate(): (to: string, options?: NavigateOptions) => void {
   const router = useContext(RouterContext);
   if (!router) throw new Error("useNavigate must be used within a <Router>");
   return router.navigate;
+}
+
+/**
+ * Imperatively trigger speculative prefetching of URLs
+ */
+export function usePrefetch(): (url: string) => void {
+  return prefetch;
 }
 
 /**

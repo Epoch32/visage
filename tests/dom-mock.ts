@@ -15,6 +15,9 @@ export function setupDOM() {
     g.HTMLTextAreaElement = window.HTMLTextAreaElement;
     g.HTMLSelectElement = window.HTMLSelectElement;
     g.HTMLIFrameElement = window.HTMLIFrameElement;
+    g.HTMLScriptElement = window.HTMLScriptElement;
+    g.HTMLLinkElement = window.HTMLLinkElement;
+    g.HTMLAnchorElement = window.HTMLAnchorElement;
     g.SVGElement = window.SVGElement;
     g.Text = window.Text;
     g.Comment = window.Comment;

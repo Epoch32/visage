@@ -3,7 +3,18 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { Link, Route, Router, Routes, render, useNavigate, useParams } from "../src";
+import {
+  clearPrefetchCache,
+  Link,
+  prefetch,
+  Route,
+  Router,
+  Routes,
+  render,
+  useNavigate,
+  useParams,
+  usePrefetch
+} from "../src";
 
 describe("Visage Router", () => {
   let container: any;
@@ -323,6 +334,160 @@ describe("Visage Router", () => {
 
       navigateFn("/no-vt", { viewTransition: true });
       expect(container.querySelector(".page-no-vt")?.textContent).toBe("No VT");
+
+      unmount();
+    });
+  });
+
+  describe("Speculative Navigation (Speculation Rules & Prefetching)", () => {
+    afterEach(() => {
+      clearPrefetchCache();
+      delete (HTMLScriptElement as any).supports;
+      // Clean up injected prefetch tags from head
+      const scripts = document.head.querySelectorAll('script[type="speculationrules"]');
+      for (const s of scripts) {
+        s.remove();
+      }
+      const links = document.head.querySelectorAll('link[rel="prefetch"]');
+      for (const l of links) {
+        l.remove();
+      }
+    });
+
+    it('injects <script type="speculationrules"> when HTMLScriptElement.supports is available', () => {
+      (HTMLScriptElement as any).supports = (feature: string) => feature === "speculationrules";
+
+      prefetch("/products/featured");
+
+      const script = document.head.querySelector('script[type="speculationrules"]');
+      expect(script).not.toBeNull();
+      const payload = JSON.parse(script?.textContent || "{}");
+      expect(payload).toEqual({
+        prefetch: [{ source: "list", urls: ["/products/featured"] }]
+      });
+
+      // Deduplication: prefetching again does not insert a duplicate tag
+      prefetch("/products/featured");
+      expect(document.head.querySelectorAll('script[type="speculationrules"]').length).toBe(1);
+    });
+
+    it('falls back to <link rel="prefetch"> when Speculation Rules API is unsupported', () => {
+      delete (HTMLScriptElement as any).supports;
+
+      prefetch("/fallback-article");
+
+      const link = document.head.querySelector('link[rel="prefetch"][href="/fallback-article"]');
+      expect(link).not.toBeNull();
+      expect(link?.getAttribute("rel")).toBe("prefetch");
+      expect(link?.getAttribute("href")).toBe("/fallback-article");
+
+      // Deduplication
+      prefetch("/fallback-article");
+      expect(
+        document.head.querySelectorAll('link[rel="prefetch"][href="/fallback-article"]').length
+      ).toBe(1);
+    });
+
+    it("ignores anchor fragments, javascript schemes, mailto, and empty URLs", () => {
+      prefetch("#section");
+      prefetch("javascript:alert(1)");
+      prefetch("mailto:user@example.com");
+      prefetch("tel:+1234567890");
+      prefetch("");
+
+      expect(document.head.querySelectorAll('script[type="speculationrules"]').length).toBe(0);
+      expect(document.head.querySelectorAll('link[rel="prefetch"]').length).toBe(0);
+    });
+
+    it('<Link prefetch="render"> prefetches immediately upon rendering', () => {
+      const unmount = render(
+        () => (
+          <Router>
+            {() => (
+              <Link href="/immediate-data" prefetch="render">
+                Immediate Link
+              </Link>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      const linkTag = document.head.querySelector('link[rel="prefetch"][href="/immediate-data"]');
+      expect(linkTag).not.toBeNull();
+
+      unmount();
+    });
+
+    it('<Link prefetch="hover"> prefetches on pointer enter and focus events', () => {
+      const unmount = render(
+        () => (
+          <Router>
+            {() => (
+              <Link href="/hover-route" prefetch="hover" class="hover-link">
+                Hover Me
+              </Link>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      expect(document.head.querySelector('link[rel="prefetch"][href="/hover-route"]')).toBeNull();
+
+      const anchor = container.querySelector(".hover-link") as HTMLAnchorElement;
+      expect(anchor).not.toBeNull();
+
+      anchor.dispatchEvent(new Event("pointerenter"));
+
+      expect(
+        document.head.querySelector('link[rel="prefetch"][href="/hover-route"]')
+      ).not.toBeNull();
+
+      unmount();
+    });
+
+    it('<Router prefetch="hover"> cascades default prefetch behavior to child Links', () => {
+      const unmount = render(
+        () => (
+          <Router prefetch="hover">
+            {() => (
+              <Link href="/cascaded-page" class="cascaded-link">
+                Cascaded Link
+              </Link>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      expect(document.head.querySelector('link[rel="prefetch"][href="/cascaded-page"]')).toBeNull();
+
+      const anchor = container.querySelector(".cascaded-link") as HTMLAnchorElement;
+      anchor.dispatchEvent(new Event("pointerenter"));
+
+      expect(
+        document.head.querySelector('link[rel="prefetch"][href="/cascaded-page"]')
+      ).not.toBeNull();
+
+      unmount();
+    });
+
+    it("usePrefetch provides imperative prefetching function", () => {
+      let imperativelyPrefetch: any;
+      function TestComponent() {
+        imperativelyPrefetch = usePrefetch();
+        return <div>Prefetch Hook</div>;
+      }
+
+      const unmount = render(() => <Router>{() => <TestComponent />}</Router>, container);
+
+      expect(typeof imperativelyPrefetch).toBe("function");
+      imperativelyPrefetch("/imperative-destination");
+
+      expect(
+        document.head.querySelector('link[rel="prefetch"][href="/imperative-destination"]')
+      ).not.toBeNull();
 
       unmount();
     });

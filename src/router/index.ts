@@ -1,10 +1,12 @@
 export {
+  clearPrefetchCache,
   Link,
   type LinkProps,
   type LocationState,
   lazy,
   type MatchedRoute,
   type NavigateOptions,
+  prefetch,
   Route,
   type RouteDefinition,
   type RouteProps,
@@ -16,5 +18,6 @@ export {
   useLocation,
   useNavigate,
   useParams,
+  usePrefetch,
   useSearchParams
 } from "./router";
