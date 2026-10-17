@@ -70,6 +70,83 @@ describe("Visage Signals", () => {
     expect(history).toEqual(["2-11", "4-12"]);
   });
 
+  it("handles 0, 1, 2, and 3+ sources/subscribers with inline slot promotion", () => {
+    const s1 = signal(1);
+    const s2 = signal(10);
+    const s3 = signal(100);
+    const s4 = signal(1000);
+
+    // 0 sources
+    const c0 = computed(() => 42);
+    expect(c0()).toBe(42);
+
+    // 1 source
+    const c1 = computed(() => s1() * 2);
+    expect(c1()).toBe(2);
+
+    // 2 sources
+    const c2 = computed(() => s1() + s2());
+    expect(c2()).toBe(11);
+
+    // 3+ sources (promotes to Set/Map)
+    const cMany = computed(() => s1() + s2() + s3() + s4());
+    expect(cMany()).toBe(1111);
+
+    // Verify updating sources
+    s4.set(2000);
+    expect(cMany()).toBe(2111);
+
+    // Multiple subscribers (inline slots up to 2, then Set promotion)
+    let e1Val = 0;
+    let e2Val = 0;
+    let e3Val = 0;
+    let dispose1!: () => void;
+    let dispose2!: () => void;
+    let dispose3!: () => void;
+
+    createRoot((d1) => {
+      dispose1 = d1;
+      effect(() => {
+        e1Val = cMany();
+      });
+    });
+    createRoot((d2) => {
+      dispose2 = d2;
+      effect(() => {
+        e2Val = cMany();
+      });
+    });
+    createRoot((d3) => {
+      dispose3 = d3;
+      effect(() => {
+        e3Val = cMany();
+      });
+    });
+
+    expect(e1Val).toBe(2111);
+    expect(e2Val).toBe(2111);
+    expect(e3Val).toBe(2111);
+
+    s1.set(2);
+    expect(e1Val).toBe(2112);
+    expect(e2Val).toBe(2112);
+    expect(e3Val).toBe(2112);
+
+    // Test subscriber removal
+    dispose3();
+    s1.set(3);
+    expect(e1Val).toBe(2113);
+    expect(e2Val).toBe(2113);
+    expect(e3Val).toBe(2112); // unchanged
+
+    dispose2();
+    s1.set(4);
+    expect(e1Val).toBe(2114);
+    expect(e2Val).toBe(2113);
+
+    dispose1();
+  });
+
   it("batches multiple signal updates", () => {
     const first = signal("John");
     const last = signal("Doe");

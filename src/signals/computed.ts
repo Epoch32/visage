@@ -26,12 +26,58 @@ export class Computed<T> implements ISubscriber, IDependency {
   [COMPUTED_BRAND] = true as const;
   private _fn: () => T;
   private _value!: T;
-  private _subscribers: Set<ISubscriber> = new Set();
-  sources: Set<IDependency> = new Set();
-  sourceVersions: Map<IDependency, number> = new Map();
+  private _sub0: ISubscriber | null = null;
+  private _sub1: ISubscriber | null = null;
+  private _subs: Set<ISubscriber> | null = null;
+  private _source0: IDependency | null = null;
+  private _version0 = 0;
+  private _source1: IDependency | null = null;
+  private _version1 = 0;
+  private _sources: Set<IDependency> | null = null;
+  private _sourceVersions: Map<IDependency, number> | null = null;
   state: SubscriberState = SubscriberState.DIRTY;
   scope: Scope | null;
   version = 0;
+
+  get sources(): Set<IDependency> {
+    if (this._sources !== null) return this._sources;
+    const s = new Set<IDependency>();
+    if (this._source0 !== null) s.add(this._source0);
+    if (this._source1 !== null) s.add(this._source1);
+    return s;
+  }
+
+  get sourceVersions(): Map<IDependency, number> {
+    if (this._sourceVersions !== null) return this._sourceVersions;
+    const m = new Map<IDependency, number>();
+    if (this._source0 !== null) m.set(this._source0, this._version0);
+    if (this._source1 !== null) m.set(this._source1, this._version1);
+    return m;
+  }
+
+  get _subscribers(): Set<ISubscriber> {
+    if (this._subs !== null) return this._subs;
+    const s = new Set<ISubscriber>();
+    if (this._sub0 !== null) s.add(this._sub0);
+    if (this._sub1 !== null) s.add(this._sub1);
+    return s;
+  }
+
+  getSubscribersCount(): number {
+    if (this._subs !== null) return this._subs.size;
+    let count = 0;
+    if (this._sub0 !== null) count++;
+    if (this._sub1 !== null) count++;
+    return count;
+  }
+
+  getSubscribers(): ISubscriber[] {
+    if (this._subs !== null) return Array.from(this._subs);
+    const arr: ISubscriber[] = [];
+    if (this._sub0 !== null) arr.push(this._sub0);
+    if (this._sub1 !== null) arr.push(this._sub1);
+    return arr;
+  }
 
   constructor(fn: () => T) {
     this._fn = fn;
@@ -48,7 +94,25 @@ export class Computed<T> implements ISubscriber, IDependency {
 
     const curSub = getCurrentSubscriber();
     if (curSub !== null && curSub.state !== SubscriberState.DISPOSED) {
-      this._subscribers.add(curSub);
+      if (this._subs !== null) {
+        this._subs.add(curSub);
+      } else if (this._sub0 === null) {
+        this._sub0 = curSub;
+      } else if (this._sub0 === curSub) {
+        // already subscribed
+      } else if (this._sub1 === null) {
+        this._sub1 = curSub;
+      } else if (this._sub1 === curSub) {
+        // already subscribed
+      } else {
+        const set = new Set<ISubscriber>();
+        set.add(this._sub0);
+        set.add(this._sub1);
+        set.add(curSub);
+        this._subs = set;
+        this._sub0 = null;
+        this._sub1 = null;
+      }
       curSub.addSource(this, this.version);
     }
 
@@ -74,12 +138,60 @@ export class Computed<T> implements ISubscriber, IDependency {
   }
 
   removeSubscriber(sub: ISubscriber): void {
-    this._subscribers.delete(sub);
+    if (this._subs !== null) {
+      this._subs.delete(sub);
+      if (this._subs.size === 0) {
+        this._subs = null;
+      }
+      return;
+    }
+    if (this._sub0 === sub) {
+      this._sub0 = this._sub1;
+      this._sub1 = null;
+      return;
+    }
+    if (this._sub1 === sub) {
+      this._sub1 = null;
+    }
   }
 
   addSource(source: IDependency, version: number): void {
-    this.sources.add(source);
-    this.sourceVersions.set(source, version);
+    if (this._sources !== null) {
+      this._sources.add(source);
+      this._sourceVersions!.set(source, version);
+      return;
+    }
+    if (this._source0 === null) {
+      this._source0 = source;
+      this._version0 = version;
+      return;
+    }
+    if (this._source0 === source) {
+      this._version0 = version;
+      return;
+    }
+    if (this._source1 === null) {
+      this._source1 = source;
+      this._version1 = version;
+      return;
+    }
+    if (this._source1 === source) {
+      this._version1 = version;
+      return;
+    }
+
+    const s = new Set<IDependency>();
+    const m = new Map<IDependency, number>();
+    s.add(this._source0);
+    m.set(this._source0, this._version0);
+    s.add(this._source1);
+    m.set(this._source1, this._version1);
+    s.add(source);
+    m.set(source, version);
+    this._sources = s;
+    this._sourceVersions = m;
+    this._source0 = null;
+    this._source1 = null;
   }
 
   markDirty(targetState: SubscriberState = SubscriberState.CHECK_DIRTY): void {
@@ -88,8 +200,17 @@ export class Computed<T> implements ISubscriber, IDependency {
     }
     this.state = targetState;
 
-    for (const sub of this._subscribers) {
-      sub.markDirty(SubscriberState.CHECK_DIRTY);
+    if (this._subs !== null) {
+      for (const sub of this._subs) {
+        sub.markDirty(SubscriberState.CHECK_DIRTY);
+      }
+      return;
+    }
+    if (this._sub0 !== null) {
+      this._sub0.markDirty(SubscriberState.CHECK_DIRTY);
+    }
+    if (this._sub1 !== null) {
+      this._sub1.markDirty(SubscriberState.CHECK_DIRTY);
     }
   }
 
@@ -102,13 +223,33 @@ export class Computed<T> implements ISubscriber, IDependency {
 
     if (this.state === SubscriberState.CHECK_DIRTY) {
       let anyChanged = false;
-      for (const source of this.sources) {
-        if (source instanceof Computed) {
-          source.updateIfNecessary();
+      if (this._sources !== null) {
+        for (const source of this._sources) {
+          if (source instanceof Computed) {
+            source.updateIfNecessary();
+          }
+          const lastVersion = this._sourceVersions!.get(source);
+          if (lastVersion !== undefined && lastVersion !== source.version) {
+            anyChanged = true;
+            break;
+          }
         }
-        const lastVersion = this.sourceVersions.get(source);
-        if (lastVersion !== undefined && lastVersion !== source.version) {
-          anyChanged = true;
+      } else {
+        if (this._source0 !== null) {
+          if (this._source0 instanceof Computed) {
+            this._source0.updateIfNecessary();
+          }
+          if (this._version0 !== this._source0.version) {
+            anyChanged = true;
+          }
+        }
+        if (!anyChanged && this._source1 !== null) {
+          if (this._source1 instanceof Computed) {
+            this._source1.updateIfNecessary();
+          }
+          if (this._version1 !== this._source1.version) {
+            anyChanged = true;
+          }
         }
       }
 
@@ -147,18 +288,31 @@ export class Computed<T> implements ISubscriber, IDependency {
   }
 
   private cleanupSources(): void {
-    for (const source of this.sources) {
-      source.removeSubscriber(this);
+    if (this._sources !== null) {
+      for (const source of this._sources) {
+        source.removeSubscriber(this);
+      }
+      this._sources = null;
+      this._sourceVersions = null;
+      return;
     }
-    this.sources.clear();
-    this.sourceVersions.clear();
+    if (this._source0 !== null) {
+      this._source0.removeSubscriber(this);
+      this._source0 = null;
+    }
+    if (this._source1 !== null) {
+      this._source1.removeSubscriber(this);
+      this._source1 = null;
+    }
   }
 
   dispose(): void {
     if (this.state === SubscriberState.DISPOSED) return;
     this.state = SubscriberState.DISPOSED;
     this.cleanupSources();
-    this._subscribers.clear();
+    this._sub0 = null;
+    this._sub1 = null;
+    this._subs = null;
   }
 }
 
@@ -214,13 +368,14 @@ export function computed<T>(fn: () => T, options?: ComputedOptions): ReadonlySig
       type: "computed",
       getValue: () => c.get(),
       version: () => c.version,
-      subscribersCount: () => (c as any)._subscribers?.size ?? 0,
+      subscribersCount: () => c.getSubscribersCount(),
       dependencies: () =>
         Array.from(c.sources ?? [])
           .map((src: any) => (src as any)._devId)
           .filter(Boolean),
       dependents: () =>
-        Array.from((c as any)._subscribers ?? [])
+        c
+          .getSubscribers()
           .map((sub: any) => sub._devId)
           .filter(Boolean)
     });
