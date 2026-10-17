@@ -1,6 +1,8 @@
 
 # Visage
 
+<img width="1290" height="550" alt="image" src="https://github.com/user-attachments/assets/ebd1e69a-92ed-4536-a870-4d64a2869f14" />
+
 Visage started as a research project by Epoch32. The original concept, explored in a blog post, demonstrated that building a UI library without a Virtual DOM (like Solid) was, in principle, a straightforward task.
 
 Since then, Visage has grown into much more. With the release of [v1.0.0](https://github.com/Epoch32/visage/releases/tag/visage-v1.0.0), which introduced two Vite plugins, developer tools, streamlined CSS authoring, and our signals engine, we realized that the project had the potential to become more than a research experiment. We took it a step further, evolving Visage into what it is today: a full-stack web toolkit built on a fine-grained reactivity architecture.
