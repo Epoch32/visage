@@ -23,8 +23,8 @@ export function createPagesPlugin(
   let pagesDir: string | null = null;
   let routes: PageRoute[] = [];
   let special: PageSpecialFiles = {};
-  let outDir = "dist";
   let isDev = true;
+  let basePrefix = "/";
 
   function refreshRoutes() {
     if (pagesDir) {
@@ -36,10 +36,60 @@ export function createPagesPlugin(
 
   return {
     name: "visage:pages",
+
+    config(config, env) {
+      projectRoot = config.root || (typeof process !== "undefined" ? process.cwd() : ".");
+      isDev = env.command === "serve";
+      basePrefix = config.base || "/";
+      pagesDir = resolvePagesDir(projectRoot, options.dir);
+
+      if (options.layout && fs.existsSync(path.resolve(projectRoot, options.layout))) {
+        special.layout = path.resolve(projectRoot, options.layout);
+      }
+      if (options.document && fs.existsSync(path.resolve(projectRoot, options.document))) {
+        special.document = path.resolve(projectRoot, options.document);
+      }
+      if (options.notFound && fs.existsSync(path.resolve(projectRoot, options.notFound))) {
+        special.notFound = path.resolve(projectRoot, options.notFound);
+      }
+
+      refreshRoutes();
+
+      // Configure multi-page entry points for Rollup during production build
+      if (!isDev && pagesDir && routes.length > 0 && options.ssg !== false) {
+        const input: Record<string, string> = {};
+        for (const route of routes) {
+          if (route.isDynamic || route.isCatchAll) continue;
+          const name =
+            route.path === "/"
+              ? "index"
+              : route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
+          input[`page-${name}`] = `virtual:visage-pages-entry:${route.path}`;
+        }
+        if (special.notFound) {
+          input["page-404"] = "virtual:visage-pages-entry:404";
+        }
+
+        const existingInput = config.build?.rollupOptions?.input;
+        const mergedInput =
+          existingInput && typeof existingInput === "object" && !Array.isArray(existingInput)
+            ? { ...existingInput, ...input }
+            : input;
+
+        return {
+          build: {
+            rollupOptions: {
+              input: mergedInput
+            }
+          }
+        };
+      }
+    },
+
     configResolved(config) {
       projectRoot = config.root;
       isDev = config.command === "serve";
-      outDir = config.build?.outDir || "dist";
+      basePrefix = config.base || "/";
       pagesDir = resolvePagesDir(projectRoot, options.dir);
 
       if (options.layout && fs.existsSync(path.resolve(projectRoot, options.layout))) {
@@ -113,7 +163,8 @@ export function createPagesPlugin(
             title: options.title,
             rootId,
             clientEntryUrl,
-            headTags: options.headTags
+            headTags: options.headTags,
+            viewTransitions: options.viewTransitions !== false
           });
 
           try {
@@ -137,7 +188,8 @@ export function createPagesPlugin(
             title: "404 - Not Found",
             rootId,
             clientEntryUrl,
-            headTags: options.headTags
+            headTags: options.headTags,
+            viewTransitions: options.viewTransitions !== false
           });
 
           const html = await server.transformIndexHtml(req.url, rawHtml);
@@ -169,7 +221,23 @@ export function createPagesPlugin(
         return null;
       }
 
-      // Parse query parameters from the virtual module ID
+      const rootId = options.rootId || "visage-root";
+
+      // 1. Build-time virtual module ID: "\0virtual:visage-pages-entry:<path>"
+      if (id.startsWith("\0virtual:visage-pages-entry:")) {
+        const routePath = id.slice("\0virtual:visage-pages-entry:".length);
+
+        if (routePath === "404" && special.notFound) {
+          return generateNotFoundEntry(special.notFound, rootId);
+        }
+
+        const matchedRoute = routes.find((r) => r.path === routePath);
+        if (matchedRoute) {
+          return generateClientEntry(matchedRoute, {}, special, rootId);
+        }
+      }
+
+      // 2. Dev-time virtual module ID query parameters
       const queryIndex = id.indexOf("?");
       const queryString = queryIndex !== -1 ? id.slice(queryIndex) : "";
       const searchParams = new URLSearchParams(queryString);
@@ -178,14 +246,12 @@ export function createPagesPlugin(
       const isNotFound = searchParams.get("notFound") === "true";
       const rawParams = searchParams.get("params");
       const params: Record<string, string> = rawParams ? JSON.parse(rawParams) : {};
-      const rootId = options.rootId || "visage-root";
 
       if (isNotFound && filePath) {
         return generateNotFoundEntry(filePath, rootId);
       }
 
       if (filePath) {
-        // Find matching route or synthesize Route metadata
         let matchedRoute = routes.find((r) => r.filePath === filePath);
         if (!matchedRoute) {
           matchedRoute = {
@@ -206,63 +272,96 @@ export function createPagesPlugin(
       return null;
     },
 
-    closeBundle() {
-      // Build-time Static Site Generation (SSG)
+    generateBundle(this: any, _outputOptions: any, bundle: Record<string, any>) {
       if (isDev || options.ssg === false || !pagesDir || routes.length === 0) {
         return;
       }
 
-      const distPath = path.isAbsolute(outDir) ? outDir : path.resolve(projectRoot, outDir);
-      if (!fs.existsSync(distPath)) {
-        fs.mkdirSync(distPath, { recursive: true });
+      const rootId = options.rootId || "visage-root";
+      const base = basePrefix.replace(/\/$/, "");
+
+      const entryChunks = new Map<string, any>();
+      for (const item of Object.values(bundle)) {
+        if (item.type === "chunk" && item.isEntry && item.name) {
+          entryChunks.set(item.name, item);
+        }
       }
 
       let generatedCount = 0;
-      const rootId = options.rootId || "visage-root";
 
       for (const route of routes) {
-        if (route.isDynamic || route.isCatchAll) {
-          // Dynamic routes require explicit static paths or server rendering
-          continue;
+        if (route.isDynamic || route.isCatchAll) continue;
+
+        const name =
+          route.path === "/"
+            ? "index"
+            : route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
+        const chunk = entryChunks.get(`page-${name}`);
+        if (!chunk) continue;
+
+        const clientEntryUrl = `${base}/${chunk.fileName}`;
+
+        let cssTags = "";
+        const importedCss = (chunk as any).viteMetadata?.importedCss as Set<string> | undefined;
+        if (importedCss) {
+          for (const cssFile of importedCss) {
+            cssTags += `\n    <link rel="stylesheet" crossorigin href="${base}/${cssFile}">`;
+          }
         }
 
+        const headTags = (options.headTags || "") + cssTags;
         const targetHtmlPath =
-          route.path === "/"
-            ? path.join(distPath, "index.html")
-            : path.join(distPath, route.path.replace(/^\/+/, ""), "index.html");
+          route.path === "/" ? "index.html" : `${route.path.replace(/^\/+/, "")}/index.html`;
 
-        fs.mkdirSync(path.dirname(targetHtmlPath), { recursive: true });
-
-        const clientEntryUrl = `/@visage-pages-entry?file=${encodeURIComponent(route.filePath)}`;
         const html = generateHtmlShell({
           title: options.title,
           rootId,
           clientEntryUrl,
-          headTags: options.headTags
+          headTags,
+          viewTransitions: options.viewTransitions !== false
         });
 
-        fs.writeFileSync(targetHtmlPath, html, "utf8");
+        this.emitFile({
+          type: "asset",
+          fileName: targetHtmlPath,
+          source: html
+        });
         generatedCount++;
       }
 
-      // If custom 404 page exists, emit 404.html
       if (special.notFound) {
-        const notFoundPath = path.join(distPath, "404.html");
-        const clientEntryUrl = `/@visage-pages-entry?file=${encodeURIComponent(special.notFound)}&notFound=true`;
-        const html = generateHtmlShell({
-          title: "404 - Not Found",
-          rootId,
-          clientEntryUrl,
-          headTags: options.headTags
-        });
-        fs.writeFileSync(notFoundPath, html, "utf8");
-        generatedCount++;
+        const chunk = entryChunks.get("page-404");
+        if (chunk) {
+          const clientEntryUrl = `${base}/${chunk.fileName}`;
+          let cssTags = "";
+          const importedCss = (chunk as any).viteMetadata?.importedCss as Set<string> | undefined;
+          if (importedCss) {
+            for (const cssFile of importedCss) {
+              cssTags += `\n    <link rel="stylesheet" crossorigin href="${base}/${cssFile}">`;
+            }
+          }
+          const headTags = (options.headTags || "") + cssTags;
+          const html = generateHtmlShell({
+            title: "404 - Not Found",
+            rootId,
+            clientEntryUrl,
+            headTags,
+            viewTransitions: options.viewTransitions !== false
+          });
+
+          this.emitFile({
+            type: "asset",
+            fileName: "404.html",
+            source: html
+          });
+          generatedCount++;
+        }
       }
 
       if (generatedCount > 0) {
         vLog.info(
           "visage:pages",
-          `SSG static site generation complete ${pc.dim(`(${generatedCount} static HTML file${generatedCount === 1 ? "" : "s"} emitted to ${path.relative(projectRoot, distPath)})`)}`
+          `SSG static site generation complete ${pc.dim(`(${generatedCount} static HTML file${generatedCount === 1 ? "" : "s"} bundled)`)}`
         );
       }
     }

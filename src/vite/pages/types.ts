@@ -52,6 +52,13 @@ export interface PagesOptions {
    * @default "/"
    */
   base?: string;
+
+  /**
+   * Enable seamless soft navigation and View Transitions across MPA pages.
+   * Intercepts internal link clicks, swaps page DOM in place, and animates transitions.
+   * @default true
+   */
+  viewTransitions?: boolean;
 }
 
 /**

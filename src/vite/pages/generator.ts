@@ -61,6 +61,87 @@ if (target) {
 }
 
 /**
+ * Embedded soft-navigation and View Transitions runtime for MPA pages
+ */
+export const softNavScript = `
+(() => {
+  if (typeof window === "undefined" || window.__visage_soft_nav) return;
+  window.__visage_soft_nav = true;
+
+  async function navigate(url, isPopState) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        window.location.href = url;
+        return;
+      }
+      const htmlText = await res.text();
+      const nextDoc = new DOMParser().parseFromString(htmlText, "text/html");
+
+      const updateDom = async () => {
+        document.title = nextDoc.title;
+
+        for (const el of nextDoc.head.querySelectorAll("link[rel='stylesheet'], style")) {
+          const href = el.getAttribute("href");
+          const devId = el.getAttribute("data-vite-dev-id");
+          const selector = href
+            ? "link[href=\\"" + href + "\\"]"
+            : devId
+              ? "style[data-vite-dev-id=\\"" + devId + "\\"]"
+              : null;
+          if (!selector || !document.head.querySelector(selector)) {
+            document.head.appendChild(el.cloneNode(true));
+          }
+        }
+
+        const nextScript = nextDoc.querySelector("script[type='module']");
+        const nextScriptSrc = nextScript ? nextScript.getAttribute("src") : null;
+
+        if (!isPopState) {
+          window.history.pushState({ visage: true }, "", url);
+        }
+
+        if (nextScriptSrc) {
+          await import(/* @vite-ignore */ nextScriptSrc);
+        }
+
+        window.scrollTo(0, 0);
+      };
+
+      if (document.startViewTransition) {
+        document.startViewTransition(updateDom);
+      } else {
+        await updateDom();
+      }
+    } catch {
+      window.location.href = url;
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.defaultPrevented) return;
+    const a = e.target.closest("a");
+    if (!a || !a.href) return;
+    if (a.target && a.target !== "_self") return;
+    if (a.hasAttribute("download") || a.hasAttribute("data-reload")) return;
+
+    const url = new URL(a.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    if (url.pathname === window.location.pathname && url.search === window.location.search) {
+      return;
+    }
+
+    e.preventDefault();
+    navigate(url.href, false);
+  });
+
+  window.addEventListener("popstate", () => {
+    navigate(window.location.href, true);
+  });
+})();
+`.trim();
+
+/**
  * Generates the HTML shell for a given route and client entry script URL
  */
 export function generateHtmlShell(options: {
@@ -68,8 +149,15 @@ export function generateHtmlShell(options: {
   rootId?: string;
   clientEntryUrl: string;
   headTags?: string;
+  viewTransitions?: boolean;
 }): string {
-  const { title = "Visage App", rootId = "visage-root", clientEntryUrl, headTags = "" } = options;
+  const {
+    title = "Visage App",
+    rootId = "visage-root",
+    clientEntryUrl,
+    headTags = "",
+    viewTransitions = false
+  } = options;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -82,6 +170,7 @@ export function generateHtmlShell(options: {
   <body>
     <div id="${escapeHtml(rootId)}"></div>
     <script type="module" src="${clientEntryUrl}"></script>
+    ${viewTransitions ? `<script>${softNavScript}</script>` : ""}
   </body>
 </html>`;
 }

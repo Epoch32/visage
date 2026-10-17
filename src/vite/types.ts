@@ -396,6 +396,7 @@ export interface VisageVitePlugin {
     options?: { ssr?: boolean }
   ) => Promise<{ code: string; map?: any } | null> | { code: string; map?: any } | null;
   buildStart?: () => void | Promise<void>;
+  generateBundle?: (this: any, options: any, bundle: any) => void | Promise<void>;
   closeBundle?: () => void | Promise<void>;
   transformIndexHtml?: (html: string) => string | Promise<string>;
 }
