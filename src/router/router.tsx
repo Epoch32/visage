@@ -23,6 +23,7 @@ export interface RouterContextValue {
   matchedRoute: ReadonlySignal<MatchedRoute | null>;
   routes: RouteDefinition[];
   registerRoute: (route: RouteDefinition) => void;
+  unregisterRoute: (route: RouteDefinition) => void;
 }
 
 export interface MatchedRoute {
@@ -42,11 +43,19 @@ export interface RouteDefinition {
 
 const RouterContext = createContext<RouterContextValue | null>(null);
 
+const pathCache = new Map<string, { matcher: RegExp; paramNames: string[] }>();
+
 function compilePath(path: string): { matcher: RegExp; paramNames: string[] } {
+  const cached = pathCache.get(path);
+  if (cached) return cached;
+
   const paramNames: string[] = [];
   const normalized = path.replace(/\/+$/, "") || "/";
 
-  const regexStr = normalized
+  // Escape special regex characters except : and *
+  const escaped = normalized.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+
+  const regexStr = escaped
     .replace(/:([a-zA-Z0-9_]+)/g, (_, name) => {
       paramNames.push(name);
       return "([^/]+)";
@@ -54,7 +63,9 @@ function compilePath(path: string): { matcher: RegExp; paramNames: string[] } {
     .replace(/\*/g, "(.*)");
 
   const matcher = new RegExp(`^${regexStr}(?:/)?$`);
-  return { matcher, paramNames };
+  const result = { matcher, paramNames };
+  pathCache.set(path, result);
+  return result;
 }
 
 function matchRoute(routes: RouteDefinition[], pathname: string, base = ""): MatchedRoute | null {
@@ -127,8 +138,17 @@ export function Router(props: RouterProps): Child {
   const registeredRoutes = signal<RouteDefinition[]>([]);
 
   const registerRoute = (route: RouteDefinition) => {
+    if (routes.includes(route)) return;
     routes.push(route);
     registeredRoutes.set([...routes]);
+  };
+
+  const unregisterRoute = (route: RouteDefinition) => {
+    const idx = routes.indexOf(route);
+    if (idx !== -1) {
+      routes.splice(idx, 1);
+      registeredRoutes.set([...routes]);
+    }
   };
 
   const syncLocation = () => {
@@ -182,7 +202,8 @@ export function Router(props: RouterProps): Child {
     base,
     matchedRoute,
     routes,
-    registerRoute
+    registerRoute,
+    unregisterRoute
   };
 
   return RouterContext.Provider({
@@ -207,12 +228,16 @@ export function Route(props: RouteProps): Child {
   }
 
   const { matcher, paramNames } = compilePath(props.path);
-  router.registerRoute({
+  const route: RouteDefinition = {
     path: props.path,
     component: props.component,
     children: props.children,
     matcher,
     paramNames
+  };
+  router.registerRoute(route);
+  onCleanup(() => {
+    router.unregisterRoute(route);
   });
 
   return null;

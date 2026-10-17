@@ -130,4 +130,38 @@ describe("Visage Router", () => {
 
     unmount();
   });
+
+  it("escapes regex characters in paths and caches compiled routes", () => {
+    let navigateFn: any;
+    function Nav() {
+      navigateFn = useNavigate();
+      return null;
+    }
+
+    const unmount = render(
+      () => (
+        <Router>
+          {() => (
+            <>
+              <Nav />
+              <Routes fallback={<div class="not-found">404</div>}>
+                <Route path="/v1.0/docs" component={() => <div class="docs">Docs</div>} />
+              </Routes>
+            </>
+          )}
+        </Router>
+      ),
+      container
+    );
+
+    navigateFn("/v1.0/docs");
+    expect(container.querySelector(".docs")?.textContent).toBe("Docs");
+
+    // Dot was escaped, so /v1_0/docs should NOT match!
+    navigateFn("/v1_0/docs");
+    expect(container.querySelector(".docs")).toBeNull();
+    expect(container.querySelector(".not-found")?.textContent).toBe("404");
+
+    unmount();
+  });
 });
