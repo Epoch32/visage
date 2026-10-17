@@ -58,6 +58,10 @@ function scanProjectOrigins(
       } else if (/\.[jt]sx$/.test(entry.name)) {
         try {
           const code = fs.readFileSync(fullPath, "utf8");
+          // Fast-path: Skip heavy Babel compilation on files without external URL patterns
+          if (!/(?:https?:\/\/|\/\/|wss?:\/\/)/i.test(code)) {
+            continue;
+          }
           compileJsx(code, {
             filename: fullPath,
             ...compilerOpts,
