@@ -5,6 +5,7 @@ import { createConfigPlugin } from "./plugins/config";
 import { createCspPlugin } from "./plugins/csp";
 import { createHmrPlugin } from "./plugins/hmr";
 import { createNativePlugin } from "./plugins/native";
+import { createPagesPlugin } from "./plugins/pages";
 import { createServerPlugin } from "./plugins/server";
 import { createStoragePrebootPlugin } from "./plugins/storage-preboot";
 import type { StoragePrebootOptions, VisagePluginOptions, VisageVitePlugin } from "./types";
@@ -112,6 +113,11 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
 
   if (isStoragePreboot) {
     plugins.push(createStoragePrebootPlugin(storagePrebootOpts, vLog));
+  }
+
+  if (options.pages) {
+    const pagesOpts = typeof options.pages === "object" ? options.pages : {};
+    plugins.push(createPagesPlugin(pagesOpts, vLog));
   }
 
   plugins.push(createHmrPlugin(options, vLog, isDev), createServerPlugin(options, vLog, isDev));

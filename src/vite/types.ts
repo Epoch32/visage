@@ -1,4 +1,5 @@
 import type { createRouter } from "../rpc/router";
+import type { PagesOptions } from "./pages/types";
 
 /**
  * Options for the Visage Vite Plugin
@@ -41,6 +42,14 @@ export interface VisagePluginOptions {
    * @default false
    */
   compiler?: boolean | import("./compiler/types").CompilerOptions;
+
+  /**
+   * File-system driven Multi-Page Application (MPA) pages router.
+   * Automatically discovers pages in src/pages (or configured dir),
+   * synthesizes virtual HTML entry points, shared layouts, and dynamic routes.
+   * @default false
+   */
+  pages?: boolean | PagesOptions;
 
   /**
    * Opt-in experimental compiler and packager options
@@ -355,3 +364,10 @@ export interface VisageVitePlugin {
   closeBundle?: () => void | Promise<void>;
   transformIndexHtml?: (html: string) => string | Promise<string>;
 }
+
+export type {
+  PageRoute,
+  PageSpecialFiles,
+  PagesOptions,
+  RouteMatch
+} from "./pages/types";
