@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.0](https://github.com/Epoch32/visage/compare/v1.13.1...v1.14.0) (2026-10-17)
+
+
+### Features
+
+* **native:** add custom window borders, frameless decorations, and drag regions on Linux GTK ([450099b](https://github.com/Epoch32/visage/commit/450099bbcdede23637a1431d2e5727ccd3aec297))
+* **pages:** support headTags in PagesOptions and enable Link prefetching across mpa-pages ([c03fb18](https://github.com/Epoch32/visage/commit/c03fb181b962efc4ae69dfe1130d4ce59a795787))
+
 ## [1.13.1](https://github.com/Epoch32/visage/compare/v1.13.0...v1.13.1) (2026-10-17)
 
 
