@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import { visage, visageLucide } from "../../src/vite";
+import { visage, visageLucide } from "@epoch32/visage/vite";
 
 export default defineConfig({
   plugins: [
@@ -9,11 +9,6 @@ export default defineConfig({
     }),
     visageLucide()
   ],
-  resolve: {
-    alias: {
-      visage: new URL("../../src", import.meta.url).pathname
-    }
-  },
   server: {
     port: 5184
   }

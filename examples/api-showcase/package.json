@@ -1,0 +1,15 @@
+{
+  "name": "example-api-showcase",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun server.ts"
+  },
+  "dependencies": {
+    "@epoch32/visage": "^1.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

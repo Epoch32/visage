@@ -1,0 +1,99 @@
+import type { Child } from "@epoch32/visage";
+
+interface LayoutProps {
+  children: Child;
+  params: Record<string, string>;
+}
+
+export default function RootLayout(props: LayoutProps) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "#0d1117",
+        color: "#c9d1d9",
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif'
+      }}
+    >
+      <header
+        style={{
+          borderBottom: "1px solid #30363d",
+          backgroundColor: "#161b22",
+          padding: "16px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <a
+            href="/"
+            style={{
+              fontSize: "18px",
+              fontWeight: 700,
+              color: "#58a6ff",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}
+          >
+            <span style={{ fontSize: "22px" }}>⚡</span> Visage MPA
+          </a>
+          <span
+            style={{
+              fontSize: "11px",
+              backgroundColor: "#21262d",
+              color: "#8b949e",
+              padding: "2px 8px",
+              borderRadius: "12px",
+              border: "1px solid #30363d"
+            }}
+          >
+            Multi-Page App
+          </span>
+        </div>
+
+        <nav style={{ display: "flex", gap: "18px", fontSize: "14px", fontWeight: 500 }}>
+          <a href="/" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+            Home
+          </a>
+          <a href="/about" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+            About
+          </a>
+          <a href="/blog" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+            Blog
+          </a>
+          <a href="/contact" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+            Contact
+          </a>
+          <a href="/docs/guide/overview" style={{ color: "#c9d1d9", textDecoration: "none" }}>
+            Docs
+          </a>
+        </nav>
+      </header>
+
+      <main style={{ flex: 1, maxWidth: "960px", width: "100%", margin: "0 auto", padding: "40px 24px" }}>
+        {props.children}
+      </main>
+
+      <footer
+        style={{
+          borderTop: "1px solid #30363d",
+          backgroundColor: "#161b22",
+          padding: "24px",
+          textAlign: "center",
+          fontSize: "13px",
+          color: "#8b949e"
+        }}
+      >
+        <p style={{ margin: 0 }}>
+          Built with <strong>Visage File-System MPA Pages Router</strong> • Fine-grained reactivity with zero VDOM
+        </p>
+      </footer>
+    </div>
+  );
+}

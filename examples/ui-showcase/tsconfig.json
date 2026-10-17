@@ -10,16 +10,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "visage",
+    "jsxImportSource": "@epoch32/visage",
     "types": ["vite/client"],
-    "paths": {
-      "visage": ["../../src/index.ts"],
-      "visage/jsx-runtime": ["../../src/jsx-runtime/index.ts"],
-      "visage/jsx-dev-runtime": ["../../src/jsx-runtime/index.ts"],
-      "visage/ui": ["../../src/ui/index.ts"],
-      "visage/vite": ["../../src/vite/index.ts"],
-      "visage/*": ["../../src/*"]
-    },
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import { visage } from "../../src/vite";
+import { visage } from "@epoch32/visage/vite";
 
 export default defineConfig({
   plugins: [
@@ -16,10 +16,5 @@ export default defineConfig({
         csp: true
       }
     })
-  ],
-  resolve: {
-    alias: {
-      visage: new URL("../../src", import.meta.url).pathname
-    }
-  }
+  ]
 });
