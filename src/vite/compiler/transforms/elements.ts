@@ -118,6 +118,57 @@ function tryFormatStaticStyle(expr: t.ObjectExpression): string | null {
   return styles.join("; ");
 }
 
+function tryFormatStaticClass(expr: t.Expression): string | null {
+  if (t.isStringLiteral(expr)) {
+    return expr.value;
+  }
+  if (t.isArrayExpression(expr)) {
+    const classes: string[] = [];
+    for (const el of expr.elements) {
+      if (el === null || t.isNullLiteral(el)) continue;
+      if (t.isBooleanLiteral(el) && !el.value) continue;
+      if (t.isStringLiteral(el)) {
+        if (el.value.trim()) classes.push(el.value.trim());
+      } else if (t.isNumericLiteral(el)) {
+        classes.push(String(el.value));
+      } else if (t.isObjectExpression(el)) {
+        const objClass = tryFormatStaticClass(el);
+        if (objClass === null) return null;
+        if (objClass) classes.push(objClass);
+      } else {
+        return null;
+      }
+    }
+    return classes.join(" ");
+  }
+  if (t.isObjectExpression(expr)) {
+    const classes: string[] = [];
+    for (const prop of expr.properties) {
+      if (!t.isObjectProperty(prop) || prop.computed) return null;
+      let key: string;
+      if (t.isIdentifier(prop.key)) {
+        key = prop.key.name;
+      } else if (t.isStringLiteral(prop.key)) {
+        key = prop.key.value;
+      } else {
+        return null;
+      }
+
+      if (t.isBooleanLiteral(prop.value)) {
+        if (prop.value.value) classes.push(key);
+      } else if (t.isNullLiteral(prop.value)) {
+        // falsy, skip
+      } else if (t.isNumericLiteral(prop.value)) {
+        if (prop.value.value !== 0) classes.push(key);
+      } else {
+        return null;
+      }
+    }
+    return classes.join(" ");
+  }
+  return null;
+}
+
 export function processElement(
   element: t.JSXElement,
   currentPath: DomNavStep[],
@@ -221,6 +272,20 @@ export function processElement(
           } else {
             dynamicAttrs.push(attr);
           }
+        } else if (
+          (attrName === "class" || attrName === "className") &&
+          (t.isArrayExpression(expr) || t.isObjectExpression(expr))
+        ) {
+          const staticClass = tryFormatStaticClass(expr);
+          if (staticClass !== null) {
+            if (staticClass) {
+              staticAttrs.push(`class="${escapeHtmlAttr(staticClass)}"`);
+            }
+          } else {
+            dynamicAttrs.push(attr);
+          }
+        } else if (t.isNullLiteral(expr) || (t.isIdentifier(expr) && expr.name === "undefined")) {
+          // Static null or undefined attribute: omit from template and dynamic attributes
         } else {
           if (checkEventShield && isEventAttribute(attrName) && t.isTemplateLiteral(expr)) {
             assertSafeEventValue(attrName, "[template literal]");

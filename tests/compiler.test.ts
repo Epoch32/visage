@@ -49,6 +49,36 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).not.toContain('setAttribute(_el$, "style"');
   });
 
+  it("inlines static class array and object expressions into HTML templates at compile time", () => {
+    const input = `
+      function Badges() {
+        return (
+          <div>
+            <span class={["badge", "badge-pill", null, false]} />
+            <span class={{ active: true, hidden: false, primary: true }} />
+          </div>
+        );
+      }
+    `;
+
+    const { code } = compileJsx(input);
+    expect(code).toContain('class=\\"badge badge-pill\\"');
+    expect(code).toContain('class=\\"active primary\\"');
+    expect(code).not.toContain("effect(");
+  });
+
+  it("omits static null and undefined attributes from template and dynamic attributes", () => {
+    const input = `
+      function Clean() {
+        return <div title={null} id={undefined} aria-hidden={false} />;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+    expect(code).toContain('template("<div></div>")');
+    expect(code).not.toContain("setAttribute");
+  });
+
   it("compiles dynamic event listeners with high-performance event delegation", () => {
     const input = `
       function Button() {
