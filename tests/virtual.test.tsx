@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { createVirtualizer, render, signal, VirtualList } from "../src";
+import { createVirtualizer, render, signal, VirtualGrid, VirtualList } from "../src";
 
 describe("Visage Virtualization (visage/virtual)", () => {
   let container: any;
@@ -187,6 +187,58 @@ describe("Visage Virtualization (visage/virtual)", () => {
     expect(firstRowAfter).not.toBeNull();
     // Element identity must be preserved by keyed reconciliation!
     expect(firstRowAfter).toBe(firstRowBefore);
+
+    unmount();
+  });
+
+  it("renders only visible cells with <VirtualGrid> and preserves cell DOM nodes with getItemKey", () => {
+    // 500 rows x 50 columns
+    const gridData = Array.from({ length: 500 }, (_, r) =>
+      Array.from({ length: 50 }, (_, c) => ({
+        id: `cell-${r}-${c}`,
+        value: `R${r}C${c}`
+      }))
+    );
+
+    const unmount = render(
+      () => (
+        <VirtualGrid
+          data={gridData}
+          rowHeight={40}
+          columnWidth={100}
+          height={200}
+          width={300}
+          overscan={1}
+          getItemKey={(cell) => cell.id}
+        >
+          {(cell) => (
+            <div class="test-cell" data-id={cell.id}>
+              {cell.value}
+            </div>
+          )}
+        </VirtualGrid>
+      ),
+      container
+    );
+
+    const renderedCells = container.querySelectorAll(".test-cell");
+    // 25,000 total cells, but only visible viewport cells (~5-7 rows x 3-5 cols = ~30 cells) rendered!
+    expect(renderedCells.length < 50).toBe(true);
+    expect(renderedCells.length > 0).toBe(true);
+    expect(renderedCells[0]?.textContent).toBe("R0C0");
+
+    const firstCellBefore = container.querySelector('.test-cell[data-id="cell-0-0"]');
+    expect(firstCellBefore).not.toBeNull();
+
+    // Trigger scroll
+    const scrollContainer = container.querySelector("div");
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 10;
+      scrollContainer.dispatchEvent(new Event("scroll"));
+    }
+
+    const firstCellAfter = container.querySelector('.test-cell[data-id="cell-0-0"]');
+    expect(firstCellAfter).toBe(firstCellBefore);
 
     unmount();
   });
