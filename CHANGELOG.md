@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.13.0](https://github.com/Epoch32/visage/compare/v1.12.0...v1.13.0) (2026-10-17)
+
+
+### Features
+
+* **examples:** add 256x256 BML traffic simulation showcase ([1ad54e8](https://github.com/Epoch32/visage/commit/1ad54e80619104d9344af55fcbae976824fc587a))
+* **router:** add native View Transitions API support to Router, Link, and useNavigate ([f7b8ffa](https://github.com/Epoch32/visage/commit/f7b8ffa6e23805f44db7bb76d78749858bddd7a8))
+* **router:** add speculative prefetching via Speculation Rules API and Link prefetch prop ([3f00299](https://github.com/Epoch32/visage/commit/3f00299e6af8411ba1dacc24f94b701e8efc3f42))
+* **ui:** add native Popover API and CSS Anchor Positioning to Popover and Tooltip ([948b22e](https://github.com/Epoch32/visage/commit/948b22e183debf70266ccad10a71483eb2063d80))
+* **vite:** add experimental storagePreboot transform and modularize plugin pipeline ([e3b7a73](https://github.com/Epoch32/visage/commit/e3b7a738aca748146ef85f9c4ba5451c34aa62b2))
+* **vite:** add file-system driven MPA pages router ([f0ad8bc](https://github.com/Epoch32/visage/commit/f0ad8bc97b44d42de3a1c4b386a67463a00d03be))
+
 ## [1.12.0](https://github.com/Epoch32/visage/compare/v1.11.0...v1.12.0) (2026-10-17)
 
 
