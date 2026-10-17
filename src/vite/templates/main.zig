@@ -15,9 +15,44 @@ pub const WindowConfig = struct {
     pub const resizable: bool = {{WINDOW_RESIZABLE}};
     pub const debug: bool = {{WINDOW_DEBUG}};
     pub const virtual_origin: [:0]const u8 = "{{VIRTUAL_ORIGIN}}";
+    pub const decorations: bool = {{WINDOW_DECORATIONS}};
+    pub const border_color: ?[:0]const u8 = {{BORDER_COLOR}};
+    pub const border_width: c_int = {{BORDER_WIDTH}};
+    pub const border_radius: c_int = {{BORDER_RADIUS}};
 };
 
 var global_webview: ?*Webview = null;
+
+const linux = if (builtin.os.tag == .linux) struct {
+    extern fn gtk_window_set_decorated(window: ?*anyopaque, setting: c_int) void;
+    extern fn gtk_window_get_decorated(window: ?*anyopaque) c_int;
+    extern fn gtk_window_begin_move_drag(window: ?*anyopaque, button: c_int, root_x: c_int, root_y: c_int, timestamp: u32) void;
+    extern fn gtk_css_provider_new() ?*anyopaque;
+    extern fn gtk_css_provider_load_from_data(provider: ?*anyopaque, data: [*]const u8, length: isize, err: ?*anyopaque) c_int;
+    extern fn gdk_screen_get_default() ?*anyopaque;
+    extern fn gtk_style_context_add_provider_for_screen(screen: ?*anyopaque, provider: ?*anyopaque, priority: c_uint) void;
+    extern fn g_object_unref(object: ?*anyopaque) void;
+
+    pub fn applyBorder(color: []const u8, width: c_int, radius: c_int) void {
+        const provider = gtk_css_provider_new() orelse return;
+        defer g_object_unref(provider);
+
+        var css_buf: [512]u8 = undefined;
+        const css = std.fmt.bufPrint(&css_buf, "window, .background {{ border: {d}px solid {s}; border-radius: {d}px; }}", .{
+            width,
+            color,
+            radius,
+        }) catch return;
+
+        if (gtk_css_provider_load_from_data(provider, css.ptr, @intCast(css.len), null) != 0) {
+            const screen = gdk_screen_get_default();
+            if (screen != null) {
+                // 600 = GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+                gtk_style_context_add_provider_for_screen(screen, provider, 600);
+            }
+        }
+    }
+} else struct {};
 
 fn handleNativeCall(id: [:0]const u8, req: [:0]const u8, arg: ?*anyopaque) void {
     _ = arg;
@@ -39,6 +74,77 @@ fn handleNativeCall(id: [:0]const u8, req: [:0]const u8, arg: ?*anyopaque) void 
     } else if (std.mem.indexOf(u8, req, "window:maximize") != null) {
         w.maximize() catch {};
         w.respond(id, .ok, "{}") catch {};
+    } else if (std.mem.indexOf(u8, req, "window:setDecorations") != null) {
+        if (builtin.os.tag == .linux) {
+            const gtk_win = w.getWindow();
+            if (gtk_win != null) {
+                const enable = std.mem.indexOf(u8, req, "\"decorated\":false") == null and
+                    std.mem.indexOf(u8, req, "\"decorated\": false") == null;
+                linux.gtk_window_set_decorated(gtk_win, if (enable) 1 else 0);
+            }
+        }
+        w.respond(id, .ok, "{\"success\": true}") catch {};
+    } else if (std.mem.indexOf(u8, req, "window:startDrag") != null) {
+        if (builtin.os.tag == .linux) {
+            const gtk_win = w.getWindow();
+            if (gtk_win != null) {
+                var root_x: c_int = 0;
+                var root_y: c_int = 0;
+                if (std.mem.indexOf(u8, req, "\"screenX\":")) |idx| {
+                    const rest = req[idx + 10 ..];
+                    var end: usize = 0;
+                    while (end < rest.len and (rest[end] >= '0' and rest[end] <= '9')) : (end += 1) {}
+                    if (end > 0) {
+                        root_x = std.fmt.parseInt(c_int, rest[0..end], 10) catch 0;
+                    }
+                }
+                if (std.mem.indexOf(u8, req, "\"screenY\":")) |idx| {
+                    const rest = req[idx + 10 ..];
+                    var end: usize = 0;
+                    while (end < rest.len and (rest[end] >= '0' and rest[end] <= '9')) : (end += 1) {}
+                    if (end > 0) {
+                        root_y = std.fmt.parseInt(c_int, rest[0..end], 10) catch 0;
+                    }
+                }
+                linux.gtk_window_begin_move_drag(gtk_win, 1, root_x, root_y, 0);
+            }
+        }
+        w.respond(id, .ok, "{\"success\": true}") catch {};
+    } else if (std.mem.indexOf(u8, req, "window:setBorder") != null) {
+        if (builtin.os.tag == .linux) {
+            var color: []const u8 = "#3b82f6";
+            var width: c_int = 1;
+            var radius: c_int = 0;
+
+            if (std.mem.indexOf(u8, req, "\"color\":")) |idx| {
+                const rest = req[idx + 8 ..];
+                if (std.mem.indexOf(u8, rest, "\"")) |start_quote| {
+                    const val_rest = rest[start_quote + 1 ..];
+                    if (std.mem.indexOf(u8, val_rest, "\"")) |end_quote| {
+                        color = val_rest[0..end_quote];
+                    }
+                }
+            }
+            if (std.mem.indexOf(u8, req, "\"width\":")) |idx| {
+                const rest = req[idx + 8 ..];
+                var end: usize = 0;
+                while (end < rest.len and (rest[end] >= '0' and rest[end] <= '9')) : (end += 1) {}
+                if (end > 0) {
+                    width = std.fmt.parseInt(c_int, rest[0..end], 10) catch 1;
+                }
+            }
+            if (std.mem.indexOf(u8, req, "\"radius\":")) |idx| {
+                const rest = req[idx + 9 ..];
+                var end: usize = 0;
+                while (end < rest.len and (rest[end] >= '0' and rest[end] <= '9')) : (end += 1) {}
+                if (end > 0) {
+                    radius = std.fmt.parseInt(c_int, rest[0..end], 10) catch 0;
+                }
+            }
+
+            linux.applyBorder(color, width, radius);
+        }
+        w.respond(id, .ok, "{\"success\": true}") catch {};
     } else {
         w.respond(id, .ok, "{\"ok\": true}") catch {};
     }
@@ -52,6 +158,19 @@ pub fn main() !void {
 
     try w.setTitle(WindowConfig.title);
     try w.setSize(WindowConfig.width, WindowConfig.height, if (WindowConfig.resizable) .none else .fixed);
+
+    // Linux-specific window configuration (custom borders & frameless decorations)
+    if (builtin.os.tag == .linux) {
+        const gtk_win = w.getWindow();
+        if (gtk_win != null) {
+            if (!WindowConfig.decorations) {
+                linux.gtk_window_set_decorated(gtk_win, 0);
+            }
+            if (WindowConfig.border_color) |color| {
+                linux.applyBorder(color, WindowConfig.border_width, WindowConfig.border_radius);
+            }
+        }
+    }
 
     // Inject native bridge marker before document evaluation
     try w.addInitScript(

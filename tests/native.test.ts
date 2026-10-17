@@ -114,6 +114,36 @@ describe("Visage Native IPC Bridge (visage/native)", () => {
     const res = await native.invoke("customCommand", { foo: "bar" });
     expect(res).toEqual({ ok: true, mock: true, command: "customCommand" });
   });
+
+  it("invokes window control functions (close, minimize, maximize, setDecorations, setBorder, startDrag)", async () => {
+    (globalThis as any).window = {};
+    const calls: { cmd: string; payload: any }[] = [];
+
+    (globalThis as any).window.__visage_native_call = async (
+      _id: string,
+      cmd: string,
+      payload: any
+    ) => {
+      calls.push({ cmd, payload });
+      return { success: true };
+    };
+
+    await native.window.close();
+    await native.window.minimize();
+    await native.window.maximize();
+    await native.window.setDecorations(false);
+    await native.window.setBorder({ color: "#3b82f6", width: 2, radius: 8 });
+    await native.window.startDrag({ button: 1, screenX: 150, screenY: 200 });
+
+    expect(calls).toEqual([
+      { cmd: "window:close", payload: undefined },
+      { cmd: "window:minimize", payload: undefined },
+      { cmd: "window:maximize", payload: undefined },
+      { cmd: "window:setDecorations", payload: { decorated: false } },
+      { cmd: "window:setBorder", payload: { color: "#3b82f6", width: 2, radius: 8 } },
+      { cmd: "window:startDrag", payload: { button: 1, screenX: 150, screenY: 200 } }
+    ]);
+  });
 });
 
 describe("Zig Native Project Scaffolding", () => {
@@ -153,6 +183,8 @@ describe("Zig Native Project Scaffolding", () => {
     expect(mainZigContent).toContain("width: c_int = 1280");
     expect(mainZigContent).toContain("height: c_int = 800");
     expect(mainZigContent).toContain("debug: bool = true");
+    expect(mainZigContent).toContain("decorations: bool = true");
+    expect(mainZigContent).toContain("border_color: ?[:0]const u8 = null");
     expect(mainZigContent).toContain('@embedFile("ui_html")');
     expect(mainZigContent).toContain('const Webview = @import("webview").Webview;');
 
@@ -160,5 +192,30 @@ describe("Zig Native Project Scaffolding", () => {
     expect(buildZigContent).toContain('.dependency("webview"');
     expect(buildZigContent).toContain(".link_libc = true");
     expect(buildZigContent).toContain('.name = "visage-app"');
+  });
+
+  it("scaffolds custom window border and frameless window options in main.zig", () => {
+    scaffoldZigNative(tempDir, {
+      title: "Frameless Custom Border Window",
+      decorations: false,
+      border: {
+        color: "#3b82f6",
+        width: 3,
+        radius: 12
+      },
+      outputDir: "src-native"
+    });
+
+    const mainZigPath = path.join(tempDir, "src-native", "main.zig");
+    const mainZigContent = fs.readFileSync(mainZigPath, "utf8");
+
+    expect(mainZigContent).toContain("decorations: bool = false");
+    expect(mainZigContent).toContain('border_color: ?[:0]const u8 = "#3b82f6"');
+    expect(mainZigContent).toContain("border_width: c_int = 3");
+    expect(mainZigContent).toContain("border_radius: c_int = 12");
+    expect(mainZigContent).toContain("linux.gtk_window_set_decorated(gtk_win, 0);");
+    expect(mainZigContent).toContain(
+      "linux.applyBorder(color, WindowConfig.border_width, WindowConfig.border_radius);"
+    );
   });
 });

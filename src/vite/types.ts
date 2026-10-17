@@ -108,6 +108,41 @@ export interface ZigNativeOptions {
    * @default "visage://localhost"
    */
   virtualOrigin?: string;
+
+  /**
+   * Enable or disable native window decorations (titlebar and OS window borders).
+   * Set to `false` to create a frameless window with custom borders.
+   * @default true
+   */
+  decorations?: boolean;
+
+  /**
+   * Custom window border styling for the native desktop host.
+   */
+  border?: boolean | WindowBorderOptions;
+}
+
+/**
+ * Options for custom window borders on native desktop hosts
+ */
+export interface WindowBorderOptions {
+  /**
+   * Custom border color (CSS color string, e.g. "#3b82f6" or "rgb(59, 130, 246)")
+   * @default "#3b82f6"
+   */
+  color?: string;
+
+  /**
+   * Border stroke width in pixels
+   * @default 1
+   */
+  width?: number;
+
+  /**
+   * Border corner radius in pixels
+   * @default 0
+   */
+  radius?: number;
 }
 
 /**

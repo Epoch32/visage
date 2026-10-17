@@ -104,13 +104,24 @@ export function scaffoldZigNative(projectRoot: string, options: ZigNativeOptions
   if (!fs.existsSync(mainZigPath)) {
     const template = loadTemplate("main.zig");
     const virtualOrigin = options.virtualOrigin ?? "visage://localhost";
+    const decorations = options.decorations !== false;
+    const borderConfig =
+      typeof options.border === "object" ? options.border : options.border ? {} : null;
+    const borderColor = borderConfig?.color ? `"${borderConfig.color}"` : "null";
+    const borderWidth = borderConfig?.width ?? 1;
+    const borderRadius = borderConfig?.radius ?? 0;
+
     const mainZigContent = template
       .replace("{{WINDOW_TITLE}}", title)
       .replace("{{WINDOW_WIDTH}}", String(width))
       .replace("{{WINDOW_HEIGHT}}", String(height))
       .replace("{{WINDOW_RESIZABLE}}", String(resizable))
       .replace("{{WINDOW_DEBUG}}", String(debug))
-      .replaceAll("{{VIRTUAL_ORIGIN}}", virtualOrigin);
+      .replaceAll("{{VIRTUAL_ORIGIN}}", virtualOrigin)
+      .replace("{{WINDOW_DECORATIONS}}", String(decorations))
+      .replace("{{BORDER_COLOR}}", borderColor)
+      .replace("{{BORDER_WIDTH}}", String(borderWidth))
+      .replace("{{BORDER_RADIUS}}", String(borderRadius));
     fs.writeFileSync(mainZigPath, mainZigContent, "utf8");
   }
 

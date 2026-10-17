@@ -88,6 +88,24 @@ function ensureInitialized() {
       }
     }
   };
+
+  // Automatic drag region listener for frameless native windows
+  if (typeof document !== "undefined") {
+    document.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest("button, input, textarea, select, a, [data-visage-no-drag]")) {
+        return;
+      }
+      if (
+        target.closest("[data-visage-drag-region]") ||
+        target.closest("[data-tauri-drag-region]")
+      ) {
+        startDrag({ button: 1, screenX: e.screenX, screenY: e.screenY }).catch(() => {});
+      }
+    });
+  }
 }
 
 /**
@@ -228,6 +246,63 @@ export function maximizeWindow(): Promise<void> {
   return invoke("window:maximize");
 }
 
+export interface WindowBorderOptions {
+  /**
+   * Border color (e.g., "#3b82f6", "rgb(59, 130, 246)")
+   */
+  color?: string;
+  /**
+   * Border width in pixels
+   */
+  width?: number;
+  /**
+   * Border corner radius in pixels
+   */
+  radius?: number;
+}
+
+/**
+ * Toggle native window decorations (frameless vs standard titlebar/borders).
+ */
+export function setDecorations(decorated: boolean): Promise<void> {
+  return invoke("window:setDecorations", { decorated });
+}
+
+/**
+ * Set custom native window border styling (color, width, radius).
+ */
+export function setBorder(options: WindowBorderOptions): Promise<void> {
+  return invoke("window:setBorder", options);
+}
+
+/**
+ * Initiate an interactive native window move/drag operation.
+ * Automatically triggered when clicking elements with `data-visage-drag-region`.
+ */
+export function startDrag(event?: {
+  button?: number;
+  screenX?: number;
+  screenY?: number;
+}): Promise<void> {
+  return invoke("window:startDrag", {
+    button: event?.button ?? 1,
+    screenX: event?.screenX ?? 0,
+    screenY: event?.screenY ?? 0
+  });
+}
+
+/**
+ * Window control functions namespace
+ */
+export const windowControls = {
+  close: closeWindow,
+  minimize: minimizeWindow,
+  maximize: maximizeWindow,
+  setDecorations,
+  setBorder,
+  startDrag
+};
+
 /**
  * Default native namespace export
  */
@@ -237,7 +312,11 @@ export const native = {
   isNativeApp,
   close: closeWindow,
   minimize: minimizeWindow,
-  maximize: maximizeWindow
+  maximize: maximizeWindow,
+  setDecorations,
+  setBorder,
+  startDrag,
+  window: windowControls
 };
 
 export default native;
