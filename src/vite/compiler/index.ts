@@ -58,6 +58,16 @@ export function compileJsx(code: string, options: CompilerOptions = {}): Generat
       res.arguments.length === 0
     ) {
       path.parentPath.get("body").replaceWith((res.callee as t.ArrowFunctionExpression).body);
+    } else if (
+      path.parentPath.isReturnStatement() &&
+      path.parentPath.parentPath?.isBlockStatement() &&
+      t.isCallExpression(res) &&
+      t.isArrowFunctionExpression(res.callee) &&
+      res.arguments.length === 0 &&
+      t.isBlockStatement((res.callee as t.ArrowFunctionExpression).body)
+    ) {
+      const block = (res.callee as t.ArrowFunctionExpression).body as t.BlockStatement;
+      path.parentPath.replaceWithMultiple(block.body);
     } else {
       path.replaceWith(res);
     }

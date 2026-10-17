@@ -66,6 +66,9 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain("const _tmpl$1 = template(");
     expect(code).toContain('<button class=\\"btn btn-primary\\">Click Me</button>');
     expect(code).toContain("_el$.__click = handleClick;");
+    // Verify statements are inlined directly into the function body without IIFE wrapper
+    expect(code).not.toContain("(() => {");
+    expect(code).toContain("return _el$;");
   });
 
   it("compiles event delegation tuples [handler, data] into zero-allocation property assignments", () => {
