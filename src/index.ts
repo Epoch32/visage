@@ -210,6 +210,7 @@ export {
   type LinkProps,
   type LocationState,
   type MatchedRoute,
+  type NavigateOptions,
   Route,
   type RouteDefinition,
   type RouteProps,

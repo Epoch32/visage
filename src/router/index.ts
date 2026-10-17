@@ -4,6 +4,7 @@ export {
   type LocationState,
   lazy,
   type MatchedRoute,
+  type NavigateOptions,
   Route,
   type RouteDefinition,
   type RouteProps,

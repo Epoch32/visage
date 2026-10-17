@@ -15,9 +15,14 @@ export interface LocationState {
   hash: ReadonlySignal<string>;
 }
 
+export interface NavigateOptions {
+  replace?: boolean;
+  viewTransition?: boolean;
+}
+
 export interface RouterContextValue {
   location: LocationState;
-  navigate: (to: string, options?: { replace?: boolean }) => void;
+  navigate: (to: string, options?: NavigateOptions) => void;
   params: ReadonlySignal<Record<string, string>>;
   base: string;
   matchedRoute: ReadonlySignal<MatchedRoute | null>;
@@ -96,6 +101,7 @@ function matchRoute(routes: RouteDefinition[], pathname: string, base = ""): Mat
 export interface RouterProps {
   base?: string;
   mode?: "history" | "hash";
+  viewTransitions?: boolean;
   children: Child;
 }
 
@@ -163,28 +169,41 @@ export function Router(props: RouterProps): Child {
     onCleanup(() => window.removeEventListener(eventName, syncLocation));
   }
 
-  const navigate = (to: string, options?: { replace?: boolean }) => {
-    if (typeof window === "undefined" || !window.history) {
-      pathname.set(to);
-      return;
-    }
-
+  const navigate = (to: string, options?: NavigateOptions) => {
     const target = base ? `${base.replace(/\/$/, "")}/${to.replace(/^\//, "")}` : to;
 
-    if (mode === "hash") {
-      if (options?.replace) {
-        window.location.replace(`#${to}`);
-      } else {
-        window.location.hash = `#${to}`;
+    const performNavigation = () => {
+      if (typeof window === "undefined" || !window.history) {
+        pathname.set(to);
+        return;
       }
+
+      if (mode === "hash") {
+        if (options?.replace) {
+          window.location.replace(`#${to}`);
+        } else {
+          window.location.hash = `#${to}`;
+        }
+      } else {
+        if (options?.replace) {
+          window.history.replaceState(null, "", target);
+        } else {
+          window.history.pushState(null, "", target);
+        }
+      }
+      syncLocation();
+    };
+
+    const useTransition = options?.viewTransition ?? props.viewTransitions ?? false;
+    const doc = typeof document !== "undefined" ? (document as any) : null;
+
+    if (useTransition && doc && typeof doc.startViewTransition === "function") {
+      doc.startViewTransition(() => {
+        performNavigation();
+      });
     } else {
-      if (options?.replace) {
-        window.history.replaceState(null, "", target);
-      } else {
-        window.history.pushState(null, "", target);
-      }
+      performNavigation();
     }
-    syncLocation();
   };
 
   const matchedRoute = computed(() => {
@@ -281,6 +300,7 @@ export interface LinkProps {
   className?: string | (() => string);
   activeClass?: string;
   replace?: boolean;
+  viewTransition?: boolean;
   children: Child;
   [key: string]: any;
 }
@@ -296,6 +316,7 @@ export function Link(props: LinkProps): Child {
     className: classNameProp,
     activeClass = "active",
     replace,
+    viewTransition,
     children,
     ...rest
   } = props;
@@ -308,7 +329,7 @@ export function Link(props: LinkProps): Child {
 
     e.preventDefault();
     if (router) {
-      router.navigate(href, { replace });
+      router.navigate(href, { replace, viewTransition });
     } else if (typeof window !== "undefined") {
       window.location.href = href;
     }
@@ -347,7 +368,7 @@ export function useLocation(): LocationState {
 /**
  * Access the imperative navigate function
  */
-export function useNavigate(): (to: string, options?: { replace?: boolean }) => void {
+export function useNavigate(): (to: string, options?: NavigateOptions) => void {
   const router = useContext(RouterContext);
   if (!router) throw new Error("useNavigate must be used within a <Router>");
   return router.navigate;

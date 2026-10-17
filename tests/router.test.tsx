@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { setupDOM } from "./dom-mock";
 
 setupDOM();
@@ -9,6 +9,9 @@ describe("Visage Router", () => {
   let container: any;
 
   beforeEach(() => {
+    if (window.history) {
+      window.history.replaceState(null, "", "/");
+    }
     container = document.createElement("div");
     document.body.appendChild(container);
   });
@@ -163,5 +166,165 @@ describe("Visage Router", () => {
     expect(container.querySelector(".not-found")?.textContent).toBe("404");
 
     unmount();
+  });
+
+  describe("View Transitions", () => {
+    afterEach(() => {
+      delete (document as any).startViewTransition;
+    });
+
+    it("navigates using document.startViewTransition when viewTransition option is true", () => {
+      let transitionCalled = false;
+      (document as any).startViewTransition = (cb: () => void) => {
+        transitionCalled = true;
+        cb();
+        return { finished: Promise.resolve() };
+      };
+
+      let navigateFn: any;
+      function Nav() {
+        navigateFn = useNavigate();
+        return null;
+      }
+
+      const unmount = render(
+        () => (
+          <Router>
+            {() => (
+              <>
+                <Nav />
+                <Routes>
+                  <Route path="/" component={() => <div class="page-home">Home</div>} />
+                  <Route path="/target" component={() => <div class="page-target">Target</div>} />
+                </Routes>
+              </>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      expect(container.querySelector(".page-home")?.textContent).toBe("Home");
+      expect(transitionCalled).toBe(false);
+
+      navigateFn("/target", { viewTransition: true });
+      expect(transitionCalled).toBe(true);
+      expect(container.querySelector(".page-target")?.textContent).toBe("Target");
+
+      unmount();
+    });
+
+    it("supports router-level viewTransitions configuration with per-navigation override", () => {
+      let transitionsCount = 0;
+      (document as any).startViewTransition = (cb: () => void) => {
+        transitionsCount++;
+        cb();
+        return { finished: Promise.resolve() };
+      };
+
+      let navigateFn: any;
+      function Nav() {
+        navigateFn = useNavigate();
+        return null;
+      }
+
+      const unmount = render(
+        () => (
+          <Router viewTransitions={true}>
+            {() => (
+              <>
+                <Nav />
+                <Routes>
+                  <Route path="/" component={() => <div class="page-1">One</div>} />
+                  <Route path="/two" component={() => <div class="page-2">Two</div>} />
+                  <Route path="/three" component={() => <div class="page-3">Three</div>} />
+                </Routes>
+              </>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      navigateFn("/two");
+      expect(transitionsCount).toBe(1);
+      expect(container.querySelector(".page-2")?.textContent).toBe("Two");
+
+      // Per-navigation override disables view transition
+      navigateFn("/three", { viewTransition: false });
+      expect(transitionsCount).toBe(1);
+      expect(container.querySelector(".page-3")?.textContent).toBe("Three");
+
+      unmount();
+    });
+
+    it("triggers startViewTransition when clicking a Link with viewTransition prop", () => {
+      let transitionCalled = false;
+      (document as any).startViewTransition = (cb: () => void) => {
+        transitionCalled = true;
+        cb();
+        return { finished: Promise.resolve() };
+      };
+
+      const unmount = render(
+        () => (
+          <Router>
+            {() => (
+              <>
+                <Link href="/about" viewTransition class="nav-link">
+                  Go to About
+                </Link>
+                <Routes>
+                  <Route path="/" component={() => <div>Home</div>} />
+                  <Route path="/about" component={() => <div class="page-about">About</div>} />
+                </Routes>
+              </>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      const link = container.querySelector(".nav-link") as HTMLAnchorElement;
+      expect(link).not.toBeNull();
+      link.click();
+
+      expect(transitionCalled).toBe(true);
+      expect(container.querySelector(".page-about")?.textContent).toBe("About");
+
+      unmount();
+    });
+
+    it("falls back gracefully when document.startViewTransition is not available", () => {
+      delete (document as any).startViewTransition;
+
+      let navigateFn: any;
+      function Nav() {
+        navigateFn = useNavigate();
+        return null;
+      }
+
+      const unmount = render(
+        () => (
+          <Router viewTransitions={true}>
+            {() => (
+              <>
+                <Nav />
+                <Routes>
+                  <Route path="/" component={() => <div>Home</div>} />
+                  <Route path="/no-vt" component={() => <div class="page-no-vt">No VT</div>} />
+                </Routes>
+              </>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      navigateFn("/no-vt", { viewTransition: true });
+      expect(container.querySelector(".page-no-vt")?.textContent).toBe("No VT");
+
+      unmount();
+    });
   });
 });
