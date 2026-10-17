@@ -1,0 +1,151 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { compileJsx } from "../compiler";
+import type { DetectedOrigins } from "../compiler/types";
+import { buildCspString, extractOriginFromUrl, injectCspMetaTag } from "../csp";
+import { pc, type VisageLogger } from "../logger";
+import type { CSPOptions, VisageVitePlugin } from "../types";
+
+declare const process: any;
+
+export function extractOriginsFromHtml(html: string, detectedOrigins: DetectedOrigins): void {
+  const matches = html.matchAll(/<(?:img|iframe|video|audio|source|link)\b[^>]+>/gi);
+  for (const match of matches) {
+    const tag = match[0];
+    const srcMatch = tag.match(/\bsrc=["']([^"']+)["']/i);
+    const hrefMatch = tag.match(/\bhref=["']([^"']+)["']/i);
+    const url = srcMatch?.[1] || hrefMatch?.[1];
+    if (url) {
+      const origin = extractOriginFromUrl(url);
+      if (origin) {
+        if (/^<img\b/i.test(tag)) detectedOrigins.img.add(origin);
+        else if (/^<iframe\b/i.test(tag)) detectedOrigins.frame.add(origin);
+        else if (/^<(?:video|audio|source)\b/i.test(tag)) detectedOrigins.media.add(origin);
+        else if (/^<link\b/i.test(tag)) {
+          if (/rel=["']stylesheet["']/i.test(tag)) detectedOrigins.style.add(origin);
+          else if (/as=["']font["']/i.test(tag)) detectedOrigins.font.add(origin);
+        }
+      }
+    }
+  }
+}
+
+export function scanProjectOrigins(
+  dir: string,
+  cspOpts: boolean | CSPOptions,
+  detectedOrigins: DetectedOrigins,
+  compilerOpts: any
+): void {
+  if (!fs.existsSync(dir)) return;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (
+        entry.name === "node_modules" ||
+        entry.name === "dist" ||
+        entry.name.startsWith(".") ||
+        entry.name === "zig-out" ||
+        entry.name === "zig-pkg" ||
+        entry.name === ".zig-cache"
+      ) {
+        continue;
+      }
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        scanProjectOrigins(fullPath, cspOpts, detectedOrigins, compilerOpts);
+      } else if (/\.[jt]sx$/.test(entry.name)) {
+        try {
+          const code = fs.readFileSync(fullPath, "utf8");
+          if (!/(?:https?:\/\/|\/\/|wss?:\/\/)/i.test(code)) {
+            continue;
+          }
+          compileJsx(code, {
+            filename: fullPath,
+            ...compilerOpts,
+            csp: cspOpts,
+            detectedOrigins
+          });
+        } catch {
+          // Ignore parse errors on scratch files
+        }
+      }
+    }
+  } catch {
+    // Ignore directory read errors
+  }
+}
+
+export function createCspPlugin(
+  cspOpts: any,
+  detectedOrigins: DetectedOrigins,
+  vLog: VisageLogger,
+  virtualOrigin?: string,
+  compilerOpts?: any
+): VisageVitePlugin {
+  let hasPreScanned = false;
+  let projectRoot = typeof process !== "undefined" ? process.cwd() : ".";
+
+  return {
+    name: "visage:csp",
+    configResolved(config) {
+      if (config?.root) {
+        projectRoot = config.root;
+      }
+    },
+    buildStart() {
+      const voDetail = virtualOrigin ? `, origin: ${virtualOrigin}` : "";
+      vLog.info(
+        "visage:csp",
+        `Content Security Policy generator armed ${pc.dim(`(strict zero-trust${voDetail})`)}`
+      );
+      const shouldAutoDetect = typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
+      if (shouldAutoDetect && !hasPreScanned) {
+        scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts);
+        hasPreScanned = true;
+        const originCount =
+          detectedOrigins.connect.size +
+          detectedOrigins.img.size +
+          detectedOrigins.font.size +
+          detectedOrigins.style.size +
+          detectedOrigins.media.size +
+          detectedOrigins.frame.size;
+        if (originCount > 0) {
+          const originsSample = [
+            ...detectedOrigins.connect,
+            ...detectedOrigins.img,
+            ...detectedOrigins.font,
+            ...detectedOrigins.style,
+            ...detectedOrigins.media,
+            ...detectedOrigins.frame
+          ];
+          vLog.info(
+            "visage:csp",
+            `Auto-whitelisted ${originCount} external origin${originCount > 1 ? "s" : ""} from project scan ${pc.dim(`(${originsSample.slice(0, 3).join(", ")}${originCount > 3 ? ", ..." : ""})`)}`
+          );
+        }
+      }
+    },
+    transformIndexHtml(html: string) {
+      const shouldAutoDetect = typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
+      if (shouldAutoDetect && !hasPreScanned) {
+        scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts);
+        hasPreScanned = true;
+      }
+      extractOriginsFromHtml(html, detectedOrigins);
+      let transformedHtml = html;
+      if (virtualOrigin && !/<base\b/i.test(transformedHtml)) {
+        const voBase = virtualOrigin.endsWith("/") ? virtualOrigin : `${virtualOrigin}/`;
+        transformedHtml = transformedHtml.replace(
+          /(<head\b[^>]*>)/i,
+          `$1\n    <base href="${voBase}">`
+        );
+      }
+      const cspString = buildCspString(cspOpts, detectedOrigins);
+      vLog.debug(
+        "visage:csp",
+        `Injected CSP meta tag into HTML shell ${pc.dim(`(${cspString.slice(0, 45)}...)`)}`
+      );
+      return injectCspMetaTag(transformedHtml, cspString);
+    }
+  };
+}

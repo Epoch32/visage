@@ -19,7 +19,8 @@ const TAG_COLORS: Record<string, (str: string) => string> = {
   "visage:devtools": pc.cyan,
   "visage:lucide": pc.magenta,
   "visage:hmr": pc.green,
-  "visage:ssr": pc.cyan
+  "visage:ssr": pc.cyan,
+  "visage:storage-preboot": pc.cyan
 };
 
 export function formatTag(tag: string): string {
