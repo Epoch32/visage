@@ -776,6 +776,81 @@ describe("Visage UI Component Primitives", () => {
       unmount();
     });
 
+    it("memoizes filtered/sorted data and reuses DOM rows across sorting and pagination", () => {
+      const items = signal([
+        { id: "101", title: "Item A", score: 50 },
+        { id: "102", title: "Item B", score: 80 },
+        { id: "103", title: "Item C", score: 20 },
+        { id: "104", title: "Item D", score: 95 }
+      ]);
+      const filterText = signal("");
+
+      const unmount = render(
+        () => (
+          <DataTable
+            data={items}
+            filter={filterText}
+            pageSize={2}
+            columns={[
+              { id: "id", header: "ID", accessorKey: "id" },
+              { id: "title", header: "Title", accessorKey: "title", sortable: true },
+              { id: "score", header: "Score", accessorKey: "score", sortable: true }
+            ]}
+          />
+        ),
+        container
+      );
+
+      // Initial page: 2 rows (Item A: 50, Item B: 80)
+      let rows = container.querySelectorAll("tbody tr");
+      expect(rows.length).toBe(2);
+      expect(rows[0]?.textContent).toContain("Item A");
+      expect(rows[1]?.textContent).toContain("Item B");
+
+      // Verify pagination text
+      expect(container.textContent).toContain("Page 1 of 2");
+
+      // Track the DOM element for Item A
+      const itemARow = rows[0];
+
+      // Click "Score" header to sort score ascending (C: 20, A: 50 on page 1)
+      const headers = container.querySelectorAll("th");
+      const scoreHeader = headers[2]; // ID, Title, Score
+      (scoreHeader as HTMLElement).click();
+
+      rows = container.querySelectorAll("tbody tr");
+      expect(rows[0]?.textContent).toContain("Item C");
+      expect(rows[1]?.textContent).toContain("Item A");
+      // Keying by getRowId preserves the existing DOM node for Item A across reordering
+      expect(rows[1]).toBe(itemARow);
+
+      // Next page button
+      const buttons = container.querySelectorAll("button");
+      const nextBtn = buttons[buttons.length - 1];
+      nextBtn?.click();
+
+      // Page 2 shows remaining items in ascending order (Item B: 80 and Item D: 95)
+      rows = container.querySelectorAll("tbody tr");
+      expect(rows.length).toBe(2);
+      expect(rows[0]?.textContent).toContain("Item B");
+      expect(rows[1]?.textContent).toContain("Item D");
+      expect(container.textContent).toContain("Page 2 of 2");
+
+      // Previous page button
+      const prevBtn = buttons[buttons.length - 2];
+      prevBtn?.click();
+      expect(container.textContent).toContain("Page 1 of 2");
+
+      // Filtering with signal
+      filterText.set("Item D");
+      rows = container.querySelectorAll("tbody tr");
+      expect(rows.length).toBe(1);
+      expect(rows[0]?.textContent).toContain("Item D");
+      expect(container.textContent).toContain("Page 1 of 1");
+
+      unmount();
+    });
+
     it("renders Select primitive with options and handles selection", () => {
       let selectedVal = "light";
       const unmount = render(

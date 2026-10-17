@@ -1,6 +1,6 @@
-import { For } from "../dom/control-flow";
+import { For } from "../dom";
 import type { Child } from "../dom/render";
-import { createSignal } from "../signals";
+import { computed, createSignal } from "../signals";
 import { createControllableSignal } from "./utils";
 
 export type SortDirection = "asc" | "desc" | null;
@@ -60,14 +60,14 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
   const pageSize = props.pageSize ?? 10;
   const selectionMode = props.selection ?? "none";
 
-  const getRowId = (row: T, index: number): string => {
-    if (props.getRowId) return props.getRowId(row, index);
+  const getRowId = (row: T, index?: number): string => {
+    if (props.getRowId) return props.getRowId(row, index ?? 0);
     if (row && typeof row === "object" && "id" in row) return String(row.id);
-    return String(index);
+    return String(index ?? 0);
   };
 
-  // 1. Filtered Data
-  const filteredData = () => {
+  // 1. Filtered Data (memoized)
+  const filteredData = computed(() => {
     const raw = typeof props.data === "function" ? props.data() : props.data;
     if (!raw) return [];
     const filterQuery = props.filter
@@ -78,10 +78,10 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
     return raw.filter((row) =>
       Object.values(row).some((val) => String(val).toLowerCase().includes(filterQuery))
     );
-  };
+  });
 
-  // 2. Sorted Data
-  const sortedData = () => {
+  // 2. Sorted Data (memoized)
+  const sortedData = computed(() => {
     const list = [...filteredData()];
     const currentSort = sortState();
     if (!currentSort.column || !currentSort.direction) return list;
@@ -96,15 +96,15 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
       const comp = aVal < bVal ? -1 : 1;
       return currentSort.direction === "asc" ? comp : -comp;
     });
-  };
+  });
 
-  // 3. Paginated Data
-  const totalPages = () => Math.ceil(sortedData().length / pageSize) || 1;
-  const paginatedData = () => {
+  // 3. Paginated Data (memoized)
+  const totalPages = computed(() => Math.ceil(sortedData().length / pageSize) || 1);
+  const paginatedData = computed(() => {
     if (!props.pageSize) return sortedData();
     const start = currentPage() * pageSize;
     return sortedData().slice(start, start + pageSize);
-  };
+  });
 
   const handleSort = (colId: string) => {
     const current = sortState();
@@ -213,6 +213,7 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
           <tbody>
             <For
               each={paginatedData}
+              by={(row: T) => getRowId(row)}
               fallback={
                 <tr>
                   <td
@@ -304,7 +305,8 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
               Previous
             </button>
             <span>
-              Page <strong>{() => currentPage() + 1}</strong> of <strong>{totalPages}</strong>
+              Page <strong>{() => currentPage() + 1}</strong> of{" "}
+              <strong>{() => totalPages()}</strong>
             </span>
             <button
               type="button"
