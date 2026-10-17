@@ -45,41 +45,27 @@ export function compileJsx(code: string, options: CompilerOptions = {}): Generat
     plugins: ["jsx", "typescript"]
   });
 
-  babelTraverse(ast, {
-    JSXElement(path: any) {
-      if (t.isJSXElement(path.parent) || t.isJSXFragment(path.parent)) {
-        return;
-      }
-      const res = transformJsxNode(path.node, context);
-      if (
-        path.parentPath.isArrowFunctionExpression() &&
-        path.parent.body === path.node &&
-        t.isCallExpression(res) &&
-        t.isArrowFunctionExpression(res.callee) &&
-        res.arguments.length === 0
-      ) {
-        path.parentPath.get("body").replaceWith((res.callee as t.ArrowFunctionExpression).body);
-      } else {
-        path.replaceWith(res);
-      }
-    },
-    JSXFragment(path: any) {
-      if (t.isJSXElement(path.parent) || t.isJSXFragment(path.parent)) {
-        return;
-      }
-      const res = transformJsxNode(path.node, context);
-      if (
-        path.parentPath.isArrowFunctionExpression() &&
-        path.parent.body === path.node &&
-        t.isCallExpression(res) &&
-        t.isArrowFunctionExpression(res.callee) &&
-        res.arguments.length === 0
-      ) {
-        path.parentPath.get("body").replaceWith((res.callee as t.ArrowFunctionExpression).body);
-      } else {
-        path.replaceWith(res);
-      }
+  function handleRootJsx(path: any) {
+    if (t.isJSXElement(path.parent) || t.isJSXFragment(path.parent)) {
+      return;
     }
+    const res = transformJsxNode(path.node, context);
+    if (
+      path.parentPath.isArrowFunctionExpression() &&
+      path.parent.body === path.node &&
+      t.isCallExpression(res) &&
+      t.isArrowFunctionExpression(res.callee) &&
+      res.arguments.length === 0
+    ) {
+      path.parentPath.get("body").replaceWith((res.callee as t.ArrowFunctionExpression).body);
+    } else {
+      path.replaceWith(res);
+    }
+  }
+
+  babelTraverse(ast, {
+    JSXElement: handleRootJsx,
+    JSXFragment: handleRootJsx
   });
 
   const result = generateCode(ast as any, context);
