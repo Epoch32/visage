@@ -141,6 +141,7 @@
     "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.27.0",
     "@types/babel__traverse": "^7.28.0",
+    "@types/bun": "^1.4.3",
     "csstype": "^3.2.3",
     "happy-dom": "^21.0.1",
     "lucide": "^1.54.0",

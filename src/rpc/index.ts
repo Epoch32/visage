@@ -33,6 +33,7 @@ export type {
   ClientRouter,
   ClientSubscriptionMethod,
   CORSOptions,
+  FetchFn,
   FetchHandlerOptions,
   InferProcedureInput,
   InferProcedureOutput,

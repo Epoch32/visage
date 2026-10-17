@@ -203,10 +203,12 @@ export type ClientHeadersRule =
   | Record<string, string>
   | (() => Promise<Record<string, string>> | Record<string, string>);
 
+export type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 export interface ClientOptions {
   baseUrl?: string;
   endpoint?: string;
-  fetch?: typeof fetch;
+  fetch?: FetchFn;
   headers?:
     | Record<string, string>
     | Record<string, ClientHeadersRule>

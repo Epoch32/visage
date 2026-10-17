@@ -55,6 +55,7 @@ export type {
   ApiSubscriptionCallbacks,
   ApiSubscriptionCaller,
   ApiSubscriptionHandle,
+  FetchFn,
   FileRouteModule,
   HttpMethod,
   InferApiInput,
