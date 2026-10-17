@@ -5,7 +5,12 @@ const nodeCache = new Map<string, Node>();
 /**
  * Cache and clone pre-parsed HTML template strings with native browser cloneNode(true)
  */
-export function template<T extends HTMLElement = HTMLElement>(htmlString: string): () => T {
+const SVG_CHILD_REGEX =
+  /^<(?:path|circle|rect|line|polyline|polygon|ellipse|g|defs|clipPath|linearGradient|radialGradient|stop|text|tspan)\b/i;
+
+export function template<T extends HTMLElement | SVGElement = HTMLElement>(
+  htmlString: string
+): () => T {
   let cachedNode = nodeCache.get(htmlString);
 
   return () => {
@@ -23,6 +28,15 @@ export function template<T extends HTMLElement = HTMLElement>(htmlString: string
         cachedNode =
           templateEl.content.firstElementChild!.firstElementChild!.firstElementChild!
             .firstElementChild!;
+      } else if (/^<(?:tbody|thead|tfoot|colgroup|caption)\b/i.test(trimmed)) {
+        templateEl.innerHTML = `<table>${trimmed}</table>`;
+        cachedNode = templateEl.content.firstElementChild!.firstElementChild!;
+      } else if (trimmed.startsWith("<col")) {
+        templateEl.innerHTML = `<table><colgroup>${trimmed}</colgroup></table>`;
+        cachedNode = templateEl.content.firstElementChild!.firstElementChild!.firstElementChild!;
+      } else if (SVG_CHILD_REGEX.test(trimmed)) {
+        templateEl.innerHTML = `<svg>${trimmed}</svg>`;
+        cachedNode = templateEl.content.firstElementChild!.firstElementChild!;
       } else {
         templateEl.innerHTML = trimmed;
         cachedNode = templateEl.content.firstElementChild!;

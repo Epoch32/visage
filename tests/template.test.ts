@@ -39,6 +39,19 @@ describe("Visage Template Engine", () => {
     expect(tr.querySelector(".lbl")?.textContent).toBe("text");
   });
 
+  it("clones table section and SVG child templates in their correct namespaces", () => {
+    const tbodyTmpl = template<HTMLTableSectionElement>("<tbody><tr><td>Row</td></tr></tbody>");
+    const tbody = tbodyTmpl();
+    expect(tbody).toBeTruthy();
+    expect(tbody.tagName.toLowerCase()).toBe("tbody");
+
+    const circleTmpl = template<SVGCircleElement>('<circle cx="50" cy="50" r="40" fill="red" />');
+    const circle = circleTmpl();
+    expect(circle).toBeTruthy();
+    expect(circle.tagName.toLowerCase()).toBe("circle");
+    expect(circle.namespaceURI).toBe("http://www.w3.org/2000/svg");
+  });
+
   it("binds reactive signals and text nodes using html tagged template", () => {
     const count = signal(10);
     const title = signal("Counter App");
