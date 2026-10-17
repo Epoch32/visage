@@ -39,9 +39,16 @@ export function transformComponentElement(
   }
 
   const tagName = getTagName(node);
-  const tagIdentifier = tagName.includes(".")
-    ? t.memberExpression(t.identifier(tagName.split(".")[0]!), t.identifier(tagName.split(".")[1]!))
-    : t.identifier(tagName);
+  const parts = tagName.split(".");
+  const tagIdentifier =
+    parts.length > 1
+      ? parts
+          .slice(1)
+          .reduce<t.Expression>(
+            (acc, part) => t.memberExpression(acc, t.identifier(part)),
+            t.identifier(parts[0]!)
+          )
+      : t.identifier(tagName);
 
   const propsProperties: (t.ObjectProperty | t.SpreadElement)[] = [];
 

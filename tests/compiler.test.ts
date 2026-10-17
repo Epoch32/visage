@@ -107,6 +107,7 @@ describe("Visage AOT JSX Compiler", () => {
         return (
           <div class="app">
             <Header title="My App" />
+            <UI.Form.Input placeholder="Username" />
             <For each={items}>
               {(item) => <li>{item}</li>}
             </For>
@@ -119,6 +120,8 @@ describe("Visage AOT JSX Compiler", () => {
 
     expect(code).toContain("Header({");
     expect(code).toContain('title: "My App"');
+    expect(code).toContain("UI.Form.Input({");
+    expect(code).toContain('placeholder: "Username"');
     expect(code).toContain("For({");
   });
 
