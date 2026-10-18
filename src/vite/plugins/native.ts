@@ -74,7 +74,9 @@ export function inlineSingleFileHtml(
     html = html.replace(/(<head\b[^>]*>)/i, `$1\n    <base href="${voBase}">`);
   }
 
-  if (csp) {
+  const isCspActive =
+    Boolean(csp) && (typeof csp !== "object" || (csp as CSPOptions).enabled !== false);
+  if (isCspActive) {
     const mergedCspOpts: CSPOptions = typeof csp === "object" ? { ...csp } : {};
     if (virtualOrigin) {
       mergedCspOpts.virtualOrigin = virtualOrigin;

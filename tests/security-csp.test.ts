@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { compileJsx } from "../src/vite/compiler";
 import { buildCspString, extractOriginFromUrl, injectCspMetaTag } from "../src/vite/csp";
 import { visage } from "../src/vite/plugin";
+import { inlineSingleFileHtml } from "../src/vite/plugins/native";
 
 describe("Content Security Policy (CSP): Core, Generator & Vite Integration", () => {
   describe("Default Off Behavior", () => {
@@ -427,6 +431,28 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
       expect(finalHtml).toContain("https://www.youtube.com");
       expect(finalHtml).toContain("https://media.stream.org");
       expect(finalHtml).toContain("https://api.backend.org");
+    });
+
+    it("honors csp.enabled: false in native inlineSingleFileHtml", () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "visage-native-csp-test-"));
+      try {
+        const htmlPath = path.join(tempDir, "index.html");
+        fs.writeFileSync(htmlPath, "<html><head><title>App</title></head><body></body></html>");
+
+        inlineSingleFileHtml(tempDir, { enabled: false });
+        const updatedHtml = fs.readFileSync(htmlPath, "utf8");
+        expect(updatedHtml).not.toContain("Content-Security-Policy");
+
+        inlineSingleFileHtml(tempDir, false);
+        const updatedHtml2 = fs.readFileSync(htmlPath, "utf8");
+        expect(updatedHtml2).not.toContain("Content-Security-Policy");
+
+        inlineSingleFileHtml(tempDir, true);
+        const updatedHtml3 = fs.readFileSync(htmlPath, "utf8");
+        expect(updatedHtml3).toContain("Content-Security-Policy");
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 });
