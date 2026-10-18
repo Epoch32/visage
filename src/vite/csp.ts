@@ -146,16 +146,20 @@ export function buildCspString(
  * Injects a Content-Security-Policy meta tag into an HTML document string.
  */
 export function injectCspMetaTag(html: string, cspString: string): string {
-  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${cspString}">`;
+  const escapedCsp = cspString.replace(/"/g, "&quot;");
+  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${escapedCsp}">`;
 
   // 1. Replace existing CSP meta tag if present
   if (/<meta\b[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/i.test(html)) {
-    return html.replace(/<meta\b[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/i, metaTag);
+    return html.replace(
+      /<meta\b[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/i,
+      () => metaTag
+    );
   }
 
   // 2. Insert into <head> directly after opening tag
   if (/<head\b[^>]*>/i.test(html)) {
-    return html.replace(/(<head\b[^>]*>)/i, `$1\n    ${metaTag}`);
+    return html.replace(/(<head\b[^>]*>)/i, (_match, p1) => `${p1}\n    ${metaTag}`);
   }
 
   // 3. Fallback: prepend to document

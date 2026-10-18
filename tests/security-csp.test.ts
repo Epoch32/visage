@@ -214,6 +214,16 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
         )
       ).toBe(true);
     });
+
+    it("escapes double quotes and safely preserves special regex replacement tokens ($1, $&)", () => {
+      const html = "<html><head><title>App</title></head><body></body></html>";
+      const csp = 'default-src "trusted"; report-uri /csp?token=$1&$&;';
+      const injected = injectCspMetaTag(html, csp);
+
+      expect(injected).toContain(
+        'content="default-src &quot;trusted&quot;; report-uri /csp?token=$1&$&;"'
+      );
+    });
   });
 
   describe("Static JSX Origin Auto-Detection", () => {
