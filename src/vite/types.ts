@@ -74,6 +74,14 @@ export interface VisagePluginOptions {
   native?: boolean | ZigNativeOptions;
 
   /**
+   * Content Security Policy (CSP) generator and injector.
+   * Auto-detects external origins across JSX code and injects strict CSP meta tags into HTML.
+   * Disabled by default (`false`). Set to `true` or provide options to enable.
+   * @default false
+   */
+  csp?: boolean | CSPOptions;
+
+  /**
    * Opt-in experimental compiler and packager options
    */
   experimental?: ExperimentalOptions;

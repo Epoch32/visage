@@ -5,10 +5,17 @@ import { visage } from "../src/vite/plugin";
 
 describe("Content Security Policy (CSP): Core, Generator & Vite Integration", () => {
   describe("Default Off Behavior", () => {
-    it("does not inject CSP meta tag or create visage:csp plugin when experimental.csp is omitted", () => {
-      const plugins = visage({});
-      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
-      expect(cspPlugin).toBeUndefined();
+    it("does not inject CSP meta tag or create visage:csp plugin when csp is omitted or false", () => {
+      const plugins1 = visage({});
+      expect(plugins1.find((p) => p.name === "visage:csp")).toBeUndefined();
+
+      const plugins2 = visage({ csp: false });
+      expect(plugins2.find((p) => p.name === "visage:csp")).toBeUndefined();
+    });
+
+    it("activates visage:csp plugin when top-level csp is true", () => {
+      const plugins = visage({ csp: true });
+      expect(plugins.find((p) => p.name === "visage:csp")).toBeDefined();
     });
 
     it("does not inject CSP meta tag when experimental.csp is explicitly false", () => {

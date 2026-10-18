@@ -56,17 +56,11 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
         ? experimentalSecurity
         : true;
 
-  // 3. Experimental Content Security Policy (CSP) Options
+  // 3. Content Security Policy (CSP) Options (top-level or legacy experimental.csp)
+  const rawCsp = options.csp ?? options.experimental?.csp;
   const isCsp =
-    Boolean(options.experimental?.csp) &&
-    (typeof options.experimental?.csp !== "object" ||
-      (options.experimental.csp as any).enabled !== false);
-  const cspOpts: any =
-    typeof options.experimental?.csp === "object"
-      ? { ...options.experimental.csp }
-      : isCsp
-        ? {}
-        : false;
+    Boolean(rawCsp) && (typeof rawCsp !== "object" || (rawCsp as any).enabled !== false);
+  const cspOpts: any = typeof rawCsp === "object" ? { ...rawCsp } : isCsp ? {} : false;
 
   // 4. Experimental Storage Preboot Options
   const isStoragePreboot =
