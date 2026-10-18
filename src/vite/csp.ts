@@ -40,7 +40,8 @@ export function extractOriginFromUrl(rawUrl: string): string | null {
  */
 export function buildCspString(
   options: boolean | CSPOptions,
-  detectedOrigins?: DetectedOrigins
+  detectedOrigins?: DetectedOrigins,
+  inlineScriptHashes?: string[]
 ): string {
   const opts = typeof options === "object" ? options : {};
   const shouldAutoDetect = opts.autoDetectOrigins !== false;
@@ -98,6 +99,9 @@ export function buildCspString(
   }
   if (opts.scriptSrc) {
     for (const src of opts.scriptSrc) addSource("script-src", src);
+  }
+  if (inlineScriptHashes) {
+    for (const h of inlineScriptHashes) addSource("script-src", h);
   }
   if (opts.mediaSrc) {
     for (const src of opts.mediaSrc) addSource("media-src", src);

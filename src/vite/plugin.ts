@@ -113,12 +113,12 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     plugins.push(createCompilerPlugin(options, vLog, compilerOpts, isSecureTransforms));
   }
 
-  if (isCsp) {
-    plugins.push(createCspPlugin(cspOpts, detectedOrigins, vLog, virtualOrigin, compilerOpts));
-  }
-
   if (isStoragePreboot) {
     plugins.push(createStoragePrebootPlugin(storagePrebootOpts, vLog));
+  }
+
+  if (isCsp) {
+    plugins.push(createCspPlugin(cspOpts, detectedOrigins, vLog, virtualOrigin, compilerOpts));
   }
 
   if (options.pages) {

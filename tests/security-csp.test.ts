@@ -464,5 +464,45 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
     });
+
+    it("automatically computes SHA-256 hashes for inline script tags and whitelists them in script-src", () => {
+      const plugins = visage({
+        csp: true,
+        storagePreboot: false
+      });
+
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(cspPlugin).toBeDefined();
+
+      const initialHtml = `<!DOCTYPE html><html><head></head><body>
+        <script>console.log("analytics initialized");</script>
+      </body></html>`;
+
+      const finalHtml = (cspPlugin as any).transformIndexHtml(initialHtml);
+      expect(finalHtml).toContain("script-src 'self' 'sha256-");
+    });
+
+    it("seamlessly interoperates with storagePreboot by hashing preboot script into CSP", () => {
+      const plugins = visage({
+        csp: true,
+        storagePreboot: {
+          states: [{ key: "theme", fallback: "dark", attribute: "data-theme" }]
+        }
+      });
+
+      const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(prebootPlugin).toBeDefined();
+      expect(cspPlugin).toBeDefined();
+
+      const initialHtml =
+        "<!DOCTYPE html><html><head><title>App</title></head><body></body></html>";
+      const prebootHtml = (prebootPlugin as any).transformIndexHtml(initialHtml);
+      expect(prebootHtml).toContain('data-visage-preboot="true"');
+
+      const finalHtml = (cspPlugin as any).transformIndexHtml(prebootHtml);
+      expect(finalHtml).toContain('<meta http-equiv="Content-Security-Policy"');
+      expect(finalHtml).toContain("script-src 'self' 'sha256-");
+    });
   });
 });

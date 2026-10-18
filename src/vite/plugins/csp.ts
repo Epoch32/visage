@@ -1,3 +1,4 @@
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { compileJsx } from "../compiler";
@@ -140,7 +141,21 @@ export function createCspPlugin(
           `$1\n    <base href="${voBase}">`
         );
       }
-      const cspString = buildCspString(cspOpts, detectedOrigins);
+      const shouldHashInline = typeof cspOpts !== "object" || cspOpts.hashInlineScripts !== false;
+      const inlineScriptHashes: string[] = [];
+      if (shouldHashInline) {
+        const scriptMatches = transformedHtml.matchAll(
+          /<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi
+        );
+        for (const match of scriptMatches) {
+          const content = match[1]?.trim();
+          if (content) {
+            const hash = crypto.createHash("sha256").update(content, "utf8").digest("base64");
+            inlineScriptHashes.push(`'sha256-${hash}'`);
+          }
+        }
+      }
+      const cspString = buildCspString(cspOpts, detectedOrigins, inlineScriptHashes);
       vLog.debug(
         "visage:csp",
         `Injected CSP meta tag into HTML shell ${pc.dim(`(${cspString.slice(0, 45)}...)`)}`

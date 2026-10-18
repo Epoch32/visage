@@ -288,6 +288,13 @@ export interface CSPOptions {
   autoDetectOrigins?: boolean;
 
   /**
+   * Automatically compute SHA-256 hashes for inline scripts in HTML (such as storagePreboot)
+   * and whitelist them in script-src without requiring 'unsafe-inline'.
+   * @default true
+   */
+  hashInlineScripts?: boolean;
+
+  /**
    * Enforce HTTPS for all resource requests
    * @default false
    */
