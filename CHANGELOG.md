@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.1](https://github.com/Epoch32/visage/compare/v1.14.0...v1.14.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **security:** enforce origin validation in CORS headers to prevent origin reflection ([e6089b9](https://github.com/Epoch32/visage/commit/e6089b9a7e7434eeb1eb8329e6c685c04f08be6a))
+
 ## [1.14.0](https://github.com/Epoch32/visage/compare/v1.13.1...v1.14.0) (2026-10-17)
 
 
