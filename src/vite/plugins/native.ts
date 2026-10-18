@@ -100,7 +100,7 @@ export function createNativePlugin(
   detectedOrigins?: DetectedOrigins
 ): VisageVitePlugin {
   return {
-    name: "visage:experimental-native",
+    name: "visage:native",
     apply: "build",
     buildStart() {
       vLog.info(

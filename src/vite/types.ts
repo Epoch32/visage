@@ -61,6 +61,19 @@ export interface VisagePluginOptions {
   lucide?: boolean | VisageLucideOptions;
 
   /**
+   * Native desktop application compiler and host for Linux WebView via Zig.
+   * (Support for macOS WKWebView and Windows WebView2 planned during Version 2).
+   *
+   * When enabled:
+   * - Configures relative asset paths (`base: "./"`) for embedded webviews
+   * - Enables the `visage/native` IPC bridge and native runtime
+   * - Scaffolds native Zig host files (`src-native/main.zig`, `build.zig`, `platform.zig`)
+   *
+   * @default false
+   */
+  native?: boolean | ZigNativeOptions;
+
+  /**
    * Opt-in experimental compiler and packager options
    */
   experimental?: ExperimentalOptions;

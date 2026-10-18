@@ -35,10 +35,10 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
   const isDev = typeof process !== "undefined" ? process.env?.NODE_ENV !== "production" : true;
   const vLog = createVisageLogger();
 
-  // 1. Experimental Native Zig Desktop Options
-  const isZigNative = Boolean(options.experimental?.zigNative);
-  const zigOpts =
-    typeof options.experimental?.zigNative === "object" ? options.experimental.zigNative : {};
+  // 1. Native Zig Desktop Options (top-level or legacy experimental.zigNative)
+  const nativeConfig = options.native ?? options.experimental?.zigNative;
+  const isZigNative = Boolean(nativeConfig);
+  const zigOpts = typeof nativeConfig === "object" ? nativeConfig : {};
 
   // 2. Experimental Security Transforms Options
   const isSecureTransforms = Boolean(options.experimental?.secureTransforms);

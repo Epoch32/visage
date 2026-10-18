@@ -256,8 +256,8 @@ export function Component() {
     expect(warnings[0]).toContain("built directly into the main visage() plugin");
   });
 
-  describe("Experimental Compiler Options", () => {
-    it("keeps experimental zigNative compiler features completely dormant by default", () => {
+  describe("Native Desktop Host Options", () => {
+    it("keeps native desktop compiler features completely dormant by default", () => {
       const plugins = visage();
       const [configPlugin] = plugins;
 
@@ -265,14 +265,31 @@ export function Component() {
       expect(config.base).toBeUndefined();
 
       const pluginNames = plugins.map((p) => p.name);
-      expect(pluginNames).not.toContain("visage:experimental-native");
+      expect(pluginNames).not.toContain("visage:native");
     });
 
-    it("activates relative base path and native plugin when zigNative is explicitly enabled", () => {
+    it("activates relative base path and native plugin when top-level native is explicitly enabled", () => {
+      const plugins = visage({
+        native: {
+          title: "Custom Desktop Title",
+          scaffold: false
+        }
+      });
+
+      const [configPlugin] = plugins;
+      const config = configPlugin!.config!({}, { command: "build", mode: "production" });
+      expect(config.base).toBe("./");
+      expect(config.optimizeDeps?.exclude).toContain("visage/native");
+
+      const nativePlugin = plugins.find((p) => p.name === "visage:native");
+      expect(nativePlugin).toBeDefined();
+    });
+
+    it("supports legacy experimental.zigNative option for backwards compatibility", () => {
       const plugins = visage({
         experimental: {
           zigNative: {
-            title: "Custom Desktop Title",
+            title: "Legacy Desktop Title",
             scaffold: false
           }
         }
@@ -283,7 +300,7 @@ export function Component() {
       expect(config.base).toBe("./");
       expect(config.optimizeDeps?.exclude).toContain("visage/native");
 
-      const nativePlugin = plugins.find((p) => p.name === "visage:experimental-native");
+      const nativePlugin = plugins.find((p) => p.name === "visage:native");
       expect(nativePlugin).toBeDefined();
     });
   });
