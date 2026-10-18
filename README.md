@@ -4,6 +4,27 @@
   <img width="1290" height="550" alt="Visage banner" src="https://github.com/user-attachments/assets/ebd1e69a-92ed-4536-a870-4d64a2869f14" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/Epoch32/visage/actions">
+    <img src="https://github.com/Epoch32/visage/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+  <a href="https://www.npmjs.com/package/@epoch32/visage">
+    <img src="https://img.shields.io/npm/v/@epoch32/visage" alt="npm version" />
+  </a>
+  <a href="https://socket.dev/npm/package/@epoch32/visage">
+    <img src="https://socket.dev/api/badge/npm/package/@epoch32/visage" alt="Socket" />
+  </a>
+  <a href="https://github.com/Epoch32/visage/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0 License" />
+  </a>
+  <a href="https://github.com/Epoch32/visage/releases">
+    <img src="https://img.shields.io/github/v/release/Epoch32/visage" alt="GitHub release" />
+  </a>
+  <a href="https://github.com/Epoch32/visage">
+    <img src="https://img.shields.io/github/stars/Epoch32/visage" alt="GitHub stars" />
+  </a>
+</p>
+
 Visage is a lightning-fast, zero-VDOM, fine-grained reactive UI library and full-stack application toolkit. It combines a push-pull signals architecture, direct DOM bindings, an ahead-of-time (AOT) template compiler, and integrated desktop capabilities into a cohesive, high-performance developer experience.
 
 ## What Visage Solves
