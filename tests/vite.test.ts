@@ -6,16 +6,17 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   it("generates the standard plugin pipeline with config, transform, and server hooks", () => {
     const plugins = visage();
     expect(Array.isArray(plugins)).toBe(true);
-    expect(plugins.length).toBe(3);
+    expect(plugins.length).toBe(4);
 
     const names = plugins.map((p) => p.name);
     expect(names).toContain("visage:config");
+    expect(names).toContain("visage:lucide");
     expect(names).toContain("visage:transform");
     expect(names).toContain("visage:server");
   });
 
   it("configures oxc for automatic Visage JSX runtime and dependencies deduplication", () => {
-    const [configPlugin] = visage();
+    const configPlugin = visage().find((p) => p.name === "visage:config");
     expect(configPlugin?.config).not.toBeNull();
 
     const config = configPlugin!.config!({}, { command: "serve", mode: "development" });
@@ -30,7 +31,7 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   });
 
   it("transforms JSX/TSX components to append HMR boundaries in development", () => {
-    const [, transformPlugin] = visage({ hmr: true });
+    const transformPlugin = visage({ hmr: true }).find((p) => p.name === "visage:transform");
     expect(transformPlugin?.transform).not.toBeNull();
 
     const sourceCode = `
@@ -58,7 +59,7 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   });
 
   it("injects devtools metadata into HTML shell in development", () => {
-    const [, , serverPlugin] = visage({ devtools: true });
+    const serverPlugin = visage({ devtools: true }).find((p) => p.name === "visage:server");
     expect(serverPlugin?.transformIndexHtml).not.toBeNull();
 
     const inputHtml = `
@@ -81,12 +82,12 @@ describe("Visage Vite Plugin (visage/vite)", () => {
       resolve: async ({ input }) => ({ message: `Hello, ${input.name}!` })
     });
 
-    const [, , serverPlugin] = visage({
+    const serverPlugin = visage({
       rpc: {
         router: testRouter,
         endpoint: "/api/rpc"
       }
-    });
+    }).find((p) => p.name === "visage:server");
 
     let registeredMiddleware: any = null;
     const mockServer = {
@@ -208,6 +209,51 @@ export function Component() {
       "\0virtual:visage-icons?icons=Trash2"
     );
     expect(internalResolve).toBeNull();
+  });
+
+  it("includes Lucide icon translation directly in visage() plugin by default", () => {
+    const plugins = visage();
+    const lucidePlugin = plugins.find((p) => p.name === "visage:lucide");
+    expect(lucidePlugin).toBeDefined();
+
+    const sample = `import { Settings } from "lucide-react";`;
+    const res: any = lucidePlugin!.transform!(sample, "/app/src/Nav.tsx");
+    expect(res).not.toBeNull();
+    expect(res.code).toBe('import { Settings } from "virtual:visage-icons?icons=Settings";');
+
+    // Does not log any deprecation warning
+    const warnings: string[] = [];
+    const mockLogger = {
+      warn: (msg: string) => warnings.push(msg),
+      info: () => {},
+      error: () => {}
+    };
+    lucidePlugin!.configResolved?.({ logger: mockLogger });
+    lucidePlugin!.buildStart?.();
+    expect(warnings.length).toBe(0);
+  });
+
+  it("allows disabling Lucide icon translation via visage({ lucide: false })", () => {
+    const plugins = visage({ lucide: false });
+    const lucidePlugin = plugins.find((p) => p.name === "visage:lucide");
+    expect(lucidePlugin).toBeUndefined();
+  });
+
+  it("logs a deprecation warning in the logging output of visageLucide()", () => {
+    const plugin = visageLucide();
+    const warnings: string[] = [];
+    const mockLogger = {
+      warn: (msg: string) => warnings.push(msg),
+      info: () => {},
+      error: () => {}
+    };
+
+    plugin.configResolved?.({ logger: mockLogger });
+    plugin.buildStart?.();
+
+    expect(warnings.length > 0).toBe(true);
+    expect(warnings[0]).toContain("visageLucide() is deprecated");
+    expect(warnings[0]).toContain("built directly into the main visage() plugin");
   });
 
   describe("Experimental Compiler Options", () => {

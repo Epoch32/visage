@@ -4,6 +4,7 @@ import { createCompilerPlugin } from "./plugins/compiler";
 import { createConfigPlugin } from "./plugins/config";
 import { createCspPlugin } from "./plugins/csp";
 import { createHmrPlugin } from "./plugins/hmr";
+import { createLucidePlugin } from "./plugins/lucide";
 import { createNativePlugin } from "./plugins/native";
 import { createPagesPlugin } from "./plugins/pages";
 import { createServerPlugin } from "./plugins/server";
@@ -16,7 +17,7 @@ declare const process: any;
  * Official Visage Vite Plugin
  *
  * Provides zero-configuration JSX compilation, Hot Module Replacement (HMR),
- * DevTools auto-injection, full-stack RPC development server middleware, and
+ * built-in Lucide icon tree-shaking, DevTools auto-injection, full-stack RPC development server middleware, and
  * experimental transforms (Storage Preboot, Native Desktop, CSP, Security).
  *
  * Example:
@@ -101,6 +102,11 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
 
   if (isZigNative) {
     plugins.push(createNativePlugin(zigOpts, vLog, virtualOrigin, cspOpts, detectedOrigins));
+  }
+
+  if (options.lucide !== false) {
+    const lucideOpts = typeof options.lucide === "object" ? options.lucide : {};
+    plugins.push(createLucidePlugin(lucideOpts, vLog, false));
   }
 
   if (options.compiler || isSecureTransforms || isCsp) {

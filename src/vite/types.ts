@@ -1,5 +1,6 @@
 import type { createRouter } from "../rpc/router";
 import type { PagesOptions } from "./pages/types";
+import type { VisageLucideOptions } from "./plugins/lucide";
 
 /**
  * Options for the Visage Vite Plugin
@@ -50,6 +51,14 @@ export interface VisagePluginOptions {
    * @default false
    */
   pages?: boolean | PagesOptions;
+
+  /**
+   * Automatic build-time Lucide icon tree-shaking and translation.
+   * Statically transforms `lucide-react` and `lucide` imports into pure Visage SVG components.
+   * Enabled by default (`true`). Set to `false` to disable, or provide custom options.
+   * @default true
+   */
+  lucide?: boolean | VisageLucideOptions;
 
   /**
    * Opt-in experimental compiler and packager options
@@ -408,3 +417,4 @@ export type {
   PagesOptions,
   RouteMatch
 } from "./pages/types";
+export type { VisageLucideOptions } from "./plugins/lucide";
