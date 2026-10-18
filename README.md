@@ -82,4 +82,11 @@ See [CONTRIBUTING.md](https://github.com/Epoch32/visage/blob/main/CONTRIBUTING.m
 
 ## License
 
-See [LICENSE](https://github.com/Epoch32/visage/blob/main/LICENSE) for license information.
+Visage is licensed under the [Mozilla Public License 2.0 (MPL-2.0)](LICENSE).
+
+### Commercial & Proprietary Use
+
+- **Closed-Source & Commercial Applications:** You can freely use Visage to build proprietary, closed-source products and commercial software ("Larger Works" under MPL-2.0). There is **no viral copyleft**—your application code, business logic, and proprietary assets remain completely private and closed source.
+- **Modifications to Visage Itself:** If you modify Visage's own source files and distribute them, those direct modifications must remain open source under MPL-2.0.
+
+In short: you can build and sell proprietary products using Visage with zero obligation to open-source your own project.
