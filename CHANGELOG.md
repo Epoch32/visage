@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.14.0](https://github.com/Epoch32/visage/compare/v1.13.1...v1.14.0) (2026-10-17)
+
+
+### Features
+
+* **native:** add custom window borders, frameless decorations, and drag regions on Linux GTK ([450099b](https://github.com/Epoch32/visage/commit/450099bbcdede23637a1431d2e5727ccd3aec297))
+* **native:** add native OS dialogs, desktop notifications, and fix AOT compiler text child indexing ([1d331d4](https://github.com/Epoch32/visage/commit/1d331d4ff4b96ef209bdf58e76ed99ab4afc7a3a))
+* **pages:** bundle real multi-page JS chunks and enable soft navigation with View Transitions ([1436cc9](https://github.com/Epoch32/visage/commit/1436cc9da657814150c2d42a03e1630e8be8e5bf))
+* **pages:** support headTags in PagesOptions and enable Link prefetching across mpa-pages ([c03fb18](https://github.com/Epoch32/visage/commit/c03fb181b962efc4ae69dfe1130d4ce59a795787))
+
+
+### Bug Fixes
+
+* **pages:** resolve preview server clean URLs, mount recycling, and DOM cleanup in MPA soft nav ([b5825c5](https://github.com/Epoch32/visage/commit/b5825c52bd38375b5be13bbe06374381f84e9783))
+
 ## [1.13.1](https://github.com/Epoch32/visage/compare/v1.13.0...v1.13.1) (2026-10-17)
 
 
