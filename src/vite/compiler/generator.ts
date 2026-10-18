@@ -57,39 +57,54 @@ export function generateCode(ast: t.File, context: CompilerContext): GenerateRes
 
   // 3. Inject helper imports if autoImport !== false and helpers were required
   const autoImport = context.options.autoImport !== false;
-  const importSource = context.options.importSource ?? "visage";
+  const configuredSource = context.options.importSource;
 
   if (autoImport && context.importedHelpers.size > 0) {
+    // Collect all identifiers already imported or in scope to prevent duplicate declaration collisions
+    const inScopeIdentifiers = new Set<string>();
     let existingImport: t.ImportDeclaration | undefined;
+
     for (const stmt of ast.program.body) {
-      if (t.isImportDeclaration(stmt) && stmt.source.value === importSource) {
-        existingImport = stmt;
-        break;
+      if (t.isImportDeclaration(stmt)) {
+        for (const spec of stmt.specifiers) {
+          if (spec.local?.name) {
+            inScopeIdentifiers.add(spec.local.name);
+          }
+        }
+        // Match existing Visage imports: either "@epoch32/visage", "visage", or configured importSource
+        if (!existingImport) {
+          if (configuredSource) {
+            if (stmt.source.value === configuredSource) {
+              existingImport = stmt;
+            }
+          } else if (stmt.source.value === "@epoch32/visage" || stmt.source.value === "visage") {
+            existingImport = stmt;
+          }
+        }
       }
     }
 
-    const neededHelpers = new Set(context.importedHelpers);
+    const neededHelpers = new Set<string>();
+    for (const helper of context.importedHelpers) {
+      if (!inScopeIdentifiers.has(helper)) {
+        neededHelpers.add(helper);
+      }
+    }
 
     if (existingImport) {
-      for (const spec of existingImport.specifiers) {
-        if (t.isImportSpecifier(spec) && t.isIdentifier(spec.imported)) {
-          neededHelpers.delete(spec.imported.name);
-        }
-      }
       for (const helper of neededHelpers) {
         existingImport.specifiers.push(
           t.importSpecifier(t.identifier(helper), t.identifier(helper))
         );
       }
-    } else {
+    } else if (neededHelpers.size > 0) {
       const specifiers: t.ImportSpecifier[] = [];
       for (const helper of neededHelpers) {
         specifiers.push(t.importSpecifier(t.identifier(helper), t.identifier(helper)));
       }
-      if (specifiers.length > 0) {
-        const importDecl = t.importDeclaration(specifiers, t.stringLiteral(importSource));
-        ast.program.body.unshift(importDecl);
-      }
+      const targetSource = configuredSource ?? "@epoch32/visage";
+      const importDecl = t.importDeclaration(specifiers, t.stringLiteral(targetSource));
+      ast.program.body.unshift(importDecl);
     }
   }
 

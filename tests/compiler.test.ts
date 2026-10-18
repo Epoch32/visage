@@ -320,6 +320,39 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain("const _tmpl$1 = template(");
   });
 
+  it("merges helpers into @epoch32/visage imports and skips existing identifiers like effect", () => {
+    const input = `
+      import { createSignal, effect, For, Show, useNavigate } from "@epoch32/visage";
+
+      export function SearchModal() {
+        return <div>{query()}</div>;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    // Must merge into @epoch32/visage
+    expect(code).toContain(
+      'import { createSignal, effect, For, Show, useNavigate, template, insertChild } from "@epoch32/visage";'
+    );
+    // Must NOT contain a second import statement from visage declaring effect again
+    expect(code).not.toContain('from "visage"');
+    // Only in the single import specifier and inside the effect(...) call, never in two import declarations
+    const importLines = code.split("\n").filter((line) => line.includes("import "));
+    expect(importLines.length).toBe(1);
+  });
+
+  it("defaults to @epoch32/visage for auto-imports when no Visage import exists", () => {
+    const input = `
+      export function Hello() {
+        return <div>Hello world</div>;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+    expect(code).toContain('import { template } from "@epoch32/visage";');
+  });
+
   it("supports custom compiler plugins for attributes and elements", () => {
     const customTooltipPlugin: CompilerPlugin = {
       name: "custom-tooltip",
