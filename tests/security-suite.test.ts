@@ -4,9 +4,9 @@ import { visage } from "../src/vite/plugin";
 
 describe("Security Transforms: Full Suite & Vite Plugin Integration", () => {
   describe("Vite Plugin Integration", () => {
-    it("keeps all transforms dormant when compiler is enabled without experimental.secureTransforms", () => {
+    it("keeps all transforms dormant when security transforms are explicitly disabled", () => {
       const plugins = visage({
-        compiler: true
+        compiler: { security: false }
       });
 
       const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");

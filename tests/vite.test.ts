@@ -6,11 +6,12 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   it("generates the standard plugin pipeline with config, transform, and server hooks", () => {
     const plugins = visage();
     expect(Array.isArray(plugins)).toBe(true);
-    expect(plugins.length).toBe(4);
+    expect(plugins.length).toBe(5);
 
     const names = plugins.map((p) => p.name);
     expect(names).toContain("visage:config");
     expect(names).toContain("visage:lucide");
+    expect(names).toContain("visage:compiler");
     expect(names).toContain("visage:transform");
     expect(names).toContain("visage:server");
   });
@@ -254,6 +255,24 @@ export function Component() {
     expect(warnings.length > 0).toBe(true);
     expect(warnings[0]).toContain("visageLucide() is deprecated");
     expect(warnings[0]).toContain("built directly into the main visage() plugin");
+  });
+
+  it("activates the AOT template compiler and safe AST transforms by default", () => {
+    const plugins = visage();
+    const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+    expect(compilerPlugin).toBeDefined();
+
+    const sample = `export function Box() { return <div class="box"><span>Hello</span></div>; }`;
+    const res: any = compilerPlugin!.transform!(sample, "/app/src/Box.tsx");
+    expect(res).not.toBeNull();
+    expect(res.code).toContain("_tmpl$");
+  });
+
+  it("allows disabling the AOT compiler via visage({ compiler: false })", () => {
+    const plugins = visage({ compiler: false });
+    const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+    expect(compilerPlugin).toBeUndefined();
+    expect(plugins.length).toBe(4);
   });
 
   describe("Native Desktop Host Options", () => {

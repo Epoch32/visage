@@ -39,8 +39,9 @@ export interface VisagePluginOptions {
   };
 
   /**
-   * Enable AOT JSX Template Compiler (compiles JSX into hoisted cloneNode templates)
-   * @default false
+   * Enable AOT JSX Template Compiler (compiles JSX into hoisted cloneNode templates).
+   * Enabled by default (`true`) with safe AST security transforms. Set to `false` to disable.
+   * @default true
    */
   compiler?: boolean | import("./compiler/types").CompilerOptions;
 
@@ -62,7 +63,6 @@ export interface VisagePluginOptions {
 
   /**
    * Native desktop application compiler and host for Linux WebView via Zig.
-   * (Support for macOS WKWebView and Windows WebView2 planned during Version 2).
    *
    * When enabled:
    * - Configures relative asset paths (`base: "./"`) for embedded webviews

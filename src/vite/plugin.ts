@@ -40,12 +40,21 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
   const isZigNative = Boolean(nativeConfig);
   const zigOpts = typeof nativeConfig === "object" ? nativeConfig : {};
 
-  // 2. Experimental Security Transforms Options
-  const isSecureTransforms = Boolean(options.experimental?.secureTransforms);
+  // 2. AOT JSX Compiler & Safe Security Transforms Options
+  const isCompiler = options.compiler !== false;
+  const compilerSecurity =
+    typeof options.compiler === "object" ? options.compiler.security : undefined;
+  const experimentalSecurity = options.experimental?.secureTransforms;
+  const isSecureTransforms =
+    compilerSecurity !== false &&
+    experimentalSecurity !== false &&
+    (compilerSecurity !== undefined || experimentalSecurity !== undefined || isCompiler);
   const secureTransformsOpts =
-    typeof options.experimental?.secureTransforms === "object"
-      ? options.experimental.secureTransforms
-      : true;
+    typeof compilerSecurity === "object"
+      ? compilerSecurity
+      : typeof experimentalSecurity === "object"
+        ? experimentalSecurity
+        : true;
 
   // 3. Experimental Content Security Policy (CSP) Options
   const isCsp =
@@ -109,7 +118,7 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     plugins.push(createLucidePlugin(lucideOpts, vLog, false));
   }
 
-  if (options.compiler || isSecureTransforms || isCsp) {
+  if (isCompiler || isSecureTransforms || isCsp) {
     plugins.push(createCompilerPlugin(options, vLog, compilerOpts, isSecureTransforms));
   }
 
