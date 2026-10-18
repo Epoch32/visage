@@ -10,7 +10,7 @@ export type { VisageLucideOptions };
  * Statically transforms `import { Icon } from "lucide-react"` at build time into
  * native, tree-shaken Visage SVG component instances using `createIcon` and `lucide`.
  *
- * @deprecated `visageLucide()` is deprecated. Lucide icon integration is now built directly into the main `visage()` plugin. You can safely remove `visageLucide()` from your Vite plugins array, or configure options via `visage({ lucide: ... })`.
+ * @deprecated `visageLucide()` is deprecated in Version 2 and will be fully removed in Version 3. Lucide icon integration is now built directly into the main `visage()` plugin. You can safely remove `visageLucide()` from your Vite plugins array, or configure options via `visage({ lucide: ... })`.
  *
  * Example:
  * ```ts

@@ -254,7 +254,8 @@ export function Component() {
     plugin.buildStart?.();
 
     expect(warnings.length > 0).toBe(true);
-    expect(warnings[0]).toContain("visageLucide() is deprecated");
+    expect(warnings[0]).toContain("visageLucide() is deprecated in Version 2");
+    expect(warnings[0]).toContain("will be fully removed in Version 3");
     expect(warnings[0]).toContain("built directly into the main visage() plugin");
   });
 

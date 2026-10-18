@@ -67,7 +67,7 @@ export function createLucidePlugin(
       if (isDeprecatedWrapper) {
         vLog.warn(
           "visage:lucide",
-          "visageLucide() is deprecated. Lucide icon integration is now built directly into the main visage() plugin. You can safely remove visageLucide() from your Vite plugins array."
+          "visageLucide() is deprecated in Version 2 and will be fully removed in Version 3. Lucide icon integration is now built directly into the main visage() plugin. You can safely remove visageLucide() from your Vite plugins array."
         );
       }
       if (!isDuplicate) {
