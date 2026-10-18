@@ -295,6 +295,13 @@ export interface CSPOptions {
   hashInlineScripts?: boolean;
 
   /**
+   * Set Content-Security-Policy HTTP response headers in Vite dev server and preview server
+   * to enforce header-only directives like frame-ancestors, report-uri, and form-action.
+   * @default true
+   */
+  headers?: boolean;
+
+  /**
    * Enforce HTTPS for all resource requests
    * @default false
    */

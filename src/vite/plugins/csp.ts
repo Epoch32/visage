@@ -155,12 +155,44 @@ export function createCspPlugin(
           }
         }
       }
-      const cspString = buildCspString(cspOpts, detectedOrigins, inlineScriptHashes);
+      const cspString = buildCspString(cspOpts, detectedOrigins, inlineScriptHashes, "meta");
       vLog.debug(
         "visage:csp",
         `Injected CSP meta tag into HTML shell ${pc.dim(`(${cspString.slice(0, 45)}...)`)}`
       );
       return injectCspMetaTag(transformedHtml, cspString);
+    },
+    configureServer(server) {
+      const shouldSetHeaders = typeof cspOpts !== "object" || cspOpts.headers !== false;
+      if (shouldSetHeaders) {
+        server.middlewares.use((req: any, res: any, next: any) => {
+          const accept = req.headers?.accept || "";
+          if (
+            typeof accept === "string" &&
+            (accept.includes("text/html") || req.url === "/" || req.url?.endsWith(".html"))
+          ) {
+            const headerCsp = buildCspString(cspOpts, detectedOrigins, undefined, "header");
+            res.setHeader("Content-Security-Policy", headerCsp);
+          }
+          next();
+        });
+      }
+    },
+    configurePreviewServer(server) {
+      const shouldSetHeaders = typeof cspOpts !== "object" || cspOpts.headers !== false;
+      if (shouldSetHeaders) {
+        server.middlewares.use((req: any, res: any, next: any) => {
+          const accept = req.headers?.accept || "";
+          if (
+            typeof accept === "string" &&
+            (accept.includes("text/html") || req.url === "/" || req.url?.endsWith(".html"))
+          ) {
+            const headerCsp = buildCspString(cspOpts, detectedOrigins, undefined, "header");
+            res.setHeader("Content-Security-Policy", headerCsp);
+          }
+          next();
+        });
+      }
     }
   };
 }

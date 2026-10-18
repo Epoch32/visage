@@ -36,12 +36,22 @@ export function extractOriginFromUrl(rawUrl: string): string | null {
 }
 
 /**
+ * Directives forbidden or ignored by browsers in HTML <meta> tags per W3C CSP specification.
+ */
+export const META_UNSUPPORTED_DIRECTIVES = new Set([
+  "frame-ancestors",
+  "report-uri",
+  "form-action"
+]);
+
+/**
  * Builds a strict, standards-compliant Content Security Policy string.
  */
 export function buildCspString(
   options: boolean | CSPOptions,
   detectedOrigins?: DetectedOrigins,
-  inlineScriptHashes?: string[]
+  inlineScriptHashes?: string[],
+  target?: "meta" | "header"
 ): string {
   const opts = typeof options === "object" ? options : {};
   const shouldAutoDetect = opts.autoDetectOrigins !== false;
@@ -136,6 +146,9 @@ export function buildCspString(
 
   const parts: string[] = [];
   for (const [name, sources] of Object.entries(directives)) {
+    if (target === "meta" && META_UNSUPPORTED_DIRECTIVES.has(name) && !opts.directives?.[name]) {
+      continue;
+    }
     if (sources.size > 0) {
       parts.push(`${name} ${Array.from(sources).join(" ")}`);
     } else {

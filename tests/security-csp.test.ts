@@ -504,5 +504,59 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
       expect(finalHtml).toContain('<meta http-equiv="Content-Security-Policy"');
       expect(finalHtml).toContain("script-src 'self' 'sha256-");
     });
+
+    it("filters meta-incompatible directives (frame-ancestors, report-uri, form-action) when target is meta", () => {
+      const metaCsp = buildCspString({ reportUri: "/csp-report" }, undefined, undefined, "meta");
+      expect(metaCsp).not.toContain("frame-ancestors");
+      expect(metaCsp).not.toContain("report-uri");
+      expect(metaCsp).not.toContain("form-action");
+      expect(metaCsp).toContain("default-src 'self'");
+
+      const headerCsp = buildCspString(
+        { reportUri: "/csp-report" },
+        undefined,
+        undefined,
+        "header"
+      );
+      expect(headerCsp).toContain("frame-ancestors 'none'");
+      expect(headerCsp).toContain("report-uri /csp-report");
+      expect(headerCsp).toContain("form-action 'self'");
+    });
+
+    it("attaches Content-Security-Policy HTTP response header in dev server middleware", () => {
+      const plugins = visage({ csp: true });
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(cspPlugin).toBeDefined();
+
+      let middlewareFn: any;
+      const fakeServer = {
+        middlewares: {
+          use(fn: any) {
+            middlewareFn = fn;
+          }
+        }
+      };
+
+      (cspPlugin as any).configureServer(fakeServer);
+      expect(middlewareFn).toBeDefined();
+
+      const headersSet: Record<string, string> = {};
+      const fakeReq = { headers: { accept: "text/html" }, url: "/" };
+      const fakeRes = {
+        setHeader(name: string, val: string) {
+          headersSet[name] = val;
+        }
+      };
+      let nextCalled = false;
+
+      middlewareFn(fakeReq, fakeRes, () => {
+        nextCalled = true;
+      });
+
+      expect(nextCalled).toBe(true);
+      expect(headersSet["Content-Security-Policy"]).toBeDefined();
+      expect(headersSet["Content-Security-Policy"]).toContain("default-src 'self'");
+      expect(headersSet["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
+    });
   });
 });
