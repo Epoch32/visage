@@ -11,15 +11,22 @@ export function extractOriginFromUrl(rawUrl: string): string | null {
 
   // Protocol-relative URLs (e.g. //cdn.example.com/asset)
   if (trimmed.startsWith("//")) {
-    const slashIdx = trimmed.indexOf("/", 2);
-    return slashIdx === -1 ? `https:${trimmed}` : `https:${trimmed.slice(0, slashIdx)}`;
+    if (trimmed.length <= 2 || trimmed[2] === "/" || trimmed[2] === "?" || trimmed[2] === "#") {
+      return null;
+    }
+    try {
+      const u = new URL(`https:${trimmed}`);
+      return u.origin && u.origin !== "null" ? u.origin : null;
+    } catch {
+      return null;
+    }
   }
 
   // Absolute HTTP/HTTPS/WebSocket URLs
   if (/^(?:https?|wss?):\/\//i.test(trimmed)) {
     try {
       const u = new URL(trimmed);
-      return u.origin;
+      return u.origin && u.origin !== "null" ? u.origin : null;
     } catch {
       return null;
     }

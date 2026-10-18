@@ -64,6 +64,18 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
         "https://cdn.jsdelivr.net"
       );
       expect(extractOriginFromUrl("//assets.example.com")).toBe("https://assets.example.com");
+      expect(extractOriginFromUrl("//cdn.example.com?v=1")).toBe("https://cdn.example.com");
+      expect(extractOriginFromUrl("//cdn.example.com#section")).toBe("https://cdn.example.com");
+      expect(extractOriginFromUrl("//user:pass@cdn.example.com/asset")).toBe(
+        "https://cdn.example.com"
+      );
+      expect(extractOriginFromUrl("//cdn.example.com:8443/asset")).toBe(
+        "https://cdn.example.com:8443"
+      );
+      expect(extractOriginFromUrl("//")).toBeNull();
+      expect(extractOriginFromUrl("//?")).toBeNull();
+      expect(extractOriginFromUrl("//#")).toBeNull();
+      expect(extractOriginFromUrl("///")).toBeNull();
     });
 
     it("extracts origin from WebSocket URLs", () => {
