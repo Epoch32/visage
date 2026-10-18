@@ -210,6 +210,20 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://my-app.com");
     expect(res.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+    expect(res.headers.get("Vary")).toContain("Origin");
+
+    // Unauthorized origin
+    const evilReq = new Request("http://localhost/api/rpc/greeting", {
+      method: "POST",
+      headers: {
+        Origin: "https://evil-attacker.com",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ name: "Attacker" })
+    });
+    const evilRes = await handler(evilReq);
+    expect(evilRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    expect(evilRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
   });
 
   it("integrates seamlessly with Hono-style sub-routing and context passing", async () => {
