@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@epoch32/visage": "^1.13.0",
+    "@epoch32/visage": "file:../..",
     "lucide": "^1.54.0"
   },
   "devDependencies": {
