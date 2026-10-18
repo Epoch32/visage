@@ -62,15 +62,12 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     Boolean(rawCsp) && (typeof rawCsp !== "object" || (rawCsp as any).enabled !== false);
   const cspOpts: any = typeof rawCsp === "object" ? { ...rawCsp } : isCsp ? {} : false;
 
-  // 4. Experimental Storage Preboot Options
+  // 4. Storage Preboot Options (top-level or legacy experimental.storagePreboot)
+  const rawPreboot = options.storagePreboot ?? options.experimental?.storagePreboot;
   const isStoragePreboot =
-    Boolean(options.experimental?.storagePreboot) &&
-    (typeof options.experimental?.storagePreboot !== "object" ||
-      options.experimental.storagePreboot.enabled !== false);
+    rawPreboot !== false && (typeof rawPreboot !== "object" || rawPreboot.enabled !== false);
   const storagePrebootOpts: StoragePrebootOptions =
-    typeof options.experimental?.storagePreboot === "object"
-      ? { ...options.experimental.storagePreboot }
-      : { enabled: isStoragePreboot };
+    typeof rawPreboot === "object" ? { ...rawPreboot } : { enabled: isStoragePreboot };
 
   const virtualOrigin =
     (typeof cspOpts === "object" ? cspOpts.virtualOrigin : undefined) ||

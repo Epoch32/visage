@@ -6,12 +6,13 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   it("generates the standard plugin pipeline with config, transform, and server hooks", () => {
     const plugins = visage();
     expect(Array.isArray(plugins)).toBe(true);
-    expect(plugins.length).toBe(5);
+    expect(plugins.length).toBe(6);
 
     const names = plugins.map((p) => p.name);
     expect(names).toContain("visage:config");
     expect(names).toContain("visage:lucide");
     expect(names).toContain("visage:compiler");
+    expect(names).toContain("visage:storage-preboot");
     expect(names).toContain("visage:transform");
     expect(names).toContain("visage:server");
   });
@@ -272,7 +273,20 @@ export function Component() {
     const plugins = visage({ compiler: false });
     const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
     expect(compilerPlugin).toBeUndefined();
-    expect(plugins.length).toBe(4);
+    expect(plugins.length).toBe(5);
+  });
+
+  it("activates storage preboot by default in visage() plugin", () => {
+    const plugins = visage();
+    const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
+    expect(prebootPlugin).toBeDefined();
+  });
+
+  it("allows disabling storage preboot via visage({ storagePreboot: false })", () => {
+    const plugins = visage({ storagePreboot: false });
+    const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
+    expect(prebootPlugin).toBeUndefined();
+    expect(plugins.length).toBe(5);
   });
 
   describe("Native Desktop Host Options", () => {

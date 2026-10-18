@@ -82,6 +82,19 @@ export interface VisagePluginOptions {
   csp?: boolean | CSPOptions;
 
   /**
+   * Storage Preboot compiler transform and HTML injector.
+   *
+   * Detects persistent signals in source code (`signal(..., { persist: "..." })`)
+   * and auto-injects an ultra-compact, synchronous blocking script into HTML `<head>`.
+   * Preboots storage-backed state (theme, layout, flags) onto DOM attributes/classes
+   * and populates `window.__VISAGE_PREBOOT__` before the first frame paints (zero FOUC).
+   *
+   * Enabled by default (`true`). Set to `false` to disable.
+   * @default true
+   */
+  storagePreboot?: boolean | StoragePrebootOptions;
+
+  /**
    * Opt-in experimental compiler and packager options
    */
   experimental?: ExperimentalOptions;
