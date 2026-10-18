@@ -347,4 +347,66 @@ export const middleware = () => {};
       expect(html).toContain("Guarded Admin Family (/api/admin/*)");
     });
   });
+
+  describe("CORS Origin Validation & Security", () => {
+    const corsFiles = {
+      "./routes/health.ts": {
+        default: query({
+          resolve: () => ({ status: "healthy" })
+        })
+      }
+    };
+
+    it("reflects allowed origins with credentials and Vary header", async () => {
+      const api = createApi(
+        corsFiles,
+        {},
+        {
+          cors: {
+            origin: ["https://trusted-app.com", "https://another-trusted.com"],
+            credentials: true
+          }
+        }
+      );
+
+      const req = new Request("http://localhost/health", {
+        headers: { Origin: "https://trusted-app.com" }
+      });
+      const res = await api.fetch(req);
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://trusted-app.com");
+      expect(res.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+      expect(res.headers.get("Vary")).toContain("Origin");
+    });
+
+    it("does not reflect unauthorized origins or credentials", async () => {
+      const api = createApi(
+        corsFiles,
+        {},
+        {
+          cors: {
+            origin: "https://trusted-app.com",
+            credentials: true
+          }
+        }
+      );
+
+      const req = new Request("http://localhost/health", {
+        headers: { Origin: "https://evil-attacker.com" }
+      });
+      const res = await api.fetch(req);
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+      expect(res.headers.get("Access-Control-Allow-Credentials")).toBeNull();
+
+      const preflight = new Request("http://localhost/health", {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://evil-attacker.com",
+          "Access-Control-Request-Method": "GET"
+        }
+      });
+      const preflightRes = await api.fetch(preflight);
+      expect(preflightRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
+      expect(preflightRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
+    });
+  });
 });

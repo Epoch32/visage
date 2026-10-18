@@ -8,23 +8,47 @@ import { executeMiddlewareChain } from "./middleware";
 import type { ApiProcedure, ApiRouterConfig, FileRouteModule, RouteMatch } from "./types";
 
 /**
+ * Check whether origin matches configured CORS policy and return allowed origin string or null
+ */
+function resolveAllowedOrigin(
+  reqOrigin: string | null,
+  configOrigin?: NonNullable<ApiRouterConfig["cors"]>["origin"]
+): string | null {
+  if (!configOrigin || configOrigin === "*") {
+    return reqOrigin || "*";
+  }
+  if (!reqOrigin) {
+    return null;
+  }
+  if (typeof configOrigin === "function") {
+    return configOrigin(reqOrigin) ? reqOrigin : null;
+  }
+  if (Array.isArray(configOrigin)) {
+    return configOrigin.includes(reqOrigin) ? reqOrigin : null;
+  }
+  if (configOrigin === reqOrigin) {
+    return reqOrigin;
+  }
+  return null;
+}
+
+/**
  * Handle CORS preflight & headers
  */
 function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | null {
   if (!config) return null;
 
-  const origin = req.headers.get("Origin") || "*";
-  const isAllowed =
-    !config.origin ||
-    config.origin === "*" ||
-    (typeof config.origin === "function" && config.origin(origin)) ||
-    (Array.isArray(config.origin) && config.origin.includes(origin)) ||
-    config.origin === origin;
+  const reqOrigin = req.headers.get("Origin");
+  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin);
 
   if (req.method === "OPTIONS") {
     const headers = new Headers();
-    if (isAllowed) {
-      headers.set("Access-Control-Allow-Origin", origin);
+    if (allowedOrigin) {
+      headers.set("Access-Control-Allow-Origin", allowedOrigin);
+      if (config.credentials) {
+        headers.set("Access-Control-Allow-Credentials", "true");
+      }
+      headers.append("Vary", "Origin");
     }
     headers.set(
       "Access-Control-Allow-Methods",
@@ -34,9 +58,6 @@ function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | 
       "Access-Control-Allow-Headers",
       (config.allowedHeaders || ["Content-Type", "Authorization", "x-visage-rpc"]).join(", ")
     );
-    if (config.credentials) {
-      headers.set("Access-Control-Allow-Credentials", "true");
-    }
     if (config.maxAge) {
       headers.set("Access-Control-Max-Age", config.maxAge.toString());
     }
@@ -48,10 +69,15 @@ function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | 
 
 function applyCorsHeaders(res: Response, req: Request, config?: ApiRouterConfig["cors"]): Response {
   if (!config) return res;
-  const origin = req.headers.get("Origin") || "*";
-  res.headers.set("Access-Control-Allow-Origin", origin);
-  if (config.credentials) {
-    res.headers.set("Access-Control-Allow-Credentials", "true");
+  const reqOrigin = req.headers.get("Origin");
+  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin);
+
+  if (allowedOrigin) {
+    res.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+    if (config.credentials) {
+      res.headers.set("Access-Control-Allow-Credentials", "true");
+    }
+    res.headers.append("Vary", "Origin");
   }
   return res;
 }
