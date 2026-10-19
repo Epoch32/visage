@@ -321,7 +321,7 @@ export function processElement(
     }
   }
 
-  const dynamicChildren: { index: number; expr: t.Expression }[] = [];
+  const dynamicChildren: DynamicBinding["children"] = [];
   let childrenHtml = "";
   let childDomIndex = 0;
 
@@ -352,7 +352,8 @@ export function processElement(
     childrenHtml = " ";
     dynamicChildren.push({
       index: 0,
-      expr: singleChild.expression as t.Expression
+      expr: singleChild.expression as t.Expression,
+      isSingleTextChild: true
     });
   } else {
     let lastChildWasText = false;
@@ -443,6 +444,7 @@ export function generateTemplateInstance(
   );
 
   let targetVarIndex = 0;
+  let anchorVarIndex = 0;
   const declaredPaths = new Map<string, t.Identifier>();
   declaredPaths.set("", t.identifier("_el$"));
 
@@ -519,12 +521,32 @@ export function generateTemplateInstance(
       statements.push(...res.statements);
     }
 
-    // Process dynamic children
+    // Pre-declare anchors for placeholder-backed dynamic children so subsequent insertions don't shift DOM indices
+    const childAnchors: (t.Identifier | null)[] = [];
     for (const ch of b.children) {
+      if (ch.isSingleTextChild) {
+        childAnchors.push(null);
+      } else {
+        const anchorVar = t.identifier(`_anchor$${++anchorVarIndex}`);
+        const anchorPath = computeChildPath([], ch.index);
+        const anchorNavExpr = buildNavExpression(targetVar, anchorPath);
+        statements.push(
+          t.variableDeclaration("const", [t.variableDeclarator(anchorVar, anchorNavExpr)])
+        );
+        childAnchors.push(anchorVar);
+      }
+    }
+
+    // Process dynamic children
+    for (let i = 0; i < b.children.length; i++) {
+      const ch = b.children[i]!;
+      const anchor = childAnchors[i];
       context.requireHelper("insertChild");
-      statements.push(
-        t.expressionStatement(t.callExpression(t.identifier("insertChild"), [targetVar, ch.expr]))
-      );
+      const args: t.Expression[] = [targetVar, ch.expr];
+      if (anchor) {
+        args.push(anchor);
+      }
+      statements.push(t.expressionStatement(t.callExpression(t.identifier("insertChild"), args)));
     }
   }
 

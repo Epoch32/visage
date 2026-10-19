@@ -64,6 +64,7 @@ export interface DynamicBinding {
   children: {
     index: number;
     expr: t.Expression;
+    isSingleTextChild?: boolean;
   }[];
 }
 

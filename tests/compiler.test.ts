@@ -383,4 +383,35 @@ describe("Visage AOT JSX Compiler", () => {
 
     expect(code).toContain("setupTooltip(_el$, hint);");
   });
+
+  it("anchors dynamic component children to placeholders to preserve layout DOM order with static siblings", () => {
+    const input = `
+      function Layout() {
+        return (
+          <div className="app-layout">
+            <Sidebar activeId={activeSection} />
+            <main className="app-main">
+              <DocContent activeSection={activeSection} />
+            </main>
+            <TableOfContents items={currentToc} />
+          </div>
+        );
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    expect(code).toContain("const _tmpl$1 = template(");
+    expect(code).toContain(
+      '<div class=\\"app-layout\\"><!--visage-c--><main class=\\"app-main\\"><!--visage-c--></main><!--visage-c--></div>'
+    );
+    expect(code).toContain("const _anchor$");
+    expect(code).toContain("insertChild(_el$, Sidebar({");
+    expect(code).toContain("insertChild(_el$, TableOfContents({");
+    // Verify that insertChild calls receive the anchor variables as the 3rd argument
+    expect(/insertChild\(_el\$, Sidebar\({[\s\S]*?\}\), _anchor\$\d+\)/.test(code)).toBe(true);
+    expect(/insertChild\(_el\$, TableOfContents\({[\s\S]*?\}\), _anchor\$\d+\)/.test(code)).toBe(
+      true
+    );
+  });
 });
