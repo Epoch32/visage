@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from "../signals";
+import type { ReadonlySignal } from "@signals";
 
 export type QueryKey = readonly unknown[];
 

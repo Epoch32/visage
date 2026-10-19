@@ -1,4 +1,4 @@
-import type { createRouter } from "../rpc/router";
+import type { createRouter } from "@rpc/router";
 import type { PagesOptions } from "./pages/types";
 import type { VisageLucideOptions } from "./plugins/lucide";
 

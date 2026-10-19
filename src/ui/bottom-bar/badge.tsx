@@ -1,5 +1,5 @@
-import type { Child } from "../../dom/render";
-import { computed } from "../../signals";
+import type { Child } from "@dom/render";
+import { computed } from "@signals";
 import type { BottomBarBadgeProps } from "./types";
 
 export function BottomBarBadge(props: BottomBarBadgeProps): Child {

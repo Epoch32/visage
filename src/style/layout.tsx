@@ -1,6 +1,6 @@
-import type { Child } from "../dom";
-import { jsx } from "../jsx-runtime";
-import type { ClassProp, HTMLAttributes } from "../jsx-runtime/jsx";
+import type { Child } from "@dom";
+import { jsx } from "@jsx-runtime";
+import type { ClassProp, HTMLAttributes } from "@jsx-runtime/jsx";
 import { resolveDimension, space } from "./scale";
 
 const ALIGN_MAP: Record<string, string> = {

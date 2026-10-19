@@ -1,7 +1,7 @@
-import { For } from "../dom/control-flow";
-import type { Child } from "../dom/render";
-import { type ReadonlySignal, signal, type WritableSignal } from "../signals";
-import { createContext, useContext } from "../signals/context";
+import { For } from "@dom/control-flow";
+import type { Child } from "@dom/render";
+import { type ReadonlySignal, signal, type WritableSignal } from "@signals";
+import { createContext, useContext } from "@signals/context";
 import { createId } from "./utils";
 
 export type ToastVariant = "default" | "success" | "error" | "warning" | "info";

@@ -1,4 +1,4 @@
-import type { QueryClient } from "../query/query-client";
+import type { QueryClient } from "@query/query-client";
 import { devtoolsHub } from "./hub";
 
 export { VisageDevTools } from "./component";

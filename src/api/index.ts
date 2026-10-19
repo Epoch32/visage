@@ -11,12 +11,12 @@ export {
   type ValidationResult,
   v,
   validateWithSchema
-} from "../form/schema";
+} from "@form/schema";
 export {
   ERROR_CODE_TO_STATUS,
   RPCError,
   STATUS_TO_ERROR_CODE
-} from "../rpc/error";
+} from "@rpc/error";
 export { createApiClient } from "./client";
 export {
   buildFileRouter,

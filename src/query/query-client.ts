@@ -1,5 +1,5 @@
-import type { Child } from "../dom/render";
-import { type Context, createContext, useContext } from "../signals/context";
+import type { Child } from "@dom/render";
+import { type Context, createContext, useContext } from "@signals/context";
 import { focusManager } from "./focus-manager";
 import { MutationCache } from "./mutation-cache";
 import { onlineManager } from "./online-manager";

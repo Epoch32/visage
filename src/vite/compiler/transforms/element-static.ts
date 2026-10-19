@@ -1,5 +1,5 @@
 import * as t from "@babel/types";
-import { formatStyleProp } from "../../../style/scale";
+import { formatStyleProp } from "@style/scale";
 import type { CompilerContext } from "../types";
 
 export function recordStaticOrigin(

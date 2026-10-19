@@ -1,4 +1,4 @@
-import type { ValidationIssue } from "../form/schema";
+import type { ValidationIssue } from "@form/schema";
 import type { RPCErrorCode } from "./types";
 
 export const ERROR_CODE_TO_STATUS: Record<RPCErrorCode, number> = {

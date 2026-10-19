@@ -1,5 +1,5 @@
-import type { Child } from "../dom";
-import { onCleanup } from "../signals";
+import type { Child } from "@dom";
+import { onCleanup } from "@signals";
 import { useChartContext } from "./context";
 
 export interface XAxisProps {

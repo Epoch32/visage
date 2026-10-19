@@ -1,7 +1,7 @@
-import { onCleanup, signal } from "../signals";
-import { Style } from "../style";
-import { Tabs } from "../ui/tabs";
-import { Tooltip } from "../ui/tooltip";
+import { onCleanup, signal } from "@signals";
+import { Style } from "@style";
+import { Tabs } from "@ui/tabs";
+import { Tooltip } from "@ui/tooltip";
 import { DomTab } from "./DomTab";
 import { GraphTab } from "./GraphTab";
 import { setupDomMutationHighlighter } from "./highlighter";

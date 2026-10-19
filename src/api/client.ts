@@ -1,10 +1,10 @@
 /**
  * Visage File-Based API Typed Client SDK (visage/api)
  */
-import { createMutation } from "../query/create-mutation";
-import { createQuery } from "../query/create-query";
-import { RPCError } from "../rpc/error";
-import { matchesRulePattern } from "../rpc/server";
+import { createMutation } from "@query/create-mutation";
+import { createQuery } from "@query/create-query";
+import { RPCError } from "@rpc/error";
+import { matchesRulePattern } from "@rpc/server";
 import type {
   ApiCallOptions,
   ApiClient,

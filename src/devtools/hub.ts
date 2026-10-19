@@ -1,5 +1,5 @@
-import type { QueryClient } from "../query/query-client";
-import { signal } from "../signals";
+import type { QueryClient } from "@query/query-client";
+import { signal } from "@signals";
 import type { DevToolsTab, QueryRecord, RpcRecord, SignalRecord } from "./types";
 
 export class DevToolsHub {

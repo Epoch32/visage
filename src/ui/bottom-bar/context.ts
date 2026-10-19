@@ -1,4 +1,4 @@
-import { createContext, useContext } from "../../signals/context";
+import { createContext, useContext } from "@signals/context";
 import type { BottomBarContextValue } from "./types";
 
 export const BottomBarContext = createContext<BottomBarContextValue | null>(null);

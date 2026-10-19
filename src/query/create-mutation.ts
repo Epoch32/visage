@@ -1,4 +1,4 @@
-import { COMPUTED_BRAND, SIGNAL_BRAND } from "../signals";
+import { COMPUTED_BRAND, SIGNAL_BRAND } from "@signals";
 import type { Mutation } from "./mutation-cache";
 import { type QueryClient, useQueryClient } from "./query-client";
 import type { MutateOptions, MutationOptions, MutationResult } from "./types";

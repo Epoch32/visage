@@ -1,5 +1,5 @@
-import { createMutation } from "../query/create-mutation";
-import { createQuery } from "../query/create-query";
+import { createMutation } from "@query/create-mutation";
+import { createQuery } from "@query/create-query";
 import { RPCError } from "./error";
 import { matchesRulePattern } from "./server";
 import type {

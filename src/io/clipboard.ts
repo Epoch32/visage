@@ -1,4 +1,4 @@
-import { onCleanup, type ReadonlySignal, signal } from "../signals";
+import { onCleanup, type ReadonlySignal, signal } from "@signals";
 
 export interface CreateClipboardOptions {
   /**

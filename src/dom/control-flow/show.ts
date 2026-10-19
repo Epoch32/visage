@@ -1,4 +1,4 @@
-import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "../../signals";
+import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "@signals";
 import { type Child, insertChild, type ReactiveValue, resolveValue } from "../render";
 
 export interface ShowProps<T> {

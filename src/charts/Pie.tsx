@@ -1,4 +1,4 @@
-import type { Child } from "../dom";
+import type { Child } from "@dom";
 import { useChartContext } from "./context";
 import { pathArc } from "./path";
 

@@ -1,4 +1,4 @@
-import { Switch } from "../ui/switch";
+import { Switch } from "@ui/switch";
 import type { DevToolsHub } from "./hub";
 
 interface DomTabProps {

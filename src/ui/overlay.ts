@@ -1,4 +1,4 @@
-import { onCleanup } from "../signals";
+import { onCleanup } from "@signals";
 import { onClickOutside, trapFocus } from "./utils";
 
 export interface UseDismissOptions {

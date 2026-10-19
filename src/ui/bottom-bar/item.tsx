@@ -1,5 +1,5 @@
-import type { Child } from "../../dom/render";
-import { computed } from "../../signals";
+import type { Child } from "@dom/render";
+import { computed } from "@signals";
 import { BottomBarBadge } from "./badge";
 import { useBottomBarContext } from "./context";
 import type { BottomBarItemProps } from "./types";

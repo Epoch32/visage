@@ -1,4 +1,4 @@
-import { type Child, Show } from "../dom";
+import { type Child, Show } from "@dom";
 import {
   computed,
   createContext,
@@ -7,7 +7,7 @@ import {
   signal,
   useContext,
   type WritableSignal
-} from "../signals";
+} from "@signals";
 
 export interface LocationState {
   pathname: ReadonlySignal<string>;
@@ -506,4 +506,4 @@ export function useSearchParams(): [
   return [params, setSearchParams];
 }
 
-export { lazy } from "../dom";
+export { lazy } from "@dom";

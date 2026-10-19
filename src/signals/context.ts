@@ -1,4 +1,4 @@
-import { type Child, insertChild } from "../dom/render";
+import { type Child, insertChild } from "@dom/render";
 import { getActiveScope, runInScope, Scope } from "./scope";
 
 export interface Context<T> {

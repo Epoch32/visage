@@ -6,7 +6,7 @@ export {
   type ValidationResult,
   v,
   validateWithSchema
-} from "../form/schema";
+} from "@form/schema";
 export { createClient } from "./client";
 export {
   ERROR_CODE_TO_STATUS,

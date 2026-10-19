@@ -1,6 +1,6 @@
-import { runInHydration } from "../dom/hydration";
-import { type Child, insertChild } from "../dom/render";
-import { createRoot, onCleanup } from "../signals";
+import { runInHydration } from "@dom/hydration";
+import { type Child, insertChild } from "@dom/render";
+import { createRoot, onCleanup } from "@signals";
 
 /**
  * Hydrate server-rendered HTML by attaching fine-grained signal subscriptions and event listeners

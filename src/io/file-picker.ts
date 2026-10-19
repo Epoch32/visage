@@ -1,4 +1,4 @@
-import { onCleanup } from "../signals";
+import { onCleanup } from "@signals";
 
 export interface CreateFilePickerOptions {
   /**

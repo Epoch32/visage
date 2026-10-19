@@ -7,9 +7,9 @@ import {
   type ReadonlySignal,
   runInScope,
   Scope
-} from "../signals";
-import { hasReactiveClass, normalizeClass } from "../style/cx";
-import { formatStyleProp } from "../style/scale";
+} from "@signals";
+import { hasReactiveClass, normalizeClass } from "@style/cx";
+import { formatStyleProp } from "@style/scale";
 import { DELEGATED_EVENTS, delegateEvents } from "./events";
 import { isHydrating } from "./hydration";
 

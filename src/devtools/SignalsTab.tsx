@@ -1,5 +1,5 @@
-import { For, Show } from "../dom";
-import type { WritableSignal } from "../signals";
+import { For, Show } from "@dom";
+import type { WritableSignal } from "@signals";
 import type { DevToolsHub } from "./hub";
 import type { SignalRecord } from "./types";
 

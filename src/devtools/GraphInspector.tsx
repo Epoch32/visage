@@ -1,5 +1,5 @@
-import { Show } from "../dom";
-import type { WritableSignal } from "../signals";
+import { Show } from "@dom";
+import type { WritableSignal } from "@signals";
 import type { SignalRecord } from "./types";
 
 interface GraphInspectorProps {

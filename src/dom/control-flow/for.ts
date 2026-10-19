@@ -7,7 +7,7 @@ import {
   signal,
   untrack,
   type WritableSignal
-} from "../../signals";
+} from "@signals";
 import { type Child, insertChild, type ReactiveValue, resolveValue } from "../render";
 
 export interface ForProps<T> {

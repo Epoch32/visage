@@ -1,4 +1,4 @@
-import type { InferSchemaType, SchemaLike, StandardSchemaV1 } from "../form/schema";
+import type { InferSchemaType, SchemaLike, StandardSchemaV1 } from "@form/schema";
 import type {
   ApiProcedure,
   MiddlewareDefinition,

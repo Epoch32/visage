@@ -10,4 +10,4 @@ export {
   type SpacerProps,
   Stack,
   type StackProps
-} from "../style/layout";
+} from "@style/layout";

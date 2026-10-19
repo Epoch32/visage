@@ -1,5 +1,5 @@
-import { effect, type ReadonlySignal, signal, type WritableSignal } from "../signals";
-import { createContext, useContext } from "../signals/context";
+import { effect, type ReadonlySignal, signal, type WritableSignal } from "@signals";
+import { createContext, useContext } from "@signals/context";
 import { type ReactiveValue, resolveValue } from "./render";
 
 // Suspense Context for tracking active async requests

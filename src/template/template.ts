@@ -1,5 +1,5 @@
-import { getNextTemplateHydrationElement, isHydrating } from "../dom/hydration";
-import { insertChild, setAttribute } from "../dom/render";
+import { getNextTemplateHydrationElement, isHydrating } from "@dom/hydration";
+import { insertChild, setAttribute } from "@dom/render";
 
 const nodeCache = new Map<string, Node>();
 

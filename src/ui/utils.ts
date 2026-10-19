@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from "../signals";
+import { computed, type ReadonlySignal, signal } from "@signals";
 
 let idCounter = 0;
 
