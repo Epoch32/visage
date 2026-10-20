@@ -185,6 +185,15 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
     };
   };
 
+  const ariaDescribedBy = () => {
+    if (rest["aria-describedby"]) {
+      return ctx?.open()
+        ? `${rest["aria-describedby"]} ${ctx.tooltipId}`
+        : rest["aria-describedby"];
+    }
+    return ctx?.open() ? ctx.tooltipId : undefined;
+  };
+
   return (
     <Tag
       ref={(el: HTMLElement | null) => {
@@ -192,7 +201,7 @@ export function TooltipTrigger(props: TooltipTriggerProps): Child {
       }}
       type={Tag === "button" ? "button" : undefined}
       tabIndex={Tag === "button" ? undefined : 0}
-      aria-describedby={ctx?.tooltipId}
+      aria-describedby={ariaDescribedBy}
       data-state={() => (ctx?.open() ? "open" : "closed")}
       class={className}
       style={triggerStyle}
