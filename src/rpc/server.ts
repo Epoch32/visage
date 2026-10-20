@@ -1,87 +1,10 @@
 import { formatCacheControl, handleConditionalResponse, matchesRulePattern } from "@http";
+import { getCORSHeaders } from "./cors";
 import { ERROR_CODE_TO_STATUS, RPCError } from "./error";
 import { executeProcedure } from "./procedure";
-import type { CORSOptions, FetchHandlerOptions, Procedure, Router, RPCResponse } from "./types";
-
-function getCORSHeaders(cors: boolean | CORSOptions | undefined, req: Request): Headers {
-  const headers = new Headers();
-  if (!cors) return headers;
-
-  const opts: CORSOptions = typeof cors === "object" ? cors : {};
-  const originHeader = req.headers.get("origin") ?? "*";
-
-  let allowOrigin: string | null = null;
-  if (!opts.origin || opts.origin === "*") {
-    allowOrigin = originHeader || "*";
-  } else if (originHeader) {
-    if (typeof opts.origin === "function") {
-      const res = opts.origin(originHeader);
-      if (typeof res === "string") allowOrigin = res;
-      else if (res) allowOrigin = originHeader;
-    } else if (typeof opts.origin === "string") {
-      if (opts.origin === originHeader) allowOrigin = originHeader;
-    } else if (Array.isArray(opts.origin)) {
-      if (opts.origin.includes(originHeader)) allowOrigin = originHeader;
-    }
-  }
-
-  if (allowOrigin) {
-    headers.set("Access-Control-Allow-Origin", allowOrigin);
-    if (opts.credentials) {
-      headers.set("Access-Control-Allow-Credentials", "true");
-    }
-    headers.append("Vary", "Origin");
-  }
-  if (opts.maxAge !== undefined) {
-    headers.set("Access-Control-Max-Age", opts.maxAge.toString());
-  }
-
-  return headers;
-}
-
-function resolveProcedureFromPath(
-  router: Router<any, any>,
-  path: string
-): Procedure<any, any, any, any> {
-  const parts = path.split(/[./]/).filter(Boolean);
-  let current: any = router._def.record;
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i]!;
-    if (!current || typeof current !== "object") {
-      throw new RPCError({
-        code: "NOT_FOUND",
-        message: `Procedure '${path}' not found`
-      });
-    }
-
-    if (i === parts.length - 1) {
-      if (part in current && "type" in current[part]) {
-        return current[part];
-      }
-      throw new RPCError({
-        code: "NOT_FOUND",
-        message: `Procedure '${path}' not found`
-      });
-    }
-
-    if (part in current && "_def" in current[part]) {
-      current = current[part]._def.record;
-    } else if (part in current && typeof current[part] === "object") {
-      current = current[part];
-    } else {
-      throw new RPCError({
-        code: "NOT_FOUND",
-        message: `Procedure '${path}' not found`
-      });
-    }
-  }
-
-  throw new RPCError({
-    code: "NOT_FOUND",
-    message: `Procedure '${path}' not found`
-  });
-}
+import { resolveProcedureFromPath } from "./resolver";
+import { createSubscriptionResponse } from "./subscription";
+import type { FetchHandlerOptions, Router, RPCResponse } from "./types";
 
 export { matchesRulePattern };
 
@@ -388,44 +311,7 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           signal: request.signal
         })) as AsyncIterable<any>;
 
-        if (!iterable || typeof (iterable as any)[Symbol.asyncIterator] !== "function") {
-          throw new RPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Subscription procedure must return an AsyncIterable"
-          });
-        }
-
-        const encoder = new TextEncoder();
-        const stream = new ReadableStream({
-          async start(controller) {
-            try {
-              for await (const chunk of iterable) {
-                if (request.signal.aborted) break;
-                const message = `data: ${JSON.stringify(chunk)}\n\n`;
-                controller.enqueue(encoder.encode(message));
-              }
-              controller.close();
-            } catch (err: any) {
-              const errorMessage = `event: error\ndata: ${JSON.stringify({ message: err.message ?? "Stream error" })}\n\n`;
-              controller.enqueue(encoder.encode(errorMessage));
-              controller.close();
-            }
-          },
-          async cancel() {
-            if (typeof (iterable as any).return === "function") {
-              await (iterable as any).return();
-            }
-          }
-        });
-
-        baseHeaders.set("Content-Type", "text/event-stream; charset=utf-8");
-        baseHeaders.set("Cache-Control", "no-cache, no-transform");
-        baseHeaders.set("Connection", "keep-alive");
-
-        return new Response(stream, {
-          status: 200,
-          headers: baseHeaders
-        });
+        return createSubscriptionResponse(iterable, request.signal, baseHeaders);
       }
 
       // Standard Query or Mutation execution
