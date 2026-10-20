@@ -1,5 +1,6 @@
 import { Portal } from "@dom/control-flow";
 import type { Child } from "@dom/render";
+import { effect, onCleanup } from "@signals";
 import type { CommandProps } from "./command";
 import { CommandRoot } from "./command";
 import { useDismiss } from "./overlay";
@@ -26,7 +27,43 @@ export function CommandDialog(props: CommandDialogProps): Child {
     enabled: () => open(),
     onDismiss: () => setOpen(false),
     escapeKey: true,
+    trapFocus: true,
     outsidePointer: false
+  });
+
+  let previousActiveElement: HTMLElement | null = null;
+
+  effect(() => {
+    const isOpen = open();
+    if (isOpen) {
+      if (typeof document !== "undefined") {
+        previousActiveElement = document.activeElement as HTMLElement | null;
+      }
+      setTimeout(() => {
+        const el = contentRef.current;
+        if (el) {
+          const input = el.querySelector<HTMLInputElement>("input");
+          if (input) {
+            input.focus();
+          } else {
+            const focusable = el.querySelector<HTMLElement>(
+              'button:not([disabled]), [href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+            focusable?.focus();
+          }
+        }
+      }, 0);
+    } else if (previousActiveElement) {
+      previousActiveElement.focus?.();
+      previousActiveElement = null;
+    }
+  });
+
+  onCleanup(() => {
+    if (previousActiveElement) {
+      previousActiveElement.focus?.();
+      previousActiveElement = null;
+    }
   });
 
   const { overlayClass, contentClass, style, ...rest } = props;

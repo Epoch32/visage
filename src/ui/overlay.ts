@@ -131,6 +131,11 @@ export function useDismiss(
           options.onDismiss();
           e.stopPropagation();
         }
+      } else if (e.key === "Tab" && options.trapFocus) {
+        const el = element();
+        if (el) {
+          trapFocus(el, e);
+        }
       }
     };
 
