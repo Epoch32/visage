@@ -69,7 +69,17 @@ export function Router(props: RouterProps): Child {
   }
 
   const navigate = (to: string, options?: NavigateOptions) => {
-    const target = base ? `${base.replace(/\/$/, "")}/${to.replace(/^\//, "")}` : to;
+    const normalizedBase = base ? base.replace(/\/$/, "") : "";
+    let cleanTo = to;
+    if (
+      normalizedBase &&
+      (cleanTo === normalizedBase ||
+        cleanTo.startsWith(`${normalizedBase}/`) ||
+        cleanTo.startsWith(`${normalizedBase}?`))
+    ) {
+      cleanTo = cleanTo.slice(normalizedBase.length) || "/";
+    }
+    const target = normalizedBase ? `${normalizedBase}/${cleanTo.replace(/^\//, "")}` : to;
 
     const performNavigation = () => {
       if (typeof window === "undefined" || !window.history) {

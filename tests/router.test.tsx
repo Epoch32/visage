@@ -14,7 +14,8 @@ import {
   renderToString,
   useNavigate,
   useParams,
-  usePrefetch
+  usePrefetch,
+  useSearchParams
 } from "../src";
 
 describe("Visage Router", () => {
@@ -188,6 +189,52 @@ describe("Visage Router", () => {
 
     navigateFn("/missing-route");
     expect(container.textContent).toContain("404 Not Found");
+
+    unmount();
+  });
+
+  it("prevents base path duplication when calling useSearchParams in a router with a base path", () => {
+    let getParams: any;
+    let setParams: any;
+
+    function SearchComponent() {
+      [getParams, setParams] = useSearchParams();
+      return <div>Search View</div>;
+    }
+
+    const unmount = render(
+      () => (
+        <Router base="/app">
+          {() => (
+            <Routes>
+              <Route path="/dashboard" component={SearchComponent} />
+            </Routes>
+          )}
+        </Router>
+      ),
+      container
+    );
+
+    // Initial navigation within base
+    window.history.pushState(null, "", "/app/dashboard");
+    window.dispatchEvent(new Event("popstate"));
+
+    expect(window.location.pathname).toBe("/app/dashboard");
+
+    // First update: add ?q=test
+    setParams({ q: "test" });
+    expect(window.location.pathname).toBe("/app/dashboard");
+    expect(window.location.search).toBe("?q=test");
+    expect(getParams().get("q")).toBe("test");
+
+    // Second update: update to ?q=test&page=2
+    setParams({ q: "test", page: "2" });
+    expect(window.location.pathname).toBe("/app/dashboard");
+    expect(window.location.search).toBe("?q=test&page=2");
+    expect(getParams().get("page")).toBe("2");
+
+    // Verify it NEVER duplicated base into /app/app/dashboard
+    expect(window.location.pathname).not.toContain("/app/app");
 
     unmount();
   });

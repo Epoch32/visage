@@ -52,7 +52,17 @@ export function useSearchParams(): [
   const setSearchParams = (next: Record<string, string> | URLSearchParams) => {
     const sp = next instanceof URLSearchParams ? next : new URLSearchParams(next);
     const queryString = sp.toString();
-    const newUrl = `${router.location.pathname()}${queryString ? `?${queryString}` : ""}${router.location.hash()}`;
+    let currentPath = router.location.pathname();
+    if (router.base) {
+      const normalizedBase = router.base.replace(/\/$/, "");
+      if (
+        normalizedBase &&
+        (currentPath === normalizedBase || currentPath.startsWith(`${normalizedBase}/`))
+      ) {
+        currentPath = currentPath.slice(normalizedBase.length) || "/";
+      }
+    }
+    const newUrl = `${currentPath}${queryString ? `?${queryString}` : ""}${router.location.hash()}`;
     router.navigate(newUrl);
   };
 
