@@ -5,6 +5,7 @@ export interface VisageLogger {
   warn(tag: string, message: string): void;
   error(tag: string, message: string): void;
   debug(tag: string, message: string): void;
+  log(message: string): void;
   setViteLogger(logger: any): void;
 }
 
@@ -79,6 +80,14 @@ export function createVisageLogger(viteLogger?: any): VisageLogger {
         } else {
           console.debug(formatted);
         }
+      }
+    },
+    log(message: string) {
+      clearCurrentLine();
+      if (currentLogger?.info) {
+        currentLogger.info(message);
+      } else {
+        console.log(message);
       }
     }
   };
