@@ -3,6 +3,7 @@ import { createVisageLogger } from "./logger";
 import { createCompilerPlugin } from "./plugins/compiler";
 import { createConfigPlugin } from "./plugins/config";
 import { createCspPlugin } from "./plugins/csp";
+import { createHeadersPlugin } from "./plugins/headers";
 import { createHmrPlugin } from "./plugins/hmr";
 import { createLucidePlugin } from "./plugins/lucide";
 import { createNativePlugin } from "./plugins/native";
@@ -124,6 +125,10 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
   if (options.pages) {
     const pagesOpts = typeof options.pages === "object" ? options.pages : {};
     plugins.push(createPagesPlugin(pagesOpts, vLog));
+  }
+
+  if (options.headers !== false) {
+    plugins.push(createHeadersPlugin(options.headers, vLog));
   }
 
   plugins.push(createHmrPlugin(options, vLog, isDev), createServerPlugin(options, vLog, isDev));
