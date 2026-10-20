@@ -317,6 +317,26 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain("return [_tmpl$1(), _tmpl$2()];");
   });
 
+  it("preserves JSX fragment children passed to custom components", () => {
+    const input = `
+      function Layout() {
+        return (
+          <Container>
+            <>
+              <div>Part 1</div>
+              <div>Part 2</div>
+            </>
+          </Container>
+        );
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    expect(code).toContain("Container({");
+    expect(code).toContain("children: [_tmpl$1(), _tmpl$2()]");
+  });
+
   it("merges required helper imports into existing import declarations", () => {
     const input = `
       import { createSignal } from "visage";
