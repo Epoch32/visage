@@ -9,17 +9,28 @@ declare const require: any;
 
 let ssrStorage: any = null;
 try {
-  if (typeof window === "undefined") {
-    const nodeReq = typeof require === "function" ? require : null;
-    if (nodeReq) {
-      const asyncHooks = nodeReq("node:async_hooks");
-      if (asyncHooks?.AsyncLocalStorage) {
-        ssrStorage = new asyncHooks.AsyncLocalStorage();
-      }
+  const nodeReq = typeof require === "function" ? require : null;
+  if (nodeReq) {
+    const asyncHooks = nodeReq("node:async_hooks");
+    if (asyncHooks?.AsyncLocalStorage) {
+      ssrStorage = new asyncHooks.AsyncLocalStorage();
     }
   }
 } catch {
   // Graceful fallback when node:async_hooks is unavailable
+}
+
+if (!ssrStorage && typeof (globalThis as any).AsyncLocalStorage === "function") {
+  ssrStorage = new (globalThis as any).AsyncLocalStorage();
+}
+
+const syncSSRStack: Set<string>[] = [];
+
+function getActiveSSRStore(): Set<string> | undefined {
+  return (
+    ssrStorage?.getStore() ??
+    (syncSSRStack.length > 0 ? syncSSRStack[syncSSRStack.length - 1] : undefined)
+  );
 }
 
 /**
@@ -29,12 +40,17 @@ try {
  */
 export function runWithSSRStyles<T>(callback: () => T): { result: T; css: string; tags: string } {
   const store = new Set<string>();
+  syncSSRStack.push(store);
   let result: T;
 
-  if (ssrStorage) {
-    result = ssrStorage.run(store, callback);
-  } else {
-    result = callback();
+  try {
+    if (ssrStorage) {
+      result = ssrStorage.run(store, callback);
+    } else {
+      result = callback();
+    }
+  } finally {
+    syncSSRStack.pop();
   }
 
   const css = Array.from(store).join("\n");
@@ -50,6 +66,12 @@ export class StyleManager {
    * Inject CSS into the document head or SSR registry
    */
   inject(id: string, css: string): () => void {
+    // Collect into request-scoped store if running inside an active SSR context
+    const contextStore = getActiveSSRStore();
+    if (contextStore) {
+      contextStore.add(css);
+    }
+
     let entry = this._styles.get(id);
 
     if (!entry) {
@@ -73,11 +95,7 @@ export class StyleManager {
         }
       }
 
-      // Collect into request-scoped store if running inside an active SSR context
-      const contextStore: Set<string> | undefined = ssrStorage?.getStore();
-      if (contextStore) {
-        contextStore.add(css);
-      } else {
+      if (!contextStore) {
         this._ssrStyles.add(css);
       }
     }
@@ -110,7 +128,7 @@ export class StyleManager {
    */
   extractSSRStyles(options?: { clear?: boolean } | boolean): string {
     const shouldClear = typeof options === "boolean" ? options : (options?.clear ?? false);
-    const contextStore: Set<string> | undefined = ssrStorage?.getStore();
+    const contextStore = getActiveSSRStore();
 
     if (contextStore) {
       const css = Array.from(contextStore).join("\n");
@@ -138,7 +156,7 @@ export class StyleManager {
     }
     this._styles.clear();
     this._ssrStyles.clear();
-    const contextStore: Set<string> | undefined = ssrStorage?.getStore();
+    const contextStore = getActiveSSRStore();
     if (contextStore) {
       contextStore.clear();
     }
@@ -149,7 +167,7 @@ export class StyleManager {
    */
   clearSSR() {
     this._ssrStyles.clear();
-    const contextStore: Set<string> | undefined = ssrStorage?.getStore();
+    const contextStore = getActiveSSRStore();
     if (contextStore) {
       contextStore.clear();
     }
