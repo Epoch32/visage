@@ -287,6 +287,38 @@ describe("Visage JSX & Direct DOM", () => {
     unmount();
   });
 
+  it("does not crash on value updates to focused inputs where selectionStart throws InvalidStateError", () => {
+    const val = signal(10);
+    const unmount = render(() => <input type="number" value={val} />, container);
+
+    const input = container.querySelector("input") as HTMLInputElement;
+    expect(input.value).toBe("10");
+
+    // Focus input
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    // Simulate browser behavior where reading selectionStart on number/date input throws InvalidStateError
+    Object.defineProperty(input, "selectionStart", {
+      get() {
+        throw new DOMException(
+          "Failed to read the 'selectionStart' property from 'HTMLInputElement': The input element's type ('number') does not support selection.",
+          "InvalidStateError"
+        );
+      },
+      configurable: true
+    });
+
+    // Update value signal while focused: must not throw
+    expect(() => {
+      val.set(25);
+    }).not.toThrow();
+
+    expect(input.value).toBe("25");
+
+    unmount();
+  });
+
   it("supports two-way form bindings with bind:value and bind:checked", () => {
     const textSignal = signal("Hello Visage");
     const checkedSignal = signal(false);

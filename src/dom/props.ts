@@ -102,23 +102,29 @@ export function applyProp(el: HTMLElement | SVGElement, key: string, value: any)
   } else if (key === "value" && typeof el === "object" && el !== null && "value" in el) {
     const stringVal = value !== null && value !== undefined ? String(value) : "";
     if ((el as any).value !== stringVal) {
-      const isFocused =
-        typeof document !== "undefined" &&
-        document.activeElement === (el as any) &&
-        typeof (el as any).selectionStart === "number" &&
-        typeof (el as any).selectionEnd === "number";
+      let start: number | null = null;
+      let end: number | null = null;
 
-      if (isFocused) {
-        const start = (el as any).selectionStart;
-        const end = (el as any).selectionEnd;
-        (el as any).value = stringVal;
-        if (start !== null && end !== null && typeof (el as any).setSelectionRange === "function") {
-          try {
-            (el as any).setSelectionRange(start, end);
-          } catch {}
+      if (typeof document !== "undefined" && document.activeElement === (el as any)) {
+        try {
+          if (
+            typeof (el as any).selectionStart === "number" &&
+            typeof (el as any).selectionEnd === "number"
+          ) {
+            start = (el as any).selectionStart;
+            end = (el as any).selectionEnd;
+          }
+        } catch {
+          // Non-text input types like number, date, range throw InvalidStateError when reading selectionStart
         }
-      } else {
-        (el as any).value = stringVal;
+      }
+
+      (el as any).value = stringVal;
+
+      if (start !== null && end !== null && typeof (el as any).setSelectionRange === "function") {
+        try {
+          (el as any).setSelectionRange(start, end);
+        } catch {}
       }
     }
   } else if (key in el && !(el instanceof SVGElement) && key !== "list" && key !== "form") {
