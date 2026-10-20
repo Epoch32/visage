@@ -127,6 +127,8 @@ export {
   type Form,
   type FormFields,
   type FormOptions,
+  type IssuePath,
+  normalizeIssuePath,
   Schema,
   type SchemaLike,
   type StandardSchemaV1,

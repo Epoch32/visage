@@ -2,9 +2,18 @@
  * Built-in lightweight schema validator & Standard Schema v1 (ArkType, Zod, Valibot) support
  */
 
+export type IssuePath = string | (string | number)[];
+
 export interface ValidationIssue {
-  path: string;
+  path: IssuePath;
   message: string;
+}
+
+export function normalizeIssuePath(path?: IssuePath): string {
+  if (Array.isArray(path)) {
+    return path.join(".");
+  }
+  return path ? String(path) : "";
 }
 
 export interface ValidationResult<T> {
@@ -48,7 +57,7 @@ export abstract class Schema<T = any> {
       }
       return {
         issues: (res.issues || []).map((i) => ({
-          path: [i.path],
+          path: Array.isArray(i.path) ? i.path : [i.path],
           message: i.message
         }))
       };

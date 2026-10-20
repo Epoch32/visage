@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createApi, mutation, query } from "@api";
-import { v } from "@form";
+import { normalizeIssuePath, v } from "@form";
 import {
   badRequest,
   conflict,
@@ -272,6 +272,8 @@ describe("RFC 9457 Problem Details for HTTP APIs (visage/http)", () => {
       expect(rpcErr.message).toBe("Expired session credentials");
       expect(rpcErr.problem).toBe(problemDetails);
       expect(rpcErr.issues?.[0]?.message).toBe("Expired");
+      expect(rpcErr.issues?.[0]?.path).toEqual(["session_id"]);
+      expect(normalizeIssuePath(rpcErr.issues?.[0]?.path)).toBe("session_id");
     });
   });
 
