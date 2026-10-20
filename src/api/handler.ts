@@ -2,11 +2,56 @@
  * Visage Web Standard API Fetch Handler & Request Dispatcher
  */
 import { validateWithSchema } from "@form/schema";
-import { formatCacheControl, handleConditionalResponse } from "@http";
-import { ERROR_CODE_TO_STATUS, RPCError } from "@rpc/error";
+import {
+  createProblemResponse,
+  formatCacheControl,
+  formatValidationIssues,
+  getHttpStatusTitle,
+  handleConditionalResponse,
+  type ProblemDetails,
+  ProblemError
+} from "@http";
+import { ERROR_CODE_TO_STATUS, RPCError, STATUS_TO_ERROR_CODE } from "@rpc/error";
+import type { RPCErrorCode } from "@rpc/types";
 import { buildFileRouter } from "./file-router";
 import { executeMiddlewareChain } from "./middleware";
 import type { ApiProcedure, ApiRouterConfig, FileRouteModule, RouteMatch } from "./types";
+
+/**
+ * Determine if client or server configuration prefers RFC 9457 Problem Details
+ */
+function wantsProblemDetails(req: Request, config?: ApiRouterConfig): boolean {
+  if (config?.problemDetails === true) return true;
+  if (config?.problemDetails === false) return false;
+  return Boolean(req.headers.get("Accept")?.includes("application/problem+json"));
+}
+
+/**
+ * Helper to emit a response with RFC 9457 problem fields and backwards-compatible envelopes
+ */
+function formatErrorResponse(
+  req: Request,
+  config: ApiRouterConfig,
+  problem: ProblemDetails,
+  legacyPayload?: Record<string, unknown>
+): Response {
+  const isProblemNegotiated = wantsProblemDetails(req, config);
+  const status = problem.status ?? 500;
+
+  const combinedPayload = {
+    ...problem,
+    ...legacyPayload
+  };
+
+  if (isProblemNegotiated) {
+    return createProblemResponse(combinedPayload, { status });
+  }
+
+  return new Response(JSON.stringify(combinedPayload), {
+    status,
+    headers: { "Content-Type": "application/json" }
+  });
+}
 
 /**
  * Check whether origin matches configured CORS policy and return allowed origin string or null
@@ -120,14 +165,19 @@ export function createApiHandler(
     }
 
     if (!matchedRoute) {
+      const problem: ProblemDetails = {
+        type: "about:blank",
+        title: "Not Found",
+        status: 404,
+        detail: `Route not found: ${pathname}`,
+        instance: pathname,
+        code: "NOT_FOUND"
+      };
       return applyCorsHeaders(
-        new Response(
-          JSON.stringify({
-            ok: false,
-            error: { code: "NOT_FOUND", message: `Route not found: ${pathname}` }
-          }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        ),
+        formatErrorResponse(req, config, problem, {
+          ok: false,
+          error: { code: "NOT_FOUND", message: `Route not found: ${pathname}` }
+        }),
         req,
         config.cors
       );
@@ -188,17 +238,22 @@ export function createApiHandler(
       }
 
       if (!procedure) {
+        const problem: ProblemDetails = {
+          type: "about:blank",
+          title: "Method Not Allowed",
+          status: 405,
+          detail: `Method ${method} not allowed on ${pathname}`,
+          instance: pathname,
+          code: "METHOD_NOT_ALLOWED"
+        };
         return applyCorsHeaders(
-          new Response(
-            JSON.stringify({
-              ok: false,
-              error: {
-                code: "METHOD_NOT_ALLOWED",
-                message: `Method ${method} not allowed on ${pathname}`
-              }
-            }),
-            { status: 405, headers: { "Content-Type": "application/json" } }
-          ),
+          formatErrorResponse(req, config, problem, {
+            ok: false,
+            error: {
+              code: "METHOD_NOT_ALLOWED",
+              message: `Method ${method} not allowed on ${pathname}`
+            }
+          }),
           req,
           config.cors
         );
@@ -245,18 +300,26 @@ export function createApiHandler(
       if (procedure.options.input) {
         const validation = await validateWithSchema(procedure.options.input, rawInput);
         if (!validation.success) {
+          const invalidParams = formatValidationIssues(validation.issues || []);
+          const problem: ProblemDetails = {
+            type: "about:blank",
+            title: "Bad Request",
+            status: 400,
+            detail: "Validation Error",
+            instance: pathname,
+            code: "BAD_REQUEST",
+            invalidParams,
+            issues: validation.issues
+          };
           return applyCorsHeaders(
-            new Response(
-              JSON.stringify({
-                ok: false,
-                error: {
-                  code: "BAD_REQUEST",
-                  message: "Validation Error",
-                  issues: validation.issues
-                }
-              }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
-            ),
+            formatErrorResponse(req, config, problem, {
+              ok: false,
+              error: {
+                code: "BAD_REQUEST",
+                message: "Validation Error",
+                issues: validation.issues
+              }
+            }),
             req,
             config.cors
           );
@@ -344,21 +407,81 @@ export function createApiHandler(
         return applyCorsHeaders(customRes, req, config.cors);
       }
 
-      const statusCode =
-        err instanceof RPCError
-          ? err.statusCode
-          : ERROR_CODE_TO_STATUS[err?.code as keyof typeof ERROR_CODE_TO_STATUS] || 500;
+      if (err instanceof ProblemError) {
+        const problem = err.problem;
+        const legacyPayload = {
+          ok: false,
+          error: {
+            code:
+              (problem.code as string) ||
+              STATUS_TO_ERROR_CODE[err.status] ||
+              "INTERNAL_SERVER_ERROR",
+            message: err.message
+          }
+        };
+        return applyCorsHeaders(
+          formatErrorResponse(
+            req,
+            config,
+            { ...problem, instance: problem.instance ?? pathname },
+            legacyPayload
+          ),
+          req,
+          config.cors
+        );
+      }
 
-      const code = err instanceof RPCError ? err.code : "INTERNAL_SERVER_ERROR";
+      if (err instanceof RPCError) {
+        const problem = err.toProblemDetails(pathname);
+        const legacyPayload = {
+          ok: false,
+          error: {
+            code: err.code,
+            message: err.message,
+            issues: err.issues
+          }
+        };
+        return applyCorsHeaders(
+          formatErrorResponse(req, config, problem, legacyPayload),
+          req,
+          config.cors
+        );
+      }
+
+      const statusCode =
+        ERROR_CODE_TO_STATUS[err?.code as keyof typeof ERROR_CODE_TO_STATUS] || 500;
+      const code = (err?.code as RPCErrorCode) || "INTERNAL_SERVER_ERROR";
       const message = err?.message || "Internal Server Error";
 
-      const errRes = new Response(JSON.stringify({ ok: false, error: { code, message } }), {
+      const problem: ProblemDetails = {
+        type: "about:blank",
+        title: getHttpStatusTitle(statusCode),
         status: statusCode,
-        headers: { "Content-Type": "application/json" }
-      });
-      return applyCorsHeaders(errRes, req, config.cors);
+        detail: message,
+        instance: pathname,
+        code
+      };
+
+      const legacyPayload = {
+        ok: false,
+        error: { code, message }
+      };
+
+      return applyCorsHeaders(
+        formatErrorResponse(req, config, problem, legacyPayload),
+        req,
+        config.cors
+      );
     }
   };
+}
+
+function isApiRouterConfig(val: unknown): val is ApiRouterConfig {
+  if (!val || typeof val !== "object") return false;
+  const keys = Object.keys(val);
+  return keys.some((k) =>
+    ["prefix", "cors", "cache", "etag", "problemDetails", "onError"].includes(k)
+  );
 }
 
 /**
@@ -369,16 +492,11 @@ export function createApi(
   sourceMapOrConfig?: Record<string, string> | ApiRouterConfig,
   maybeConfig?: ApiRouterConfig
 ) {
-  const sourceMap =
-    sourceMapOrConfig && !("prefix" in sourceMapOrConfig) && !("cors" in sourceMapOrConfig)
-      ? (sourceMapOrConfig as Record<string, string>)
-      : {};
+  const isConfigSecondArg = isApiRouterConfig(sourceMapOrConfig);
 
-  const config =
-    maybeConfig ||
-    (sourceMapOrConfig && ("prefix" in sourceMapOrConfig || "cors" in sourceMapOrConfig)
-      ? (sourceMapOrConfig as ApiRouterConfig)
-      : {});
+  const sourceMap = isConfigSecondArg ? {} : (sourceMapOrConfig as Record<string, string>) || {};
+
+  const config = maybeConfig || (isConfigSecondArg ? (sourceMapOrConfig as ApiRouterConfig) : {});
 
   const routes = buildFileRouter(files, sourceMap);
   const fetchHandler = createApiHandler(routes, config);

@@ -1,6 +1,7 @@
 /**
  * Visage File-Based API Typed Client SDK (visage/api)
  */
+import { isProblemDetails } from "@http";
 import { createMutation } from "@query/create-mutation";
 import { createQuery } from "@query/create-query";
 import { RPCError } from "@rpc/error";
@@ -88,7 +89,7 @@ function createApiProxy(options: ApiClientOptions, path: string[] = []): any {
           const url = buildUrl(options.baseUrl, path, input);
           const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
           const headers = {
-            Accept: "application/json",
+            Accept: "application/json, application/problem+json",
             ...dynamicHeaders,
             ...callOpts?.headers
           };
@@ -110,19 +111,31 @@ function createApiProxy(options: ApiClientOptions, path: string[] = []): any {
             });
 
             const contentType = res.headers.get("Content-Type") || "";
-            if (contentType.includes("application/json")) {
+            if (
+              contentType.includes("application/json") ||
+              contentType.includes("application/problem+json")
+            ) {
               const body = await res.json();
-              if (body && typeof body === "object" && "ok" in body) {
-                if (!body.ok) {
+              if (body && typeof body === "object") {
+                if ("ok" in body && !body.ok) {
                   devtools?.updateRpcCall(logId, { status: "error", error: body.error });
+                  if (isProblemDetails(body)) {
+                    throw RPCError.fromProblem(body);
+                  }
                   throw new RPCError({
                     code: body.error?.code || "INTERNAL_SERVER_ERROR",
                     message: body.error?.message || "Request failed",
                     issues: body.error?.issues
                   });
                 }
-                devtools?.updateRpcCall(logId, { status: "success", response: body.data });
-                return body.data;
+                if (isProblemDetails(body)) {
+                  devtools?.updateRpcCall(logId, { status: "error", error: body });
+                  throw RPCError.fromProblem(body);
+                }
+                if ("ok" in body && body.ok) {
+                  devtools?.updateRpcCall(logId, { status: "success", response: body.data });
+                  return body.data;
+                }
               }
               if (!res.ok) {
                 throw new Error(`Request failed with status ${res.status}`);
@@ -161,7 +174,7 @@ function createApiProxy(options: ApiClientOptions, path: string[] = []): any {
           const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
-            Accept: "application/json",
+            Accept: "application/json, application/problem+json",
             ...dynamicHeaders,
             ...callOpts?.headers
           };
@@ -184,19 +197,31 @@ function createApiProxy(options: ApiClientOptions, path: string[] = []): any {
             });
 
             const contentType = res.headers.get("Content-Type") || "";
-            if (contentType.includes("application/json")) {
+            if (
+              contentType.includes("application/json") ||
+              contentType.includes("application/problem+json")
+            ) {
               const resBody = await res.json();
-              if (resBody && typeof resBody === "object" && "ok" in resBody) {
-                if (!resBody.ok) {
+              if (resBody && typeof resBody === "object") {
+                if ("ok" in resBody && !resBody.ok) {
                   devtools?.updateRpcCall(logId, { status: "error", error: resBody.error });
+                  if (isProblemDetails(resBody)) {
+                    throw RPCError.fromProblem(resBody);
+                  }
                   throw new RPCError({
                     code: resBody.error?.code || "INTERNAL_SERVER_ERROR",
                     message: resBody.error?.message || "Request failed",
                     issues: resBody.error?.issues
                   });
                 }
-                devtools?.updateRpcCall(logId, { status: "success", response: resBody.data });
-                return resBody.data;
+                if (isProblemDetails(resBody)) {
+                  devtools?.updateRpcCall(logId, { status: "error", error: resBody });
+                  throw RPCError.fromProblem(resBody);
+                }
+                if ("ok" in resBody && resBody.ok) {
+                  devtools?.updateRpcCall(logId, { status: "success", response: resBody.data });
+                  return resBody.data;
+                }
               }
               if (!res.ok) {
                 throw new Error(`Request failed with status ${res.status}`);

@@ -1,3 +1,4 @@
+import { isProblemDetails } from "@http";
 import { createMutation } from "@query/create-mutation";
 import { createQuery } from "@query/create-query";
 import { RPCError } from "./error";
@@ -90,7 +91,8 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
                 throw new RPCError({
                   code: body.error.code,
                   message: body.error.message,
-                  issues: body.error.issues
+                  issues: body.error.issues,
+                  problem: isProblemDetails(body) ? body : undefined
                 });
               }
 
@@ -144,7 +146,8 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
                 throw new RPCError({
                   code: body.error.code,
                   message: body.error.message,
-                  issues: body.error.issues
+                  issues: body.error.issues,
+                  problem: isProblemDetails(body) ? body : undefined
                 });
               }
 
