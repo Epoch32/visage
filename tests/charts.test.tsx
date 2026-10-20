@@ -113,6 +113,31 @@ describe("Visage Charts (visage/charts)", () => {
       });
       expect(donutD).toContain("A 80.00,80.00");
       expect(donutD).toContain("A 40.00,40.00");
+
+      // Full 100% (2π) pie slice splits into two arcs
+      const fullPieD = pathArc({
+        cx: 100,
+        cy: 100,
+        innerRadius: 0,
+        outerRadius: 80,
+        startAngle: 0,
+        endAngle: 2 * Math.PI
+      });
+      // Contains two arc commands so identical start/end point does not cause SVG arc to vanish
+      const arcMatches = fullPieD.match(/A 80\.00,80\.00/g);
+      expect(arcMatches?.length).toBe(2);
+
+      // Full 100% (2π) donut slice
+      const fullDonutD = pathArc({
+        cx: 100,
+        cy: 100,
+        innerRadius: 40,
+        outerRadius: 80,
+        startAngle: 0,
+        endAngle: 2 * Math.PI
+      });
+      expect(fullDonutD.match(/A 80\.00,80\.00/g)?.length).toBe(2);
+      expect(fullDonutD.match(/A 40\.00,40\.00/g)?.length).toBe(2);
     });
   });
 

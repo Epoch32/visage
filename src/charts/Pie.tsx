@@ -59,8 +59,9 @@ export function Pie(props: PieProps): Child {
             const item = dataArr[i];
             const val = Number(item[props.dataKey]) || 0;
             const sliceAngle = (val / total) * (2 * Math.PI);
-            const startAngle = currentAngle + (val > 0 ? padAngle / 2 : 0);
-            const endAngle = currentAngle + sliceAngle - (val > 0 ? padAngle / 2 : 0);
+            const effectivePad = dataArr.length > 1 ? padAngle : 0;
+            const startAngle = currentAngle + (val > 0 ? effectivePad / 2 : 0);
+            const endAngle = currentAngle + sliceAngle - (val > 0 ? effectivePad / 2 : 0);
 
             currentAngle += sliceAngle;
 
