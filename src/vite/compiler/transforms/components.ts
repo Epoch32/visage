@@ -68,7 +68,7 @@ export function transformComponentElement(
         val = attr.value;
       } else if (t.isJSXExpressionContainer(attr.value)) {
         val = attr.value.expression as t.Expression;
-      } else if (t.isJSXElement(attr.value)) {
+      } else if (t.isJSXElement(attr.value) || t.isJSXFragment(attr.value)) {
         val = transformNode(attr.value);
       } else {
         val = t.nullLiteral();
@@ -88,7 +88,7 @@ export function transformComponentElement(
       if (t.isJSXExpressionContainer(c)) {
         return t.isJSXEmptyExpression(c.expression) ? null : c.expression;
       }
-      if (t.isJSXElement(c)) {
+      if (t.isJSXElement(c) || t.isJSXFragment(c)) {
         return transformNode(c);
       }
       return null;
