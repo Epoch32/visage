@@ -166,9 +166,10 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
           <thead class={headerClass}>
             <tr>
               {selectionMode === "multi" ? (
-                <th style={{ width: "40px", padding: "8px" }}>
+                <th style={{ width: "40px", padding: "8px" }} scope="col">
                   <input
                     type="checkbox"
+                    aria-label="Select all rows"
                     checked={() => {
                       const keys = paginatedData().map((row, i) => getRowId(row, i));
                       return keys.length > 0 && keys.every((k) => selectedKeys().includes(k));
@@ -181,9 +182,19 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
               {props.columns.map((col) => {
                 const isSorted = () => sortState().column === col.id;
                 const sortDir = () => (isSorted() ? sortState().direction : null);
+                const ariaSort = col.sortable
+                  ? () =>
+                      sortDir() === "asc"
+                        ? "ascending"
+                        : sortDir() === "desc"
+                          ? "descending"
+                          : "none"
+                  : undefined;
 
                 return (
                   <th
+                    scope="col"
+                    aria-sort={ariaSort}
                     style={{
                       width: col.width,
                       textAlign: col.align ?? "left",
@@ -242,6 +253,7 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
                       <td style={{ width: "40px", padding: "8px" }}>
                         <input
                           type="checkbox"
+                          aria-label={() => `Select row ${idx() + 1}`}
                           checked={isSelected}
                           onClick={(e: MouseEvent) => handleSelectRow(key(), e)}
                         />
