@@ -1,4 +1,4 @@
-import { effect } from "@signals";
+import { effect, getActiveScope, onCleanup, runInScope, Scope } from "@signals";
 import { hasReactiveClass, normalizeClass } from "@style/cx";
 import { formatStyleProp } from "@style/scale";
 import { applyTwoWayBinding } from "./bind";
@@ -51,19 +51,51 @@ export function applyProp(el: HTMLElement | SVGElement, key: string, value: any)
       if (!isSvg) (el as HTMLElement).className = "";
     }
   } else if (key === "style") {
+    if ((el as any).__styleScope) {
+      (el as any).__styleScope.dispose();
+      (el as any).__styleScope = null;
+    }
+
     if (typeof value === "string") {
       el.setAttribute("style", value);
+      (el as any).__styleKeys = null;
     } else if (typeof value === "object" && value !== null) {
-      for (const styleKey in value) {
-        const styleVal = value[styleKey];
-        if (isReactive(styleVal)) {
-          effect(() => {
-            setStyleProperty(el, styleKey, resolveValue(styleVal));
-          });
-        } else {
-          setStyleProperty(el, styleKey, styleVal);
+      const prevKeys: Set<string> | null = (el as any).__styleKeys ?? null;
+      const nextKeys = new Set<string>();
+
+      const scope = new Scope(getActiveScope());
+      (el as any).__styleScope = scope;
+
+      onCleanup(() => {
+        if ((el as any).__styleScope === scope) {
+          scope.dispose();
+          (el as any).__styleScope = null;
+        }
+      });
+
+      runInScope(scope, () => {
+        for (const styleKey in value) {
+          nextKeys.add(styleKey);
+          const styleVal = value[styleKey];
+          if (isReactive(styleVal)) {
+            effect(() => {
+              setStyleProperty(el, styleKey, resolveValue(styleVal));
+            });
+          } else {
+            setStyleProperty(el, styleKey, styleVal);
+          }
+        }
+      });
+
+      if (prevKeys) {
+        for (const oldKey of prevKeys) {
+          if (!nextKeys.has(oldKey)) {
+            setStyleProperty(el, oldKey, "");
+          }
         }
       }
+
+      (el as any).__styleKeys = nextKeys;
     }
   } else if (key === "dangerouslySetInnerHTML" && value && typeof value.__html === "string") {
     el.innerHTML = value.__html;
