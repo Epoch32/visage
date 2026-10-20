@@ -11,15 +11,22 @@ export function extractOriginFromUrl(rawUrl: string): string | null {
 
   // Protocol-relative URLs (e.g. //cdn.example.com/asset)
   if (trimmed.startsWith("//")) {
-    const slashIdx = trimmed.indexOf("/", 2);
-    return slashIdx === -1 ? `https:${trimmed}` : `https:${trimmed.slice(0, slashIdx)}`;
+    if (trimmed.length <= 2 || trimmed[2] === "/" || trimmed[2] === "?" || trimmed[2] === "#") {
+      return null;
+    }
+    try {
+      const u = new URL(`https:${trimmed}`);
+      return u.origin && u.origin !== "null" ? u.origin : null;
+    } catch {
+      return null;
+    }
   }
 
   // Absolute HTTP/HTTPS/WebSocket URLs
   if (/^(?:https?|wss?):\/\//i.test(trimmed)) {
     try {
       const u = new URL(trimmed);
-      return u.origin;
+      return u.origin && u.origin !== "null" ? u.origin : null;
     } catch {
       return null;
     }
@@ -29,11 +36,22 @@ export function extractOriginFromUrl(rawUrl: string): string | null {
 }
 
 /**
+ * Directives forbidden or ignored by browsers in HTML <meta> tags per W3C CSP specification.
+ */
+export const META_UNSUPPORTED_DIRECTIVES = new Set([
+  "frame-ancestors",
+  "report-uri",
+  "form-action"
+]);
+
+/**
  * Builds a strict, standards-compliant Content Security Policy string.
  */
 export function buildCspString(
   options: boolean | CSPOptions,
-  detectedOrigins?: DetectedOrigins
+  detectedOrigins?: DetectedOrigins,
+  inlineScriptHashes?: string[],
+  target?: "meta" | "header"
 ): string {
   const opts = typeof options === "object" ? options : {};
   const shouldAutoDetect = opts.autoDetectOrigins !== false;
@@ -92,6 +110,9 @@ export function buildCspString(
   if (opts.scriptSrc) {
     for (const src of opts.scriptSrc) addSource("script-src", src);
   }
+  if (inlineScriptHashes) {
+    for (const h of inlineScriptHashes) addSource("script-src", h);
+  }
   if (opts.mediaSrc) {
     for (const src of opts.mediaSrc) addSource("media-src", src);
   }
@@ -125,6 +146,9 @@ export function buildCspString(
 
   const parts: string[] = [];
   for (const [name, sources] of Object.entries(directives)) {
+    if (target === "meta" && META_UNSUPPORTED_DIRECTIVES.has(name) && !opts.directives?.[name]) {
+      continue;
+    }
     if (sources.size > 0) {
       parts.push(`${name} ${Array.from(sources).join(" ")}`);
     } else {
@@ -139,16 +163,20 @@ export function buildCspString(
  * Injects a Content-Security-Policy meta tag into an HTML document string.
  */
 export function injectCspMetaTag(html: string, cspString: string): string {
-  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${cspString}">`;
+  const escapedCsp = cspString.replace(/"/g, "&quot;");
+  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${escapedCsp}">`;
 
   // 1. Replace existing CSP meta tag if present
   if (/<meta\b[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/i.test(html)) {
-    return html.replace(/<meta\b[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/i, metaTag);
+    return html.replace(
+      /<meta\b[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/i,
+      () => metaTag
+    );
   }
 
   // 2. Insert into <head> directly after opening tag
   if (/<head\b[^>]*>/i.test(html)) {
-    return html.replace(/(<head\b[^>]*>)/i, `$1\n    ${metaTag}`);
+    return html.replace(/(<head\b[^>]*>)/i, (_match, p1) => `${p1}\n    ${metaTag}`);
   }
 
   // 3. Fallback: prepend to document

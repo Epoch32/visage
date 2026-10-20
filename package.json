@@ -1,6 +1,6 @@
 {
   "name": "@epoch32/visage",
-  "version": "1.14.1",
+  "version": "2.0.0",
   "description": "Lightning-fast, zero-VDOM, fine-grained reactive UI library with full TypeScript support",
   "type": "module",
   "workspaces": [

@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal, type WritableSignal } from "../signals";
+import { computed, type ReadonlySignal, signal, type WritableSignal } from "@signals";
 import type { MutateOptions, MutationOptions, MutationStatus } from "./types";
 
 export class Mutation<TData = unknown, TError = any, TVariables = void, TContext = unknown> {

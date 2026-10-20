@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from "../signals/types";
+import type { ReadonlySignal } from "@signals/types";
 
 export type Accessor<T> = ReadonlySignal<T> | (() => T);
 

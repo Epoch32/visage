@@ -1,5 +1,5 @@
 import * as t from "@babel/types";
-import { DELEGATED_EVENTS } from "../../../dom/events";
+import { DELEGATED_EVENTS } from "@dom/events";
 import type { AttributeTransformContext, AttributeTransformResult } from "../types";
 
 export function isEventAttribute(name: string): boolean {

@@ -1,4 +1,4 @@
-import { createContext, useContext } from "../signals";
+import { createContext, useContext } from "@signals";
 import type { AnyScale, HoverState, LinearScale, Margin, SeriesMeta } from "./types";
 
 export interface ChartContextValue {

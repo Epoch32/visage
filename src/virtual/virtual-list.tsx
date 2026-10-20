@@ -1,5 +1,5 @@
-import { For } from "../dom";
-import { computed, signal } from "../signals";
+import { For } from "@dom";
+import { computed, signal } from "@signals";
 import { createVirtualizer, type VirtualItem } from "./virtualizer";
 
 export interface VirtualListProps<T> {

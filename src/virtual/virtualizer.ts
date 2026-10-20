@@ -1,4 +1,4 @@
-import { computed, effect, onCleanup, type ReadonlySignal, signal } from "../signals";
+import { computed, effect, onCleanup, type ReadonlySignal, signal } from "@signals";
 
 export interface VirtualItem {
   index: number;

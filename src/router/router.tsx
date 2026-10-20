@@ -1,4 +1,4 @@
-import { type Child, Show } from "../dom";
+import { type Child, Show } from "@dom";
 import {
   computed,
   createContext,
@@ -7,7 +7,7 @@ import {
   signal,
   useContext,
   type WritableSignal
-} from "../signals";
+} from "@signals";
 
 export interface LocationState {
   pathname: ReadonlySignal<string>;
@@ -354,6 +354,7 @@ export interface LinkProps {
   replace?: boolean;
   viewTransition?: boolean;
   prefetch?: boolean | "hover" | "render";
+  onClick?: (e: MouseEvent) => void;
   children: Child;
   [key: string]: any;
 }
@@ -373,6 +374,7 @@ export function Link(props: LinkProps): Child {
     prefetch: prefetchProp,
     onPointerEnter,
     onFocus,
+    onClick,
     children,
     ...rest
   } = props;
@@ -402,6 +404,12 @@ export function Link(props: LinkProps): Child {
   };
 
   const handleClick = (e: MouseEvent) => {
+    if (typeof onClick === "function") {
+      onClick(e);
+    }
+
+    if (e.defaultPrevented) return;
+
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
       return;
     }
@@ -498,4 +506,4 @@ export function useSearchParams(): [
   return [params, setSearchParams];
 }
 
-export { lazy } from "../dom";
+export { lazy } from "@dom";

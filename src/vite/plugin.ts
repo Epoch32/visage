@@ -4,6 +4,7 @@ import { createCompilerPlugin } from "./plugins/compiler";
 import { createConfigPlugin } from "./plugins/config";
 import { createCspPlugin } from "./plugins/csp";
 import { createHmrPlugin } from "./plugins/hmr";
+import { createLucidePlugin } from "./plugins/lucide";
 import { createNativePlugin } from "./plugins/native";
 import { createPagesPlugin } from "./plugins/pages";
 import { createServerPlugin } from "./plugins/server";
@@ -16,7 +17,7 @@ declare const process: any;
  * Official Visage Vite Plugin
  *
  * Provides zero-configuration JSX compilation, Hot Module Replacement (HMR),
- * DevTools auto-injection, full-stack RPC development server middleware, and
+ * built-in Lucide icon tree-shaking, DevTools auto-injection, full-stack RPC development server middleware, and
  * experimental transforms (Storage Preboot, Native Desktop, CSP, Security).
  *
  * Example:
@@ -34,39 +35,39 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
   const isDev = typeof process !== "undefined" ? process.env?.NODE_ENV !== "production" : true;
   const vLog = createVisageLogger();
 
-  // 1. Experimental Native Zig Desktop Options
-  const isZigNative = Boolean(options.experimental?.zigNative);
-  const zigOpts =
-    typeof options.experimental?.zigNative === "object" ? options.experimental.zigNative : {};
+  // 1. Native Zig Desktop Options (top-level or legacy experimental.zigNative)
+  const nativeConfig = options.native ?? options.experimental?.zigNative;
+  const isZigNative = Boolean(nativeConfig);
+  const zigOpts = typeof nativeConfig === "object" ? nativeConfig : {};
 
-  // 2. Experimental Security Transforms Options
-  const isSecureTransforms = Boolean(options.experimental?.secureTransforms);
+  // 2. AOT JSX Compiler & Safe Security Transforms Options
+  const isCompiler = options.compiler !== false;
+  const compilerSecurity =
+    typeof options.compiler === "object" ? options.compiler.security : undefined;
+  const experimentalSecurity = options.experimental?.secureTransforms;
+  const isSecureTransforms =
+    compilerSecurity !== false &&
+    experimentalSecurity !== false &&
+    (compilerSecurity !== undefined || experimentalSecurity !== undefined || isCompiler);
   const secureTransformsOpts =
-    typeof options.experimental?.secureTransforms === "object"
-      ? options.experimental.secureTransforms
-      : true;
+    typeof compilerSecurity === "object"
+      ? compilerSecurity
+      : typeof experimentalSecurity === "object"
+        ? experimentalSecurity
+        : true;
 
-  // 3. Experimental Content Security Policy (CSP) Options
+  // 3. Content Security Policy (CSP) Options (top-level or legacy experimental.csp)
+  const rawCsp = options.csp ?? options.experimental?.csp;
   const isCsp =
-    Boolean(options.experimental?.csp) &&
-    (typeof options.experimental?.csp !== "object" ||
-      (options.experimental.csp as any).enabled !== false);
-  const cspOpts: any =
-    typeof options.experimental?.csp === "object"
-      ? { ...options.experimental.csp }
-      : isCsp
-        ? {}
-        : false;
+    Boolean(rawCsp) && (typeof rawCsp !== "object" || (rawCsp as any).enabled !== false);
+  const cspOpts: any = typeof rawCsp === "object" ? { ...rawCsp } : isCsp ? {} : false;
 
-  // 4. Experimental Storage Preboot Options
+  // 4. Storage Preboot Options (top-level or legacy experimental.storagePreboot)
+  const rawPreboot = options.storagePreboot ?? options.experimental?.storagePreboot;
   const isStoragePreboot =
-    Boolean(options.experimental?.storagePreboot) &&
-    (typeof options.experimental?.storagePreboot !== "object" ||
-      options.experimental.storagePreboot.enabled !== false);
+    rawPreboot !== false && (typeof rawPreboot !== "object" || rawPreboot.enabled !== false);
   const storagePrebootOpts: StoragePrebootOptions =
-    typeof options.experimental?.storagePreboot === "object"
-      ? { ...options.experimental.storagePreboot }
-      : { enabled: isStoragePreboot };
+    typeof rawPreboot === "object" ? { ...rawPreboot } : { enabled: isStoragePreboot };
 
   const virtualOrigin =
     (typeof cspOpts === "object" ? cspOpts.virtualOrigin : undefined) ||
@@ -103,16 +104,21 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
     plugins.push(createNativePlugin(zigOpts, vLog, virtualOrigin, cspOpts, detectedOrigins));
   }
 
-  if (options.compiler || isSecureTransforms || isCsp) {
-    plugins.push(createCompilerPlugin(options, vLog, compilerOpts, isSecureTransforms));
+  if (options.lucide !== false) {
+    const lucideOpts = typeof options.lucide === "object" ? options.lucide : {};
+    plugins.push(createLucidePlugin(lucideOpts, vLog, false));
   }
 
-  if (isCsp) {
-    plugins.push(createCspPlugin(cspOpts, detectedOrigins, vLog, virtualOrigin, compilerOpts));
+  if (isCompiler || isSecureTransforms || isCsp) {
+    plugins.push(createCompilerPlugin(options, vLog, compilerOpts, isSecureTransforms));
   }
 
   if (isStoragePreboot) {
     plugins.push(createStoragePrebootPlugin(storagePrebootOpts, vLog));
+  }
+
+  if (isCsp) {
+    plugins.push(createCspPlugin(cspOpts, detectedOrigins, vLog, virtualOrigin, compilerOpts));
   }
 
   if (options.pages) {

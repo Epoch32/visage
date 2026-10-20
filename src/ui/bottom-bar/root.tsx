@@ -1,5 +1,5 @@
-import type { Child } from "../../dom/render";
-import { signal } from "../../signals";
+import type { Child } from "@dom/render";
+import { signal } from "@signals";
 import { createControllableSignal, createId } from "../utils";
 import { BottomBarContext } from "./context";
 import { BottomBarItem } from "./item";

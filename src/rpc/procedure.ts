@@ -1,4 +1,4 @@
-import { validateWithSchema } from "../form/schema";
+import { validateWithSchema } from "@form/schema";
 import { RPCError } from "./error";
 import type { MiddlewareFn, Procedure, ProcedureOptions, ProcedureType } from "./types";
 

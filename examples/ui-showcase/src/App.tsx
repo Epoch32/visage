@@ -276,7 +276,7 @@ export function App() {
                                 </span>
                               ),
                               content:
-                                "With the visageLucide() Vite plugin, your icon imports are converted at build time into pure Visage SVG components. Only the icons you import are bundled, avoiding giant icon registries."
+                                "With Visage's built-in Lucide integration, your icon imports are converted at build time into pure Visage SVG components. Only the icons you import are bundled, avoiding giant icon registries."
                             },
                             {
                               value: "item-2",

@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - dev
   pull_request:
     branches:
       - main
+      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,6 +44,10 @@ jobs:
 
       - name: Verify Example App Builds
         run: |
+          for dir in examples/charts-showcase examples/ui-showcase examples/enterprise-auth; do
+            (cd "$dir" && bun install --frozen-lockfile)
+          done
+
           bun x vite build examples/charts-showcase
           bun x vite build examples/ui-showcase
           bun x vite build examples/enterprise-auth

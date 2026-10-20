@@ -13,7 +13,7 @@ export function createCompilerPlugin(
     name: "visage:compiler",
     enforce: "pre",
     buildStart() {
-      if (options.compiler) {
+      if (options.compiler !== false) {
         const target = options.ssr ? "ssr" : "client";
         vLog.info(
           "visage:compiler",

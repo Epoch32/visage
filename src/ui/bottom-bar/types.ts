@@ -1,5 +1,5 @@
-import type { Child } from "../../dom/render";
-import type { ReadonlySignal } from "../../signals";
+import type { Child } from "@dom/render";
+import type { ReadonlySignal } from "@signals";
 
 export interface BottomBarContextValue {
   value: ReadonlySignal<string>;

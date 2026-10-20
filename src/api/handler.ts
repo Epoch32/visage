@@ -1,8 +1,8 @@
 /**
  * Visage Web Standard API Fetch Handler & Request Dispatcher
  */
-import { validateWithSchema } from "../form/schema";
-import { ERROR_CODE_TO_STATUS, RPCError } from "../rpc/error";
+import { validateWithSchema } from "@form/schema";
+import { ERROR_CODE_TO_STATUS, RPCError } from "@rpc/error";
 import { buildFileRouter } from "./file-router";
 import { executeMiddlewareChain } from "./middleware";
 import type { ApiProcedure, ApiRouterConfig, FileRouteModule, RouteMatch } from "./types";

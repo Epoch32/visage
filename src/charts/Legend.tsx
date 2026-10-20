@@ -1,5 +1,5 @@
-import type { Child } from "../dom";
-import type { ClassProp } from "../jsx-runtime/jsx";
+import type { Child } from "@dom";
+import type { ClassProp } from "@jsx-runtime/jsx";
 import { useChartContext } from "./context";
 
 export interface LegendProps {

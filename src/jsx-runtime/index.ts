@@ -6,8 +6,8 @@ import {
   isReactive,
   resolveValue,
   setAttribute
-} from "../dom";
-import { formatStyleProp } from "../style/scale";
+} from "@dom";
+import { formatStyleProp } from "@style/scale";
 
 export type { JSX } from "./jsx";
 

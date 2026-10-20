@@ -1,6 +1,6 @@
-import { For } from "../dom";
-import type { Child } from "../dom/render";
-import { computed, createSignal } from "../signals";
+import { For } from "@dom";
+import type { Child } from "@dom/render";
+import { computed, createSignal } from "@signals";
 import { createControllableSignal } from "./utils";
 
 export type SortDirection = "asc" | "desc" | null;

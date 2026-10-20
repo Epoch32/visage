@@ -1,8 +1,8 @@
 /**
  * Visage API & File-Based RPC Routing System Types
  */
-import type { SchemaLike, StandardSchemaV1 } from "../form/schema";
-import type { RPCErrorCode } from "../rpc/types";
+import type { SchemaLike, StandardSchemaV1 } from "@form/schema";
+import type { RPCErrorCode } from "@rpc/types";
 
 export type { RPCErrorCode };
 

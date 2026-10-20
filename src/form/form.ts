@@ -1,4 +1,4 @@
-import { batch, computed, type ReadonlySignal, signal, type WritableSignal } from "../signals";
+import { batch, computed, type ReadonlySignal, signal, type WritableSignal } from "@signals";
 import { type SchemaLike, validateWithSchema } from "./schema";
 
 export interface FieldState<T> {

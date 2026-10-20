@@ -1,4 +1,4 @@
-import { createFetchHandler } from "../rpc/server";
+import { createFetchHandler } from "@rpc/server";
 import type { VisagePluginOptions } from "./types";
 
 declare const Buffer: any;

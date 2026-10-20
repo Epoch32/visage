@@ -1,4 +1,4 @@
-import { useContext } from "../signals/context";
+import { useContext } from "@signals/context";
 import type { Child } from "./render";
 import { createResource, SuspenseContext } from "./resource";
 

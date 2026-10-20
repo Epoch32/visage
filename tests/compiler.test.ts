@@ -320,6 +320,39 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain("const _tmpl$1 = template(");
   });
 
+  it("merges helpers into @epoch32/visage imports and skips existing identifiers like effect", () => {
+    const input = `
+      import { createSignal, effect, For, Show, useNavigate } from "@epoch32/visage";
+
+      export function SearchModal() {
+        return <div>{query()}</div>;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    // Must merge into @epoch32/visage
+    expect(code).toContain(
+      'import { createSignal, effect, For, Show, useNavigate, template, insertChild } from "@epoch32/visage";'
+    );
+    // Must NOT contain a second import statement from visage declaring effect again
+    expect(code).not.toContain('from "visage"');
+    // Only in the single import specifier and inside the effect(...) call, never in two import declarations
+    const importLines = code.split("\n").filter((line) => line.includes("import "));
+    expect(importLines.length).toBe(1);
+  });
+
+  it("defaults to @epoch32/visage for auto-imports when no Visage import exists", () => {
+    const input = `
+      export function Hello() {
+        return <div>Hello world</div>;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+    expect(code).toContain('import { template } from "@epoch32/visage";');
+  });
+
   it("supports custom compiler plugins for attributes and elements", () => {
     const customTooltipPlugin: CompilerPlugin = {
       name: "custom-tooltip",
@@ -349,5 +382,36 @@ describe("Visage AOT JSX Compiler", () => {
     const { code } = compiler.compile(input);
 
     expect(code).toContain("setupTooltip(_el$, hint);");
+  });
+
+  it("anchors dynamic component children to placeholders to preserve layout DOM order with static siblings", () => {
+    const input = `
+      function Layout() {
+        return (
+          <div className="app-layout">
+            <Sidebar activeId={activeSection} />
+            <main className="app-main">
+              <DocContent activeSection={activeSection} />
+            </main>
+            <TableOfContents items={currentToc} />
+          </div>
+        );
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    expect(code).toContain("const _tmpl$1 = template(");
+    expect(code).toContain(
+      '<div class=\\"app-layout\\"><!--visage-c--><main class=\\"app-main\\"><!--visage-c--></main><!--visage-c--></div>'
+    );
+    expect(code).toContain("const _anchor$");
+    expect(code).toContain("insertChild(_el$, Sidebar({");
+    expect(code).toContain("insertChild(_el$, TableOfContents({");
+    // Verify that insertChild calls receive the anchor variables as the 3rd argument
+    expect(/insertChild\(_el\$, Sidebar\({[\s\S]*?\}\), _anchor\$\d+\)/.test(code)).toBe(true);
+    expect(/insertChild\(_el\$, TableOfContents\({[\s\S]*?\}\), _anchor\$\d+\)/.test(code)).toBe(
+      true
+    );
   });
 });

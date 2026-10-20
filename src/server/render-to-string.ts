@@ -1,6 +1,6 @@
-import type { Child } from "../dom/render";
-import { runInSSRMode } from "../jsx-runtime";
-import { createRoot } from "../signals";
+import type { Child } from "@dom/render";
+import { runInSSRMode } from "@jsx-runtime";
+import { createRoot } from "@signals";
 
 const VOID_ELEMENTS = new Set([
   "area",

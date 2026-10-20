@@ -1,7 +1,7 @@
-import { Show } from "../dom/control-flow";
-import type { Child } from "../dom/render";
-import { isSignal, type ReadonlySignal, signal } from "../signals";
-import { createContext, useContext } from "../signals/context";
+import { Show } from "@dom/control-flow";
+import type { Child } from "@dom/render";
+import { isSignal, type ReadonlySignal, signal } from "@signals";
+import { createContext, useContext } from "@signals/context";
 import { createControllableSignal, createId } from "./utils";
 
 export interface TabsContextValue {

@@ -1,4 +1,4 @@
-import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "../../signals";
+import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "@signals";
 import { type Child, insertChild } from "../render";
 
 export interface PortalProps {

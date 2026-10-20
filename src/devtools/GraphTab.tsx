@@ -1,5 +1,5 @@
-import { For } from "../dom";
-import { createSignal, type WritableSignal } from "../signals";
+import { For } from "@dom";
+import { createSignal, type WritableSignal } from "@signals";
 import { GraphInspector } from "./GraphInspector";
 import type { DevToolsHub } from "./hub";
 import type { SignalRecord } from "./types";

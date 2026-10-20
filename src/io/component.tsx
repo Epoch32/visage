@@ -1,4 +1,4 @@
-import type { Child } from "../dom/render";
+import type { Child } from "@dom/render";
 import { type CreateDropZoneOptions, createDropZone, type DropZoneReturn } from "./dropzone";
 import { createFilePicker } from "./file-picker";
 

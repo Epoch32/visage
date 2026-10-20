@@ -1,0 +1,68 @@
+name: Dev Release
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-dev:
+    name: Build & Publish @epoch32/visage@dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Ensure latest npm for OIDC Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Ensure no stale auth token in npm config
+        run: npm config delete //registry.npmjs.org/:_authToken --location=user 2>/dev/null || true
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Full Quality & Verification Suite
+        run: bun run verify
+
+      - name: Compute Dev Snapshot Version & Update package.json
+        run: |
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const baseVersion = pkg.version.split("-")[0];
+            const run = process.env.GITHUB_RUN_NUMBER || "0";
+            const sha = (process.env.GITHUB_SHA || "").slice(0, 7) || "dev";
+            
+            pkg.version = `${baseVersion}-dev.${run}.${sha}`;
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+            console.log(`Updated package.json version for dev publish: ${pkg.name}@${pkg.version}`);
+          '
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+
+      - name: Build Distribution Bundles
+        run: bun run build
+
+      - name: Publish to NPM (@dev tag via Trusted Publishing)
+        run: npm publish --tag dev --provenance --access public

@@ -1,4 +1,4 @@
-import type { Child } from "../../dom/render";
+import type { Child } from "@dom/render";
 import type { BottomBarActionProps } from "./types";
 
 export function BottomBarAction(props: BottomBarActionProps): Child {

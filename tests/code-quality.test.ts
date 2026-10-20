@@ -20,4 +20,16 @@ describe("Code Quality & Static Analysis", () => {
     }
     expect(proc.exitCode).toBe(0);
   });
+
+  it("resolves configured path aliases (@, @template, @vite, @signals)", async () => {
+    const rootMod = await import("@");
+    const templateMod = await import("@template");
+    const viteMod = await import("@vite");
+    const signalsMod = await import("@signals");
+
+    expect(typeof rootMod.render).toBe("function");
+    expect(typeof templateMod.template).toBe("function");
+    expect(typeof viteMod.visage).toBe("function");
+    expect(typeof signalsMod.signal).toBe("function");
+  });
 });

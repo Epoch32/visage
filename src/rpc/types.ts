@@ -1,10 +1,10 @@
-import type { InferSchemaType, SchemaLike, ValidationIssue } from "../form/schema";
+import type { InferSchemaType, SchemaLike, ValidationIssue } from "@form/schema";
 import type {
   CreateQueryOptions,
   MutationOptions,
   MutationResult,
   QueryResult
-} from "../query/types";
+} from "@query/types";
 
 export type RPCErrorCode =
   | "BAD_REQUEST"

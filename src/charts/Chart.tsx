@@ -1,6 +1,6 @@
-import { type Child, resolveValue } from "../dom";
-import type { ClassProp, ReactiveProp } from "../jsx-runtime/jsx";
-import { computed, onCleanup, signal, untrack } from "../signals";
+import { type Child, resolveValue } from "@dom";
+import type { ClassProp, ReactiveProp } from "@jsx-runtime/jsx";
+import { computed, onCleanup, signal, untrack } from "@signals";
 import { ChartContext, type ChartContextValue } from "./context";
 import { createBandScale, createLinearScale } from "./scale";
 import type { AnyScale, HoverState, Margin, SeriesMeta } from "./types";

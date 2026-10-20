@@ -4,29 +4,52 @@
   <img width="1290" height="550" alt="Visage banner" src="https://github.com/user-attachments/assets/ebd1e69a-92ed-4536-a870-4d64a2869f14" />
 </p>
 
-Visage started as a research project by Epoch32. The original concept, explored in a blog post, demonstrated that building a UI library without a Virtual DOM (like Solid) was, in principle, a straightforward task.
+<p align="center">
+  <a href="https://github.com/Epoch32/visage/actions">
+    <img src="https://github.com/Epoch32/visage/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+  <a href="https://www.npmjs.com/package/@epoch32/visage">
+    <img src="https://img.shields.io/npm/v/@epoch32/visage" alt="npm version" />
+  </a>
+  <a href="https://socket.dev/npm/package/@epoch32/visage">
+    <img src="https://socket.dev/api/badge/npm/package/@epoch32/visage" alt="Socket" />
+  </a>
+  <a href="https://github.com/Epoch32/visage/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0 License" />
+  </a>
+  <a href="https://github.com/Epoch32/visage/releases">
+    <img src="https://img.shields.io/github/v/release/Epoch32/visage" alt="GitHub release" />
+  </a>
+  <a href="https://github.com/Epoch32/visage">
+    <img src="https://img.shields.io/github/stars/Epoch32/visage" alt="GitHub stars" />
+  </a>
+</p>
 
-Since then, Visage has grown into much more. With the release of [v1.0.0](https://github.com/Epoch32/visage/releases/tag/visage-v1.0.0), which introduced two Vite plugins, developer tools, streamlined CSS authoring, and our signals engine, we realized that the project had the potential to become more than a research experiment. We took it a step further, evolving Visage into what it is today: a full-stack web toolkit built on a fine-grained reactivity architecture.
+Visage is a lightning-fast, zero-VDOM, fine-grained reactive UI library and full-stack application toolkit. It combines a push-pull signals architecture, direct DOM bindings, an ahead-of-time (AOT) template compiler, and integrated desktop capabilities into a cohesive, high-performance developer experience.
 
-## Why Visage?
+## What Visage Solves
 
-If you're coming from React, you're probably familiar with the Virtual DOM. React's rendering model commonly re-executes component functions when state changes, producing new element descriptions that React reconciles with the previous render. Visage takes a different approach:
+Modern web development often trades performance and simplicity for component abstraction. Visage directly addresses these structural bottlenecks:
 
-- **Construct-once execution:** Component functions execute during the initial mount to establish reactive dependencies and instantiate DOM nodes. Subsequent updates propagate through the reactive graph without re-executing those component functions.
-- **Push-pull reactivity:** Signal updates propagate dirty notifications through a glitch-free directed acyclic graph (DAG). Updated values are pulled lazily, allowing computations to run only when their results are needed.
-- **Direct DOM bindings:** Event listeners attach directly to native browser elements, while reactive values bind to individual text nodes and DOM element properties or attributes. This avoids the need for a virtual tree to reconcile after each update.
+- **Eliminating Virtual DOM Overhead**: Rather than re-executing entire component functions and reconciling virtual DOM trees on every state change, Visage employs a **construct-once execution model**. Component functions run once during mounting to wire up reactive dependencies; subsequent state changes update the exact targeted DOM nodes directly.
+- **Glitch-Free Reactive Precision**: State is driven by signals organized in a push-pull directed acyclic graph (DAG). Dirty notifications propagate eagerly, while computations are evaluated lazily on demand, guaranteeing zero unnecessary re-computations and eliminating synchronization glitches.
+- **Compile-Time Optimization with Security Shields**: Visage's Vite compiler extracts static markup, optimizes template instantiation, and automatically sanitizes unsafe patterns (DOM clobbering, untrusted URL schemes, and unescaped HTML) while generating zero-trust Content Security Policies (CSP) directly from your templates.
+- **Lightweight Native Desktop Distribution**: Visage eliminates the multi-hundred-megabyte footprint and resource consumption of traditional desktop wrappers by pairing your UI with an embedded, zero-dependency Zig native host (~16MB binary) with native OS dialogs and notifications.
+- **All-in-One Full-Stack Cohesion**: From file-system MPA routing with native View Transitions to end-to-end type-safe RPC, SSR streaming, and accessible UI primitives, Visage provides a complete toolkit without requiring dozens of disparate dependencies.
 
-## Performance and compilation
+## Key Features
 
-By eliminating Virtual DOM reconciliation, Visage takes a different approach to rendering performance. Since its initial release, Visage has demonstrated performance advantages over React and other Virtual DOM-based libraries in benchmarks.
-
-In [v1.8.0](https://github.com/Epoch32/visage/releases/tag/visage-v1.8.0), Visage introduced a compiler built on top of Vite to further optimize application code. With compiler-driven optimizations, Visage has also demonstrated competitive performance against [SolidJS](https://www.solidjs.com/) in the [JS Framework Benchmark](https://github.com/krausest/js-framework-benchmark/) suite.
-
-Visage combines fine-grained reactivity, compiler optimizations, and integrated development tooling to provide the performance and capabilities needed to build responsive web applications.
+- **Fine-Grained Reactivity**: Signals, computeds, effects, and persistent storage bindings.
+- **Zero-VDOM Rendering**: Direct element and attribute mutations without virtual tree diffing.
+- **AOT Template Compiler**: Compile-time JSX optimization with automated security transforms.
+- **File-System MPA Router**: Instant soft navigation powered by the browser's View Transitions API.
+- **Native Desktop Integration**: Lightweight Zig-powered desktop application host with GTK3 integration.
+- **Type-Safe Full-Stack RPC**: End-to-end typed client/server procedures and middlewares.
+- **Accessible UI & Charts**: Built-in accessible primitives, responsive chart engines, and devtools.
 
 ## Examples
 
-### Simple app
+### Simple App
 
 ```tsx
 import { render, signal, computed, Show } from "@epoch32/visage";
@@ -51,7 +74,7 @@ function Counter() {
 render(() => <Counter />, document.getElementById("app")!);
 ```
 
-### Vite configuration
+### Vite Configuration
 
 ```ts
 import { defineConfig } from "vite";
@@ -74,12 +97,17 @@ export default defineConfig({
 });
 ```
 
-The compiler also supports server-side rendering, while experimental integrations include Zig-based native WebView scaffolding, security transforms, and Content Security Policy generation.
-
 ## Contributing
 
 See [CONTRIBUTING.md](https://github.com/Epoch32/visage/blob/main/CONTRIBUTING.md) for contribution guidelines.
 
 ## License
 
-See [LICENSE](https://github.com/Epoch32/visage/blob/main/LICENSE) for license information.
+Visage is licensed under the [Mozilla Public License 2.0 (MPL-2.0)](LICENSE).
+
+### Commercial & Proprietary Use
+
+- **Closed-Source & Commercial Applications:** You can freely use Visage to build proprietary, closed-source products and commercial software ("Larger Works" under MPL-2.0). There is **no viral copyleft**—your application code, business logic, and proprietary assets remain completely private and closed source.
+- **Modifications to Visage Itself:** If you modify Visage's own source files and distribute them, those direct modifications must remain open source under MPL-2.0.
+
+In short: you can build and sell proprietary products using Visage with zero obligation to open-source your own project.

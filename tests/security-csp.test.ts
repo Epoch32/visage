@@ -1,14 +1,25 @@
 import { describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { compileJsx } from "../src/vite/compiler";
 import { buildCspString, extractOriginFromUrl, injectCspMetaTag } from "../src/vite/csp";
 import { visage } from "../src/vite/plugin";
+import { inlineSingleFileHtml } from "../src/vite/plugins/native";
 
 describe("Content Security Policy (CSP): Core, Generator & Vite Integration", () => {
   describe("Default Off Behavior", () => {
-    it("does not inject CSP meta tag or create visage:csp plugin when experimental.csp is omitted", () => {
-      const plugins = visage({});
-      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
-      expect(cspPlugin).toBeUndefined();
+    it("does not inject CSP meta tag or create visage:csp plugin when csp is omitted or false", () => {
+      const plugins1 = visage({});
+      expect(plugins1.find((p) => p.name === "visage:csp")).toBeUndefined();
+
+      const plugins2 = visage({ csp: false });
+      expect(plugins2.find((p) => p.name === "visage:csp")).toBeUndefined();
+    });
+
+    it("activates visage:csp plugin when top-level csp is true", () => {
+      const plugins = visage({ csp: true });
+      expect(plugins.find((p) => p.name === "visage:csp")).toBeDefined();
     });
 
     it("does not inject CSP meta tag when experimental.csp is explicitly false", () => {
@@ -57,6 +68,18 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
         "https://cdn.jsdelivr.net"
       );
       expect(extractOriginFromUrl("//assets.example.com")).toBe("https://assets.example.com");
+      expect(extractOriginFromUrl("//cdn.example.com?v=1")).toBe("https://cdn.example.com");
+      expect(extractOriginFromUrl("//cdn.example.com#section")).toBe("https://cdn.example.com");
+      expect(extractOriginFromUrl("//user:pass@cdn.example.com/asset")).toBe(
+        "https://cdn.example.com"
+      );
+      expect(extractOriginFromUrl("//cdn.example.com:8443/asset")).toBe(
+        "https://cdn.example.com:8443"
+      );
+      expect(extractOriginFromUrl("//")).toBeNull();
+      expect(extractOriginFromUrl("//?")).toBeNull();
+      expect(extractOriginFromUrl("//#")).toBeNull();
+      expect(extractOriginFromUrl("///")).toBeNull();
     });
 
     it("extracts origin from WebSocket URLs", () => {
@@ -190,6 +213,16 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
           '<meta http-equiv="Content-Security-Policy" content="default-src \'self\';">'
         )
       ).toBe(true);
+    });
+
+    it("escapes double quotes and safely preserves special regex replacement tokens ($1, $&)", () => {
+      const html = "<html><head><title>App</title></head><body></body></html>";
+      const csp = 'default-src "trusted"; report-uri /csp?token=$1&$&;';
+      const injected = injectCspMetaTag(html, csp);
+
+      expect(injected).toContain(
+        'content="default-src &quot;trusted&quot;; report-uri /csp?token=$1&$&;"'
+      );
     });
   });
 
@@ -408,6 +441,122 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
       expect(finalHtml).toContain("https://www.youtube.com");
       expect(finalHtml).toContain("https://media.stream.org");
       expect(finalHtml).toContain("https://api.backend.org");
+    });
+
+    it("honors csp.enabled: false in native inlineSingleFileHtml", () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "visage-native-csp-test-"));
+      try {
+        const htmlPath = path.join(tempDir, "index.html");
+        fs.writeFileSync(htmlPath, "<html><head><title>App</title></head><body></body></html>");
+
+        inlineSingleFileHtml(tempDir, { enabled: false });
+        const updatedHtml = fs.readFileSync(htmlPath, "utf8");
+        expect(updatedHtml).not.toContain("Content-Security-Policy");
+
+        inlineSingleFileHtml(tempDir, false);
+        const updatedHtml2 = fs.readFileSync(htmlPath, "utf8");
+        expect(updatedHtml2).not.toContain("Content-Security-Policy");
+
+        inlineSingleFileHtml(tempDir, true);
+        const updatedHtml3 = fs.readFileSync(htmlPath, "utf8");
+        expect(updatedHtml3).toContain("Content-Security-Policy");
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it("automatically computes SHA-256 hashes for inline script tags and whitelists them in script-src", () => {
+      const plugins = visage({
+        csp: true,
+        storagePreboot: false
+      });
+
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(cspPlugin).toBeDefined();
+
+      const initialHtml = `<!DOCTYPE html><html><head></head><body>
+        <script>console.log("analytics initialized");</script>
+      </body></html>`;
+
+      const finalHtml = (cspPlugin as any).transformIndexHtml(initialHtml);
+      expect(finalHtml).toContain("script-src 'self' 'sha256-");
+    });
+
+    it("seamlessly interoperates with storagePreboot by hashing preboot script into CSP", () => {
+      const plugins = visage({
+        csp: true,
+        storagePreboot: {
+          states: [{ key: "theme", fallback: "dark", attribute: "data-theme" }]
+        }
+      });
+
+      const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(prebootPlugin).toBeDefined();
+      expect(cspPlugin).toBeDefined();
+
+      const initialHtml =
+        "<!DOCTYPE html><html><head><title>App</title></head><body></body></html>";
+      const prebootHtml = (prebootPlugin as any).transformIndexHtml(initialHtml);
+      expect(prebootHtml).toContain('data-visage-preboot="true"');
+
+      const finalHtml = (cspPlugin as any).transformIndexHtml(prebootHtml);
+      expect(finalHtml).toContain('<meta http-equiv="Content-Security-Policy"');
+      expect(finalHtml).toContain("script-src 'self' 'sha256-");
+    });
+
+    it("filters meta-incompatible directives (frame-ancestors, report-uri, form-action) when target is meta", () => {
+      const metaCsp = buildCspString({ reportUri: "/csp-report" }, undefined, undefined, "meta");
+      expect(metaCsp).not.toContain("frame-ancestors");
+      expect(metaCsp).not.toContain("report-uri");
+      expect(metaCsp).not.toContain("form-action");
+      expect(metaCsp).toContain("default-src 'self'");
+
+      const headerCsp = buildCspString(
+        { reportUri: "/csp-report" },
+        undefined,
+        undefined,
+        "header"
+      );
+      expect(headerCsp).toContain("frame-ancestors 'none'");
+      expect(headerCsp).toContain("report-uri /csp-report");
+      expect(headerCsp).toContain("form-action 'self'");
+    });
+
+    it("attaches Content-Security-Policy HTTP response header in dev server middleware", () => {
+      const plugins = visage({ csp: true });
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(cspPlugin).toBeDefined();
+
+      let middlewareFn: any;
+      const fakeServer = {
+        middlewares: {
+          use(fn: any) {
+            middlewareFn = fn;
+          }
+        }
+      };
+
+      (cspPlugin as any).configureServer(fakeServer);
+      expect(middlewareFn).toBeDefined();
+
+      const headersSet: Record<string, string> = {};
+      const fakeReq = { headers: { accept: "text/html" }, url: "/" };
+      const fakeRes = {
+        setHeader(name: string, val: string) {
+          headersSet[name] = val;
+        }
+      };
+      let nextCalled = false;
+
+      middlewareFn(fakeReq, fakeRes, () => {
+        nextCalled = true;
+      });
+
+      expect(nextCalled).toBe(true);
+      expect(headersSet["Content-Security-Policy"]).toBeDefined();
+      expect(headersSet["Content-Security-Policy"]).toContain("default-src 'self'");
+      expect(headersSet["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
     });
   });
 });

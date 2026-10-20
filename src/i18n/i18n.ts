@@ -1,4 +1,4 @@
-import { createMemo, createSignal } from "../signals";
+import { createMemo, createSignal } from "@signals";
 import type {
   CreateI18nOptions,
   I18nInstance,

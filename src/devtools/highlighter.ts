@@ -1,4 +1,4 @@
-import { effect, onCleanup } from "../signals";
+import { effect, onCleanup } from "@signals";
 
 /**
  * Visual DOM element mutation highlighter for Visage DevTools

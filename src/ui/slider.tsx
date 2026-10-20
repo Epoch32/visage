@@ -1,6 +1,6 @@
-import type { Child } from "../dom/render";
-import type { ReadonlySignal } from "../signals";
-import { createContext, useContext } from "../signals/context";
+import type { Child } from "@dom/render";
+import type { ReadonlySignal } from "@signals";
+import { createContext, useContext } from "@signals/context";
 import { createControllableSignal } from "./utils";
 
 export interface SliderContextValue {

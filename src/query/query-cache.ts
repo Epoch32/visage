@@ -1,4 +1,4 @@
-import { signal, type WritableSignal } from "../signals";
+import { signal, type WritableSignal } from "@signals";
 import type { QueryClient } from "./query-client";
 import type {
   FetchStatus,

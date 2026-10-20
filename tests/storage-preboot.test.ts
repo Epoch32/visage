@@ -118,25 +118,35 @@ describe("Storage Preboot Experimental Transform (visage/vite)", () => {
   });
 
   describe("Vite Plugin Integration", () => {
-    it("remains completely dormant when storagePreboot is not enabled", () => {
+    it("activates visage:storage-preboot plugin by default in visage()", () => {
       const plugins = visage();
       const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
-      expect(prebootPlugin).toBeUndefined();
+      expect(prebootPlugin).toBeDefined();
     });
 
-    it("activates visage:storage-preboot plugin when explicitly configured", async () => {
-      const plugins = visage({
+    it("remains completely dormant when storagePreboot is explicitly false", () => {
+      const plugins1 = visage({ storagePreboot: false });
+      expect(plugins1.find((p) => p.name === "visage:storage-preboot")).toBeUndefined();
+
+      const plugins2 = visage({
         experimental: {
-          storagePreboot: {
-            states: [
-              {
-                key: "theme-pref",
-                attribute: "data-theme",
-                fallback: "system",
-                colorSchemeQuery: true
-              }
-            ]
-          }
+          storagePreboot: false
+        }
+      });
+      expect(plugins2.find((p) => p.name === "visage:storage-preboot")).toBeUndefined();
+    });
+
+    it("activates visage:storage-preboot plugin with top-level configuration", async () => {
+      const plugins = visage({
+        storagePreboot: {
+          states: [
+            {
+              key: "theme-pref",
+              attribute: "data-theme",
+              fallback: "system",
+              colorSchemeQuery: true
+            }
+          ]
         }
       });
 

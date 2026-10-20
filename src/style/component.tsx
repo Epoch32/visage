@@ -1,5 +1,5 @@
-import type { Child } from "../dom/render";
-import { effect, onCleanup } from "../signals";
+import type { Child } from "@dom/render";
+import { effect, onCleanup } from "@signals";
 import { objectToCSS, type StyleDefinition } from "./create-style";
 import { getScopeId } from "./hash";
 import { styleManager } from "./manager";

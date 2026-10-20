@@ -1,5 +1,5 @@
+import { onCleanup } from "@signals";
 import type * as CSS from "csstype";
-import { onCleanup } from "../signals";
 import { type ClassValue, cx } from "./cx";
 import { getScopeId } from "./hash";
 import { styleManager } from "./manager";

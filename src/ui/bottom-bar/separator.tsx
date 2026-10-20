@@ -1,4 +1,4 @@
-import type { Child } from "../../dom/render";
+import type { Child } from "@dom/render";
 import type { BottomBarSeparatorProps } from "./types";
 
 export function BottomBarSeparator(props: BottomBarSeparatorProps): Child {

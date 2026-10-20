@@ -1,5 +1,6 @@
-import type { createRouter } from "../rpc/router";
+import type { createRouter } from "@rpc/router";
 import type { PagesOptions } from "./pages/types";
+import type { VisageLucideOptions } from "./plugins/lucide";
 
 /**
  * Options for the Visage Vite Plugin
@@ -38,8 +39,9 @@ export interface VisagePluginOptions {
   };
 
   /**
-   * Enable AOT JSX Template Compiler (compiles JSX into hoisted cloneNode templates)
-   * @default false
+   * Enable AOT JSX Template Compiler (compiles JSX into hoisted cloneNode templates).
+   * Enabled by default (`true`) with safe AST security transforms. Set to `false` to disable.
+   * @default true
    */
   compiler?: boolean | import("./compiler/types").CompilerOptions;
 
@@ -50,6 +52,47 @@ export interface VisagePluginOptions {
    * @default false
    */
   pages?: boolean | PagesOptions;
+
+  /**
+   * Automatic build-time Lucide icon tree-shaking and translation.
+   * Statically transforms `lucide-react` and `lucide` imports into pure Visage SVG components.
+   * Enabled by default (`true`). Set to `false` to disable, or provide custom options.
+   * @default true
+   */
+  lucide?: boolean | VisageLucideOptions;
+
+  /**
+   * Native desktop application compiler and host for Linux WebView via Zig.
+   *
+   * When enabled:
+   * - Configures relative asset paths (`base: "./"`) for embedded webviews
+   * - Enables the `visage/native` IPC bridge and native runtime
+   * - Scaffolds native Zig host files (`src-native/main.zig`, `build.zig`, `platform.zig`)
+   *
+   * @default false
+   */
+  native?: boolean | ZigNativeOptions;
+
+  /**
+   * Content Security Policy (CSP) generator and injector.
+   * Auto-detects external origins across JSX code and injects strict CSP meta tags into HTML.
+   * Disabled by default (`false`). Set to `true` or provide options to enable.
+   * @default false
+   */
+  csp?: boolean | CSPOptions;
+
+  /**
+   * Storage Preboot compiler transform and HTML injector.
+   *
+   * Detects persistent signals in source code (`signal(..., { persist: "..." })`)
+   * and auto-injects an ultra-compact, synchronous blocking script into HTML `<head>`.
+   * Preboots storage-backed state (theme, layout, flags) onto DOM attributes/classes
+   * and populates `window.__VISAGE_PREBOOT__` before the first frame paints (zero FOUC).
+   *
+   * Enabled by default (`true`). Set to `false` to disable.
+   * @default true
+   */
+  storagePreboot?: boolean | StoragePrebootOptions;
 
   /**
    * Opt-in experimental compiler and packager options
@@ -245,6 +288,20 @@ export interface CSPOptions {
   autoDetectOrigins?: boolean;
 
   /**
+   * Automatically compute SHA-256 hashes for inline scripts in HTML (such as storagePreboot)
+   * and whitelist them in script-src without requiring 'unsafe-inline'.
+   * @default true
+   */
+  hashInlineScripts?: boolean;
+
+  /**
+   * Set Content-Security-Policy HTTP response headers in Vite dev server and preview server
+   * to enforce header-only directives like frame-ancestors, report-uri, and form-action.
+   * @default true
+   */
+  headers?: boolean;
+
+  /**
    * Enforce HTTPS for all resource requests
    * @default false
    */
@@ -408,3 +465,4 @@ export type {
   PagesOptions,
   RouteMatch
 } from "./pages/types";
+export type { VisageLucideOptions } from "./plugins/lucide";

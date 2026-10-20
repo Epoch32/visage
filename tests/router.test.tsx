@@ -491,5 +491,54 @@ describe("Visage Router", () => {
 
       unmount();
     });
+
+    it("executes custom onClick callback and still performs client-side navigation", () => {
+      let customClicked = false;
+
+      function TargetPage() {
+        return <div class="target">Target Page</div>;
+      }
+
+      const unmount = render(
+        () => (
+          <Router>
+            {() => (
+              <>
+                <Link
+                  href="/target"
+                  class="custom-click-link"
+                  onClick={() => {
+                    customClicked = true;
+                  }}
+                >
+                  Go to Target
+                </Link>
+                <Routes>
+                  <Route path="/target" component={TargetPage} />
+                </Routes>
+              </>
+            )}
+          </Router>
+        ),
+        container
+      );
+
+      const link = container.querySelector(".custom-click-link") as HTMLAnchorElement;
+      expect(link).not.toBeNull();
+
+      const clickEvent = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0
+      });
+
+      link.dispatchEvent(clickEvent);
+
+      expect(customClicked).toBe(true);
+      expect(clickEvent.defaultPrevented).toBe(true);
+      expect(container.querySelector(".target")?.textContent).toBe("Target Page");
+
+      unmount();
+    });
   });
 });

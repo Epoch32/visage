@@ -1,4 +1,4 @@
-import { SuspenseContext } from "../dom/async";
+import { SuspenseContext } from "@dom/async";
 import {
   COMPUTED_BRAND,
   computed,
@@ -9,8 +9,8 @@ import {
   signal,
   untrack,
   type WritableSignal
-} from "../signals";
-import { useContext } from "../signals/context";
+} from "@signals";
+import { useContext } from "@signals/context";
 import { focusManager } from "./focus-manager";
 import type { Query, QueryObserver } from "./query-cache";
 import { type QueryClient, useQueryClient } from "./query-client";

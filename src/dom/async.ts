@@ -1,4 +1,4 @@
-import { effect, getActiveScope, onCleanup, runInScope, Scope, signal } from "../signals";
+import { effect, getActiveScope, onCleanup, runInScope, Scope, signal } from "@signals";
 import { type Child, insertChild } from "./render";
 import {
   createResource,

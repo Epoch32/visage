@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import { visage, visageLucide } from "@epoch32/visage/vite";
+import { visage } from "@epoch32/visage/vite";
 
 export default defineConfig({
   plugins: [
@@ -17,8 +17,7 @@ export default defineConfig({
           "/docs/api/signals/computed"
         ]
       }
-    }),
-    visageLucide()
+    })
   ],
   server: {
     port: 5190

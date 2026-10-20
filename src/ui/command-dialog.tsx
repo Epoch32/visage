@@ -1,5 +1,5 @@
-import { Portal } from "../dom/control-flow";
-import type { Child } from "../dom/render";
+import { Portal } from "@dom/control-flow";
+import type { Child } from "@dom/render";
 import type { CommandProps } from "./command";
 import { CommandRoot } from "./command";
 import { useDismiss } from "./overlay";

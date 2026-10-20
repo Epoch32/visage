@@ -6,16 +6,19 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   it("generates the standard plugin pipeline with config, transform, and server hooks", () => {
     const plugins = visage();
     expect(Array.isArray(plugins)).toBe(true);
-    expect(plugins.length).toBe(3);
+    expect(plugins.length).toBe(6);
 
     const names = plugins.map((p) => p.name);
     expect(names).toContain("visage:config");
+    expect(names).toContain("visage:lucide");
+    expect(names).toContain("visage:compiler");
+    expect(names).toContain("visage:storage-preboot");
     expect(names).toContain("visage:transform");
     expect(names).toContain("visage:server");
   });
 
   it("configures oxc for automatic Visage JSX runtime and dependencies deduplication", () => {
-    const [configPlugin] = visage();
+    const configPlugin = visage().find((p) => p.name === "visage:config");
     expect(configPlugin?.config).not.toBeNull();
 
     const config = configPlugin!.config!({}, { command: "serve", mode: "development" });
@@ -30,7 +33,7 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   });
 
   it("transforms JSX/TSX components to append HMR boundaries in development", () => {
-    const [, transformPlugin] = visage({ hmr: true });
+    const transformPlugin = visage({ hmr: true }).find((p) => p.name === "visage:transform");
     expect(transformPlugin?.transform).not.toBeNull();
 
     const sourceCode = `
@@ -58,7 +61,7 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   });
 
   it("injects devtools metadata into HTML shell in development", () => {
-    const [, , serverPlugin] = visage({ devtools: true });
+    const serverPlugin = visage({ devtools: true }).find((p) => p.name === "visage:server");
     expect(serverPlugin?.transformIndexHtml).not.toBeNull();
 
     const inputHtml = `
@@ -81,12 +84,12 @@ describe("Visage Vite Plugin (visage/vite)", () => {
       resolve: async ({ input }) => ({ message: `Hello, ${input.name}!` })
     });
 
-    const [, , serverPlugin] = visage({
+    const serverPlugin = visage({
       rpc: {
         router: testRouter,
         endpoint: "/api/rpc"
       }
-    });
+    }).find((p) => p.name === "visage:server");
 
     let registeredMiddleware: any = null;
     const mockServer = {
@@ -210,8 +213,85 @@ export function Component() {
     expect(internalResolve).toBeNull();
   });
 
-  describe("Experimental Compiler Options", () => {
-    it("keeps experimental zigNative compiler features completely dormant by default", () => {
+  it("includes Lucide icon translation directly in visage() plugin by default", () => {
+    const plugins = visage();
+    const lucidePlugin = plugins.find((p) => p.name === "visage:lucide");
+    expect(lucidePlugin).toBeDefined();
+
+    const sample = `import { Settings } from "lucide-react";`;
+    const res: any = lucidePlugin!.transform!(sample, "/app/src/Nav.tsx");
+    expect(res).not.toBeNull();
+    expect(res.code).toBe('import { Settings } from "virtual:visage-icons?icons=Settings";');
+
+    // Does not log any deprecation warning
+    const warnings: string[] = [];
+    const mockLogger = {
+      warn: (msg: string) => warnings.push(msg),
+      info: () => {},
+      error: () => {}
+    };
+    lucidePlugin!.configResolved?.({ logger: mockLogger });
+    lucidePlugin!.buildStart?.();
+    expect(warnings.length).toBe(0);
+  });
+
+  it("allows disabling Lucide icon translation via visage({ lucide: false })", () => {
+    const plugins = visage({ lucide: false });
+    const lucidePlugin = plugins.find((p) => p.name === "visage:lucide");
+    expect(lucidePlugin).toBeUndefined();
+  });
+
+  it("logs a deprecation warning in the logging output of visageLucide()", () => {
+    const plugin = visageLucide();
+    const warnings: string[] = [];
+    const mockLogger = {
+      warn: (msg: string) => warnings.push(msg),
+      info: () => {},
+      error: () => {}
+    };
+
+    plugin.configResolved?.({ logger: mockLogger });
+    plugin.buildStart?.();
+
+    expect(warnings.length > 0).toBe(true);
+    expect(warnings[0]).toContain("visageLucide() is deprecated in Version 2");
+    expect(warnings[0]).toContain("will be fully removed in Version 3");
+    expect(warnings[0]).toContain("built directly into the main visage() plugin");
+  });
+
+  it("activates the AOT template compiler and safe AST transforms by default", () => {
+    const plugins = visage();
+    const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+    expect(compilerPlugin).toBeDefined();
+
+    const sample = `export function Box() { return <div class="box"><span>Hello</span></div>; }`;
+    const res: any = compilerPlugin!.transform!(sample, "/app/src/Box.tsx");
+    expect(res).not.toBeNull();
+    expect(res.code).toContain("_tmpl$");
+  });
+
+  it("allows disabling the AOT compiler via visage({ compiler: false })", () => {
+    const plugins = visage({ compiler: false });
+    const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+    expect(compilerPlugin).toBeUndefined();
+    expect(plugins.length).toBe(5);
+  });
+
+  it("activates storage preboot by default in visage() plugin", () => {
+    const plugins = visage();
+    const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
+    expect(prebootPlugin).toBeDefined();
+  });
+
+  it("allows disabling storage preboot via visage({ storagePreboot: false })", () => {
+    const plugins = visage({ storagePreboot: false });
+    const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
+    expect(prebootPlugin).toBeUndefined();
+    expect(plugins.length).toBe(5);
+  });
+
+  describe("Native Desktop Host Options", () => {
+    it("keeps native desktop compiler features completely dormant by default", () => {
       const plugins = visage();
       const [configPlugin] = plugins;
 
@@ -219,14 +299,31 @@ export function Component() {
       expect(config.base).toBeUndefined();
 
       const pluginNames = plugins.map((p) => p.name);
-      expect(pluginNames).not.toContain("visage:experimental-native");
+      expect(pluginNames).not.toContain("visage:native");
     });
 
-    it("activates relative base path and native plugin when zigNative is explicitly enabled", () => {
+    it("activates relative base path and native plugin when top-level native is explicitly enabled", () => {
+      const plugins = visage({
+        native: {
+          title: "Custom Desktop Title",
+          scaffold: false
+        }
+      });
+
+      const [configPlugin] = plugins;
+      const config = configPlugin!.config!({}, { command: "build", mode: "production" });
+      expect(config.base).toBe("./");
+      expect(config.optimizeDeps?.exclude).toContain("visage/native");
+
+      const nativePlugin = plugins.find((p) => p.name === "visage:native");
+      expect(nativePlugin).toBeDefined();
+    });
+
+    it("supports legacy experimental.zigNative option for backwards compatibility", () => {
       const plugins = visage({
         experimental: {
           zigNative: {
-            title: "Custom Desktop Title",
+            title: "Legacy Desktop Title",
             scaffold: false
           }
         }
@@ -237,7 +334,7 @@ export function Component() {
       expect(config.base).toBe("./");
       expect(config.optimizeDeps?.exclude).toContain("visage/native");
 
-      const nativePlugin = plugins.find((p) => p.name === "visage:experimental-native");
+      const nativePlugin = plugins.find((p) => p.name === "visage:native");
       expect(nativePlugin).toBeDefined();
     });
   });
