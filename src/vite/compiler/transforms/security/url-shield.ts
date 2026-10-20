@@ -34,12 +34,15 @@ export function assertSafeStaticUrl(attrName: string, url: string): void {
 }
 
 const SAFE_URL_CODE = String.raw`
-const _safeUrl = (u) =>
-  /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
-    String(typeof u === "function" ? u() : u ?? "")
-  )
-    ? "about:blank"
-    : u;
+const _safeUrl = (u) => {
+  const clean = (v) =>
+    /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
+      String(v ?? "")
+    )
+      ? "about:blank"
+      : v;
+  return typeof u === "function" ? () => clean(u()) : clean(u);
+};
 `;
 
 export const SAFE_URL_HELPER_AST = parse(SAFE_URL_CODE, {
