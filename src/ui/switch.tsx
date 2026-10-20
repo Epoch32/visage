@@ -71,28 +71,53 @@ export function SwitchRoot(props: SwitchProps): Child {
   } = props;
 
   return (
-    <Tag
-      type={Tag === "button" ? "button" : undefined}
-      role="switch"
-      aria-checked={checked}
-      data-state={() => (checked() ? "checked" : "unchecked")}
-      disabled={disabled}
-      class={className}
-      style={style}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      {...rest}
-    >
-      {children !== undefined ? (
-        typeof children === "function" ? (
-          children()
+    <>
+      <Tag
+        type={Tag === "button" ? "button" : undefined}
+        role="switch"
+        aria-checked={checked}
+        data-state={() => (checked() ? "checked" : "unchecked")}
+        disabled={disabled}
+        class={className}
+        style={style}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        {...rest}
+      >
+        {children !== undefined ? (
+          typeof children === "function" ? (
+            children()
+          ) : (
+            children
+          )
         ) : (
-          children
-        )
-      ) : (
-        <SwitchThumb class={thumbClass} style={thumbStyle} />
-      )}
-    </Tag>
+          <SwitchThumb class={thumbClass} style={thumbStyle} />
+        )}
+      </Tag>
+      {name ? (
+        <input
+          type="checkbox"
+          name={name}
+          value={value ?? "on"}
+          checked={checked}
+          required={required}
+          disabled={disabled}
+          style={{
+            position: "absolute",
+            border: 0,
+            width: "1px",
+            height: "1px",
+            padding: 0,
+            margin: "-1px",
+            overflow: "hidden",
+            clip: "rect(0, 0, 0, 0)",
+            whiteSpace: "nowrap"
+          }}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      ) : null}
+    </>
   );
 }
 
