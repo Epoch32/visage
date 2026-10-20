@@ -210,6 +210,10 @@ function transformRules(css: string, options: ScopeOptions): string {
       ) {
         // Find matching closing brace for nested at-rule
         const closeBrace = findMatchingBrace(css, openBrace);
+        if (closeBrace === -1) {
+          output += css.slice(i);
+          break;
+        }
         const innerContent = css.slice(openBrace + 1, closeBrace);
         const transformedInner = transformRules(innerContent, options);
 
@@ -221,6 +225,10 @@ function transformRules(css: string, options: ScopeOptions): string {
       if (header.includes("keyframes") || header.startsWith("@font-face")) {
         // Keep keyframe and font-face blocks intact without selector scoping
         const closeBrace = findMatchingBrace(css, openBrace);
+        if (closeBrace === -1) {
+          output += css.slice(i);
+          break;
+        }
         output += css.slice(i, closeBrace + 1);
         i = closeBrace + 1;
         continue;
@@ -228,7 +236,7 @@ function transformRules(css: string, options: ScopeOptions): string {
     }
 
     // Standard rule selector
-    const closeBrace = css.indexOf("}", openBrace);
+    const closeBrace = findMatchingBrace(css, openBrace);
     if (closeBrace === -1) {
       output += css.slice(i);
       break;
@@ -246,12 +254,44 @@ function transformRules(css: string, options: ScopeOptions): string {
 
 function findMatchingBrace(str: string, openIndex: number): number {
   let depth = 0;
+  let inString: string | null = null;
+  let inComment = false;
+
   for (let i = openIndex; i < str.length; i++) {
-    if (str[i] === "{") depth++;
-    else if (str[i] === "}") {
+    const char = str[i];
+    const prev = i > 0 ? str[i - 1] : "";
+
+    if (inComment) {
+      if (char === "/" && prev === "*") {
+        inComment = false;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (char === inString && prev !== "\\") {
+        inString = null;
+      }
+      continue;
+    }
+
+    if (char === "/" && str[i + 1] === "*") {
+      inComment = true;
+      i++;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      inString = char;
+      continue;
+    }
+
+    if (char === "{") {
+      depth++;
+    } else if (char === "}") {
       depth--;
       if (depth === 0) return i;
     }
   }
-  return str.length - 1;
+  return -1;
 }
