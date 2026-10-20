@@ -40,7 +40,8 @@ export function Bar(props: BarProps): Child {
 
           const xScale = ctx.xScale();
           const yScale = ctx.yScale();
-          const baselineY = ctx.innerHeight();
+          const zeroY = typeof yScale === "function" ? yScale(0) : ctx.innerHeight();
+          const baselineY = Math.min(ctx.innerHeight(), Math.max(0, zeroY));
 
           // Check if there are other Bar series to calculate grouped offsets
           const allBars = ctx.series().filter((s) => s.type === "bar");
@@ -73,11 +74,20 @@ export function Bar(props: BarProps): Child {
             const barW = props.maxWidth ? Math.min(props.maxWidth, subBarW) : subBarW;
             const barX = slotX + (barIndex >= 0 ? barIndex * subBarW : 0) + (subBarW - barW) / 2;
 
-            const y = yScale(val);
-            const h = Math.max(0, baselineY - y);
+            const valY = yScale(val);
+            const barY = Math.min(baselineY, valY);
+            const barH = Math.abs(valY - baselineY);
 
             bars.push(
-              <rect x={barX} y={y} width={barW} height={h} rx={radius} ry={radius} fill={fill} />
+              <rect
+                x={barX}
+                y={barY}
+                width={barW}
+                height={barH}
+                rx={radius}
+                ry={radius}
+                fill={fill}
+              />
             );
           }
 
