@@ -842,6 +842,46 @@ describe("Visage UI Component Primitives", () => {
       unmount();
     });
 
+    it("hides CommandEmpty when results match and displays it only when zero items match", () => {
+      const unmount = render(
+        () => (
+          <Command
+            emptyText="No commands found."
+            items={[
+              { value: "copy", label: "Copy Text" },
+              { value: "paste", label: "Paste Text" }
+            ]}
+          />
+        ),
+        container
+      );
+
+      const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+      // Initially 2 items match, so empty element is hidden (display: none)
+      const list = container.querySelector('[role="listbox"]')!;
+      const emptyEl = list.firstElementChild as HTMLElement;
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl.textContent).toBe("No commands found.");
+      expect(emptyEl.style.display).toBe("none");
+
+      // Search matching term: empty state remains hidden
+      input.value = "Copy";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(emptyEl.style.display).toBe("none");
+
+      // Search non-matching term: empty state is shown
+      input.value = "nonexistent";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(emptyEl.style.display).not.toBe("none");
+
+      // Clear search: empty state hidden again
+      input.value = "";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(emptyEl.style.display).toBe("none");
+
+      unmount();
+    });
+
     it("renders DataTable with sorting, filtering, selection, and pagination", () => {
       const users = [
         { id: "1", name: "Alice", role: "Admin", status: "Active" },

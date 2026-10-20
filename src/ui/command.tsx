@@ -1,57 +1,35 @@
 import type { Child } from "@dom/render";
-import type { ReadonlySignal } from "@signals";
+import { createSignal, effect, onCleanup } from "@signals";
 import { createContext, useContext } from "@signals/context";
+import type {
+  CommandContextValue,
+  CommandEmptyProps,
+  CommandGroupData,
+  CommandGroupProps,
+  CommandInputProps,
+  CommandItemData,
+  CommandItemProps,
+  CommandListProps,
+  CommandProps
+} from "./command/types";
 import { createControllableSignal, createId } from "./utils";
 
-export interface CommandItemData {
-  value?: string;
-  label: Child | (() => Child);
-  icon?: Child | (() => Child);
-  shortcut?: string;
-  disabled?: boolean;
-  onSelect?: () => void;
-  keywords?: string[];
-  class?: any;
-}
-
-export interface CommandGroupData {
-  heading?: string;
-  items: CommandItemData[];
-}
-
-export interface CommandContextValue {
-  search: ReadonlySignal<string>;
-  setSearch: (query: string) => void;
-  activeValue: ReadonlySignal<string>;
-  setActiveValue: (val: string) => void;
-  filterMatches: (text: string, keywords?: string[]) => boolean;
-  commandId: string;
-}
+export type {
+  CommandContextValue,
+  CommandEmptyProps,
+  CommandGroupData,
+  CommandGroupProps,
+  CommandInputProps,
+  CommandItemData,
+  CommandItemProps,
+  CommandListProps,
+  CommandProps
+};
 
 export const CommandContext = createContext<CommandContextValue | null>(null);
 
 export function useCommandContext(): CommandContextValue | null {
   return useContext(CommandContext);
-}
-
-export interface CommandProps {
-  value?: () => string | undefined;
-  defaultValue?: string;
-  onValueChange?: (value: string) => void;
-  search?: () => string | undefined;
-  onSearchChange?: (query: string) => void;
-  placeholder?: string;
-  groups?: CommandGroupData[];
-  items?: CommandItemData[];
-  emptyText?: string;
-  class?: any;
-  style?: any;
-  inputClass?: any;
-  listClass?: any;
-  itemClass?: any;
-  as?: string;
-  children?: Child | (() => Child);
-  [key: string]: any;
 }
 
 export function CommandRoot(props: CommandProps): Child {
@@ -77,13 +55,40 @@ export function CommandRoot(props: CommandProps): Child {
     return false;
   };
 
+  const itemsMap = new Map<string, () => boolean>();
+  const [filteredCount, setFilteredCount] = createSignal(0);
+
+  const updateFilteredCount = () => {
+    let count = 0;
+    for (const isVisible of itemsMap.values()) {
+      if (isVisible()) count++;
+    }
+    setFilteredCount(count);
+  };
+
+  const registerItem = (id: string, isVisible: () => boolean): (() => void) => {
+    itemsMap.set(id, isVisible);
+    updateFilteredCount();
+    return () => {
+      itemsMap.delete(id);
+      updateFilteredCount();
+    };
+  };
+
+  effect(() => {
+    search();
+    updateFilteredCount();
+  });
+
   const ctx: CommandContextValue = {
     search,
     setSearch,
     activeValue,
     setActiveValue,
     filterMatches,
-    commandId
+    commandId,
+    filteredCount,
+    registerItem
   };
 
   const {
@@ -173,13 +178,6 @@ export function CommandRoot(props: CommandProps): Child {
   });
 }
 
-export interface CommandInputProps {
-  placeholder?: string;
-  class?: any;
-  style?: any;
-  [key: string]: any;
-}
-
 export function CommandInput(props: CommandInputProps): Child {
   const ctx = useContext(CommandContext);
 
@@ -250,14 +248,6 @@ export function CommandInput(props: CommandInputProps): Child {
   );
 }
 
-export interface CommandListProps {
-  as?: string;
-  class?: any;
-  style?: any;
-  children: Child | (() => Child);
-  [key: string]: any;
-}
-
 export function CommandList(props: CommandListProps): Child {
   const ctx = useContext(CommandContext);
   const { as: Tag = "div", children, class: className, style, id, ...rest } = props;
@@ -275,23 +265,20 @@ export function CommandList(props: CommandListProps): Child {
   );
 }
 
-export interface CommandEmptyProps {
-  as?: string;
-  class?: any;
-  style?: any;
-  children: Child | (() => Child);
-  [key: string]: any;
-}
-
 export function CommandEmpty(props: CommandEmptyProps): Child {
   const ctx = useContext(CommandContext);
   const { as: Tag = "div", children, class: className, style, ...rest } = props;
+
+  const isVisible = () => {
+    if (!ctx) return false;
+    return ctx.filteredCount() === 0;
+  };
 
   return (
     <Tag
       class={className}
       style={() => ({
-        display: ctx && ctx.search().trim().length > 0 ? undefined : "none",
+        display: isVisible() ? undefined : "none",
         textAlign: "center",
         padding: "16px",
         color: "#94a3b8",
@@ -302,15 +289,6 @@ export function CommandEmpty(props: CommandEmptyProps): Child {
       {children}
     </Tag>
   );
-}
-
-export interface CommandGroupProps {
-  heading?: string;
-  as?: string;
-  class?: any;
-  style?: any;
-  children: Child | (() => Child);
-  [key: string]: any;
 }
 
 export function CommandGroup(props: CommandGroupProps): Child {
@@ -336,19 +314,6 @@ export function CommandGroup(props: CommandGroupProps): Child {
   );
 }
 
-export interface CommandItemProps {
-  value?: string;
-  shortcut?: string;
-  disabled?: boolean;
-  onSelect?: () => void;
-  keywords?: string[];
-  as?: string;
-  class?: any;
-  style?: any;
-  children: Child | (() => Child);
-  [key: string]: any;
-}
-
 export function CommandItem(props: CommandItemProps): Child {
   const ctx = useContext(CommandContext);
   const itemValue =
@@ -358,13 +323,6 @@ export function CommandItem(props: CommandItemProps): Child {
     if (!ctx) return true;
     const text = typeof props.children === "string" ? props.children : itemValue;
     return ctx.filterMatches(text, props.keywords);
-  };
-
-  const isSelected = () => (ctx ? ctx.activeValue() === itemValue : false);
-
-  const handleClick = () => {
-    if (props.disabled) return;
-    if (props.onSelect) props.onSelect();
   };
 
   const {
@@ -381,7 +339,18 @@ export function CommandItem(props: CommandItemProps): Child {
     id ??
     (ctx
       ? `${ctx.commandId}-item-${String(itemValue).replace(/[^a-zA-Z0-9_-]/g, "-")}`
-      : undefined);
+      : createId("command-item"));
+
+  if (ctx?.registerItem) {
+    onCleanup(ctx.registerItem(itemId, isVisible));
+  }
+
+  const isSelected = () => (ctx ? ctx.activeValue() === itemValue : false);
+
+  const handleClick = () => {
+    if (props.disabled) return;
+    if (props.onSelect) props.onSelect();
+  };
 
   return (
     <Tag
