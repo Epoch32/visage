@@ -1,6 +1,6 @@
 import { Portal } from "@dom/control-flow";
 import type { Child } from "@dom/render";
-import type { ReadonlySignal } from "@signals";
+import { onCleanup, type ReadonlySignal } from "@signals";
 import { createContext, useContext } from "@signals/context";
 import { useDismiss } from "./overlay";
 import { createControllableSignal, createId } from "./utils";
@@ -245,14 +245,31 @@ export function PopoverContent(props: PopoverContentProps): Child {
     };
   };
 
+  let toggleEl: HTMLElement | null = null;
+  let onToggleListener: ((e: any) => void) | null = null;
+
+  onCleanup(() => {
+    if (toggleEl && onToggleListener) {
+      toggleEl.removeEventListener("toggle", onToggleListener);
+      toggleEl = null;
+      onToggleListener = null;
+    }
+  });
+
   const content = (
     <Tag
       ref={(el: HTMLElement | null) => {
+        if (toggleEl && onToggleListener) {
+          toggleEl.removeEventListener("toggle", onToggleListener);
+          toggleEl = null;
+          onToggleListener = null;
+        }
         if (ctx) {
           ctx.contentRef.current = el;
         }
         if (el && useNativePopover) {
-          const onToggle = (e: any) => {
+          toggleEl = el;
+          onToggleListener = (e: any) => {
             const newState = e.newState ?? (el.matches?.(":popover-open") ? "open" : "closed");
             if (newState === "closed" && ctx?.open()) {
               ctx?.setOpen(false);
@@ -260,7 +277,7 @@ export function PopoverContent(props: PopoverContentProps): Child {
               ctx?.setOpen(true);
             }
           };
-          el.addEventListener("toggle", onToggle);
+          el.addEventListener("toggle", onToggleListener);
         }
       }}
       id={ctx?.contentId}
