@@ -104,6 +104,14 @@ export interface ApiRouterConfig {
   prefix?: string;
   cache?: CacheControlDirectives | string;
   etag?: boolean;
+
+  /**
+   * Enable RFC 9457 Problem Details (`application/problem+json`) for error responses.
+   * If not explicitly set to true, requests with `Accept: application/problem+json`
+   * will still receive RFC 9457 problem details automatically.
+   */
+  problemDetails?: boolean;
+
   cors?: {
     origin?: string | string[] | ((origin: string) => boolean);
     methods?: string[];

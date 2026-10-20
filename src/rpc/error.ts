@@ -1,4 +1,5 @@
 import type { ValidationIssue } from "@form/schema";
+import { HTTP_STATUS_TITLES, type ProblemDetails } from "@http";
 import type { RPCErrorCode } from "./types";
 
 export const ERROR_CODE_TO_STATUS: Record<RPCErrorCode, number> = {
@@ -29,6 +30,7 @@ export class RPCError extends Error {
   readonly code: RPCErrorCode;
   readonly status: number;
   readonly issues?: ValidationIssue[];
+  readonly problem?: ProblemDetails;
 
   constructor(
     codeOrStatusOrOptions:
@@ -39,6 +41,7 @@ export class RPCError extends Error {
           message?: string;
           issues?: ValidationIssue[];
           cause?: unknown;
+          problem?: ProblemDetails;
         },
     message?: string
   ) {
@@ -61,10 +64,78 @@ export class RPCError extends Error {
       this.code = codeOrStatusOrOptions.code;
       this.status = ERROR_CODE_TO_STATUS[codeOrStatusOrOptions.code] ?? 500;
       this.issues = codeOrStatusOrOptions.issues;
+      this.problem = codeOrStatusOrOptions.problem;
     }
   }
 
   get statusCode(): number {
     return this.status;
+  }
+
+  /**
+   * Convert error to an RFC 9457 Problem Details object
+   */
+  toProblemDetails(instance?: string): ProblemDetails {
+    if (this.problem) {
+      return {
+        ...this.problem,
+        ...(instance && !this.problem.instance ? { instance } : {})
+      };
+    }
+
+    const invalidParams = this.issues?.map((issue) => {
+      const path = Array.isArray(issue.path)
+        ? issue.path
+        : typeof issue.path === "string"
+          ? [issue.path]
+          : [];
+      const name = Array.isArray(issue.path) ? issue.path.join(".") : String(issue.path || "");
+      const reason = issue.message || String((issue as any).reason || "");
+      return {
+        name,
+        reason,
+        path
+      };
+    });
+
+    return {
+      type: "about:blank",
+      title: HTTP_STATUS_TITLES[this.status] ?? this.code,
+      status: this.status,
+      detail: this.message,
+      ...(instance ? { instance } : {}),
+      code: this.code,
+      ...(this.issues?.length ? { issues: this.issues } : {}),
+      ...(invalidParams?.length ? { invalidParams } : {})
+    };
+  }
+
+  /**
+   * Construct an RPCError from an RFC 9457 Problem Details representation
+   */
+  static fromProblem(problem: ProblemDetails): RPCError {
+    const status = problem.status ?? 500;
+    const code =
+      (problem.code as RPCErrorCode) || STATUS_TO_ERROR_CODE[status] || "INTERNAL_SERVER_ERROR";
+
+    const issues =
+      (problem.issues as ValidationIssue[]) ||
+      (Array.isArray(problem.invalidParams)
+        ? problem.invalidParams.map((p) => ({
+            path: Array.isArray(p.path)
+              ? p.path
+              : typeof p.path === "string"
+                ? p.path.split(".").filter(Boolean)
+                : (p.name || "").split(".").filter(Boolean),
+            message: p.reason || String(p.message || "")
+          }))
+        : undefined);
+
+    return new RPCError({
+      code,
+      message: problem.detail || problem.title || code,
+      issues,
+      problem
+    });
   }
 }

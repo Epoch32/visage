@@ -205,6 +205,11 @@ export interface FetchHandlerOptions<
   securityHeaders?: boolean | Record<string, string>;
 
   /**
+   * Emit RFC 9457 Problem Details (`application/problem+json`) on error responses
+   */
+  problemDetails?: boolean;
+
+  /**
    * Declarative pattern rules matching URL paths or procedure names (e.g. "*", "/api/*", "admin.*").
    * Supports wildcard matching with '*'.
    */

@@ -1,6 +1,6 @@
 /**
  * Visage HTTP Standards & Semantics (visage/http)
- * Implements RFC 9110 (HTTP Semantics) & RFC 9111 (HTTP Caching)
+ * Implements RFC 9110 (HTTP Semantics), RFC 9111 (HTTP Caching), and RFC 9457 (Problem Details)
  */
 
 export {
@@ -27,3 +27,26 @@ export {
   parseETag,
   parseETagList
 } from "./etag";
+export {
+  badRequest,
+  conflict,
+  createProblemResponse,
+  forbidden,
+  formatValidationIssues,
+  getHttpStatusTitle,
+  HTTP_STATUS_TITLES,
+  type InvalidParam,
+  internalServerError,
+  isProblemDetails,
+  isProblemResponse,
+  methodNotAllowed,
+  notFound,
+  PROBLEM_MEDIA_TYPE,
+  type ProblemDetails,
+  ProblemError,
+  parseProblemDetails,
+  problem,
+  tooManyRequests,
+  unauthorized,
+  unprocessable
+} from "./problem";

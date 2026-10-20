@@ -134,7 +134,8 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     securityHeaders = true,
     rules,
     cache: handlerCache,
-    etag: handlerEtag
+    etag: handlerEtag,
+    problemDetails: handlerProblemDetails
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -510,7 +511,14 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
 
       onError?.({ error, path: procedurePath, req: request });
 
-      const responsePayload: RPCResponse = {
+      const problem = error.toProblemDetails(procedurePath);
+      const isProblemNegotiated =
+        handlerProblemDetails === true ||
+        (handlerProblemDetails !== false &&
+          Boolean(request.headers.get("Accept")?.includes("application/problem+json")));
+
+      const responsePayload = {
+        ...problem,
         error: {
           code: error.code,
           message: error.message,
@@ -518,7 +526,10 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
         }
       };
 
-      baseHeaders.set("Content-Type", "application/json");
+      baseHeaders.set(
+        "Content-Type",
+        isProblemNegotiated ? "application/problem+json" : "application/json"
+      );
       return new Response(JSON.stringify(responsePayload), {
         status: ERROR_CODE_TO_STATUS[error.code] ?? 500,
         headers: baseHeaders
