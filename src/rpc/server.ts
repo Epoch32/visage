@@ -411,9 +411,9 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
               controller.close();
             }
           },
-          cancel() {
+          async cancel() {
             if (typeof (iterable as any).return === "function") {
-              (iterable as any).return();
+              await (iterable as any).return();
             }
           }
         });
