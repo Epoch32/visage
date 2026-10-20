@@ -42,6 +42,7 @@ const rawEntrypoints = [
   "src/virtual/index.ts",
   "src/form/index.ts",
   "src/server/index.ts",
+  "src/http/index.ts",
   "src/router/index.ts",
   "src/vite/index.ts",
   "src/jsx-runtime/index.ts",

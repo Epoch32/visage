@@ -1,3 +1,4 @@
+import { formatCacheControl, handleConditionalResponse } from "@http";
 import { ERROR_CODE_TO_STATUS, RPCError } from "./error";
 import { executeProcedure } from "./procedure";
 import type { CORSOptions, FetchHandlerOptions, Procedure, Router, RPCResponse } from "./types";
@@ -131,7 +132,9 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     onError,
     cors = true,
     securityHeaders = true,
-    rules
+    rules,
+    cache: handlerCache,
+    etag: handlerEtag
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -306,6 +309,10 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           baseHeaders.set(k, v);
         }
       }
+
+      if (rule.cache) {
+        baseHeaders.set("Cache-Control", formatCacheControl(rule.cache));
+      }
     }
 
     // Check for batch execution in POST body
@@ -470,10 +477,27 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
       };
 
       baseHeaders.set("Content-Type", "application/json");
-      return new Response(JSON.stringify(responsePayload), {
+
+      const cacheDirective = procedure.cache ?? handlerCache;
+      if (cacheDirective && !baseHeaders.has("Cache-Control")) {
+        baseHeaders.set("Cache-Control", formatCacheControl(cacheDirective));
+      }
+
+      const res = new Response(JSON.stringify(responsePayload), {
         status: 200,
         headers: baseHeaders
       });
+
+      if (
+        handlerEtag !== false &&
+        (procedure.type === "query" || request.method === "GET" || request.method === "HEAD")
+      ) {
+        return await handleConditionalResponse(request, res, {
+          cacheControl: cacheDirective
+        });
+      }
+
+      return res;
     } catch (err: any) {
       const error =
         err instanceof RPCError

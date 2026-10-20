@@ -27,6 +27,8 @@
       "@dom/*": ["./src/dom/*"],
       "@form": ["./src/form/index.ts"],
       "@form/*": ["./src/form/*"],
+      "@http": ["./src/http/index.ts"],
+      "@http/*": ["./src/http/*"],
       "@i18n": ["./src/i18n/index.ts"],
       "@i18n/*": ["./src/i18n/*"],
       "@io": ["./src/io/index.ts"],

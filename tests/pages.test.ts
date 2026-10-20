@@ -281,9 +281,37 @@ describe("Visage File-System MPA Pages Router (visage/pages)", () => {
 
       expect(status).toBe(200);
       expect(headers["Content-Type"]).toContain("text/html");
+      expect(headers.ETag).toBeDefined();
+      expect(headers["Cache-Control"]).toBe("public, max-age=0, must-revalidate");
       expect(body).toContain('<div id="visage-root"></div>');
       expect(body).toContain("/@visage-pages-entry");
       expect(body).toContain("about.tsx");
+
+      // Test 304 revalidation with matching If-None-Match
+      let revalStatus = 0;
+      let revalBody = "";
+      const revalHeaders: Record<string, string> = {};
+      const revalReq = {
+        url: "/about",
+        method: "GET",
+        headers: { "if-none-match": headers.ETag }
+      };
+      const revalRes = {
+        set statusCode(code: number) {
+          revalStatus = code;
+        },
+        setHeader(name: string, value: string) {
+          revalHeaders[name] = value;
+        },
+        end(data?: string) {
+          revalBody = data || "";
+        }
+      };
+
+      await middlewareFn(revalReq, revalRes, () => {});
+      expect(revalStatus).toBe(304);
+      expect(revalHeaders.ETag).toBe(headers.ETag);
+      expect(revalBody).toBe("");
     });
 
     it("rewrites clean URLs to index.html in preview server middleware", async () => {

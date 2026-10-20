@@ -1,3 +1,25 @@
+// HTTP Standards & Semantics (RFC 9110 & RFC 9111)
+export {
+  type CacheControlDirectives,
+  compareETags,
+  create304Response,
+  type ETagOptions,
+  evaluatePreconditions,
+  filter304Headers,
+  fnv1a64,
+  formatCacheControl,
+  generateETag,
+  type HandleConditionalOptions,
+  handleConditionalResponse,
+  matchesETagHeader,
+  type ParsedETag,
+  type PreconditionOptions,
+  type PreconditionResult,
+  parseCacheControl,
+  parseETag,
+  parseETagList
+} from "./http";
+
 // Reactive Primitives
 
 // File-Based API & Opinionated RPC

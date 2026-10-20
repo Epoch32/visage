@@ -2,6 +2,7 @@
  * Visage API & File-Based RPC Routing System Types
  */
 import type { SchemaLike, StandardSchemaV1 } from "@form/schema";
+import type { CacheControlDirectives } from "@http";
 import type { RPCErrorCode } from "@rpc/types";
 
 export type { RPCErrorCode };
@@ -62,6 +63,7 @@ export type ProcedureType = "query" | "mutation" | "subscription";
 export interface ProcedureOptions<TInput = any, TOutput = any, TCtx = any> {
   input?: SchemaLike<TInput> | StandardSchemaV1<TInput>;
   output?: SchemaLike<TOutput> | StandardSchemaV1<TOutput>;
+  cache?: CacheControlDirectives | string;
   resolve: (args: {
     input: TInput;
     ctx: TCtx;
@@ -100,6 +102,8 @@ export interface FileRouteModule {
 
 export interface ApiRouterConfig {
   prefix?: string;
+  cache?: CacheControlDirectives | string;
+  etag?: boolean;
   cors?: {
     origin?: string | string[] | ((origin: string) => boolean);
     methods?: string[];

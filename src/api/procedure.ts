@@ -1,4 +1,5 @@
 import type { InferSchemaType, SchemaLike, StandardSchemaV1 } from "@form/schema";
+import type { CacheControlDirectives } from "@http";
 import type {
   ApiProcedure,
   MiddlewareDefinition,
@@ -95,10 +96,16 @@ export function defineMiddleware<TCtxIn = any, TCtxOut = any>(
 export class ProcedureBuilder<TCtx = any, TInput = any> {
   private _middlewares: MiddlewareFn[] = [];
   private _inputSchema?: SchemaLike<TInput> | StandardSchemaV1<TInput>;
+  private _cache?: CacheControlDirectives | string;
 
-  constructor(middlewares: MiddlewareFn[] = [], inputSchema?: SchemaLike<TInput>) {
+  constructor(
+    middlewares: MiddlewareFn[] = [],
+    inputSchema?: SchemaLike<TInput>,
+    cache?: CacheControlDirectives | string
+  ) {
     this._middlewares = middlewares;
     this._inputSchema = inputSchema;
+    this._cache = cache;
   }
 
   use<TNextCtx = Record<string, unknown>>(
@@ -106,14 +113,19 @@ export class ProcedureBuilder<TCtx = any, TInput = any> {
   ): ProcedureBuilder<TCtx & TNextCtx, TInput> {
     return new ProcedureBuilder<TCtx & TNextCtx, TInput>(
       [...this._middlewares, middleware],
-      this._inputSchema as any
+      this._inputSchema as any,
+      this._cache
     );
   }
 
   input<TNewInput>(
     schema: SchemaLike<TNewInput> | StandardSchemaV1<TNewInput>
   ): ProcedureBuilder<TCtx, TNewInput> {
-    return new ProcedureBuilder<TCtx, TNewInput>(this._middlewares, schema as any);
+    return new ProcedureBuilder<TCtx, TNewInput>(this._middlewares, schema as any, this._cache);
+  }
+
+  cache(directives: CacheControlDirectives | string): ProcedureBuilder<TCtx, TInput> {
+    return new ProcedureBuilder<TCtx, TInput>(this._middlewares, this._inputSchema, directives);
   }
 
   query<TOutput>(
@@ -128,6 +140,7 @@ export class ProcedureBuilder<TCtx = any, TInput = any> {
       type: "query",
       options: {
         input: this._inputSchema,
+        cache: this._cache,
         resolve
       },
       middlewares: this._middlewares

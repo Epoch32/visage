@@ -477,4 +477,36 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(capturedHeaders["x-app-id"]).toBe("web-client");
     expect(capturedHeaders["x-posts-auth"]).toBe("bearer-123");
   });
+
+  it("handles RFC 9110 / RFC 9111 caching and 304 revalidation on RPC query procedures", async () => {
+    const cachedRouter = createRouter().query("stats", {
+      cache: { public: true, maxAge: 0, sMaxAge: 600, mustRevalidate: true },
+      resolve: () => ({ activeUsers: 42, cpuLoad: 0.15 })
+    });
+
+    const handler = createFetchHandler({ router: cachedRouter, endpoint: "/api/rpc" });
+
+    // 1. Initial query over GET
+    const req1 = new Request("http://localhost/api/rpc/stats", { method: "GET" });
+    const res1 = await handler(req1);
+    expect(res1.status).toBe(200);
+
+    const etag = res1.headers.get("etag");
+    expect(etag).not.toBeNull();
+    expect(etag?.startsWith('W/"')).toBe(true);
+
+    const cacheControl = res1.headers.get("cache-control");
+    expect(cacheControl).toContain("s-maxage=600");
+
+    // 2. Revalidation with If-None-Match
+    const req2 = new Request("http://localhost/api/rpc/stats", {
+      method: "GET",
+      headers: { "if-none-match": etag! }
+    });
+    const res2 = await handler(req2);
+    expect(res2.status).toBe(304);
+    expect(res2.statusText).toBe("Not Modified");
+    expect(res2.headers.get("etag")).toBe(etag);
+    expect(await res2.text()).toBe("");
+  });
 });
