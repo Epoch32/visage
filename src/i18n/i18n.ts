@@ -87,6 +87,8 @@ function resolvePlural(pluralMap: PluralForms, count: number, locale: string): s
   return pluralMap.other ?? Object.values(pluralMap)[0] ?? "";
 }
 
+const delimiterRegexCache = new Map<string, RegExp>();
+
 /**
  * Interpolates variables like {{name}} or {name}
  */
@@ -97,10 +99,17 @@ function interpolate(
 ): string {
   if (!params || typeof template !== "string") return template;
 
-  // Escape special regex characters in delimiters
-  const escStart = startDelim.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-  const escEnd = endDelim.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-  const regex = new RegExp(`${escStart}\\s*([\\w.-]+)\\s*${escEnd}`, "g");
+  const cacheKey = `${startDelim}:::${endDelim}`;
+  let regex = delimiterRegexCache.get(cacheKey);
+  if (!regex) {
+    const escStart = startDelim.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const escEnd = endDelim.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+    regex = new RegExp(`${escStart}\\s*([\\w.-]+)\\s*${escEnd}`, "g");
+    delimiterRegexCache.set(cacheKey, regex);
+  }
+
+  // Reset lastIndex because regex has global flag "g"
+  regex.lastIndex = 0;
 
   return template.replace(regex, (match, paramKey) => {
     const val = getPath(params, paramKey);
