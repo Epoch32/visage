@@ -167,6 +167,10 @@ export function SelectTrigger(props: SelectTriggerProps): Child {
       if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
         e.preventDefault();
         ctx.setOpen(true);
+        ctx.contentRef.current?.focus();
+        queueMicrotask(() => {
+          ctx.contentRef.current?.focus();
+        });
       }
     }
   };
