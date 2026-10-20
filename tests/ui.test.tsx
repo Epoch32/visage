@@ -868,9 +868,17 @@ describe("Visage UI Component Primitives", () => {
       const headers = container.querySelectorAll("th");
       expect(headers.length).toBe(4); // checkbox + 3 cols
       expect(headers[1]?.textContent).toContain("User Name");
+      expect(headers[1]?.getAttribute("aria-sort")).toBe("none");
+      expect(container.querySelector("th input[type='checkbox']")?.getAttribute("aria-label")).toBe(
+        "Select all rows"
+      );
+      expect(
+        container.querySelector("tbody input[type='checkbox']")?.getAttribute("aria-label")
+      ).toBe("Select row 1");
 
       // Sorted by default click
       (headers[1] as HTMLElement).click();
+      expect(headers[1]?.getAttribute("aria-sort")).toBe("ascending");
 
       const rows = container.querySelectorAll("tbody tr");
       expect(rows.length).toBe(2); // Page size 2
