@@ -53,6 +53,8 @@ describe("Security Transform: HTML Injection Shield", () => {
     it("throws a compile-time error when static innerHTML contains inline event handlers", () => {
       const handlers = [
         '<img src="x" onerror="alert(1)">',
+        '<img/src="x"/onerror=alert(1)>',
+        "<svg/onload=alert(1)>",
         '<body onload="steal()">',
         '<svg onload="alert(1)">',
         '<a href="#" onmouseover="leak()">Hover</a>'
@@ -67,10 +69,17 @@ describe("Security Transform: HTML Injection Shield", () => {
     });
 
     it("throws a compile-time error when static innerHTML contains dangerous URI protocols", () => {
-      const code = "<div innerHTML='<a href=\"javascript:alert(1)\">Click</a>'></div>";
-      expect(() => {
-        compileJsx(code, { security: true });
-      }).toThrow(/\[visage:security\] Blocked dangerous HTML injection/);
+      const urls = [
+        '<a href="javascript:alert(1)">Click</a>',
+        "<a href=javascript:alert(1)>Click</a>",
+        "<iframe src=javascript:alert(1)></iframe>"
+      ];
+      for (const url of urls) {
+        const code = `<div innerHTML='${url}'></div>`;
+        expect(() => {
+          compileJsx(code, { security: true });
+        }).toThrow(/\[visage:security\] Blocked dangerous HTML injection/);
+      }
     });
 
     it("permits safe static HTML markup without throwing", () => {
@@ -109,8 +118,8 @@ describe("Security Transform: HTML Injection Shield", () => {
           const s = String(typeof raw === "function" ? raw() : raw ?? "");
           const clean = s
             .replace(/<(?:script|iframe|object|embed|base)\b[^>]*>[\s\S]*?<\/(?:script|iframe|object|embed|base)>|<(?:script|iframe|object|embed|base)\b[^>]*\/?>/gi, "")
-            .replace(/\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
-            .replace(/(?:href|src)\s*=\s*['"]\s*(?:javascript|vbscript):[^'"]*['"]/gi, 'href="about:blank"');
+            .replace(/[\s/]+on[a-z0-9_-]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
+            .replace(/(?:href|src)\s*=\s*(?:['"]\s*(?:javascript|vbscript):[^'"]*['"]|(?:javascript|vbscript):[^\s>]*)/gi, 'href="about:blank"');
           return typeof h === "object" && h !== null && "__html" in h ? { ...h, __html: clean } : clean;
         };
         return _safeHtml;
@@ -128,14 +137,18 @@ describe("Security Transform: HTML Injection Shield", () => {
       expect(safeHtml('<embed src="evil.swf">Clean')).toBe("Clean");
       expect(safeHtml('<base href="https://evil.com">Clean')).toBe("Clean");
 
-      // Strips inline event handlers
+      // Strips inline event handlers (including HTML5 slash separators)
       expect(safeHtml('<img src="avatar.jpg" onerror="alert(1)">')).toBe('<img src="avatar.jpg">');
+      expect(safeHtml('<img/src="avatar.jpg"/onerror=alert(1)>')).toBe('<img/src="avatar.jpg">');
       expect(safeHtml('<div onmouseover="track()" class="box">Content</div>')).toBe(
         '<div class="box">Content</div>'
       );
 
-      // Neutralizes javascript: protocol
+      // Neutralizes javascript: protocol (both quoted and unquoted)
       expect(safeHtml('<a href="javascript:alert(1)">Click</a>')).toBe(
+        '<a href="about:blank">Click</a>'
+      );
+      expect(safeHtml("<a href=javascript:alert(1)>Click</a>")).toBe(
         '<a href="about:blank">Click</a>'
       );
 
@@ -155,8 +168,8 @@ describe("Security Transform: HTML Injection Shield", () => {
           const s = String(typeof raw === "function" ? raw() : raw ?? "");
           const clean = s
             .replace(/<(?:script|iframe|object|embed|base)\b[^>]*>[\s\S]*?<\/(?:script|iframe|object|embed|base)>|<(?:script|iframe|object|embed|base)\b[^>]*\/?>/gi, "")
-            .replace(/\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
-            .replace(/(?:href|src)\s*=\s*['"]\s*(?:javascript|vbscript):[^'"]*['"]/gi, 'href="about:blank"');
+            .replace(/[\s/]+on[a-z0-9_-]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
+            .replace(/(?:href|src)\s*=\s*(?:['"]\s*(?:javascript|vbscript):[^'"]*['"]|(?:javascript|vbscript):[^\s>]*)/gi, 'href="about:blank"');
           return typeof h === "object" && h !== null && "__html" in h ? { ...h, __html: clean } : clean;
         };
         return _safeHtml;
