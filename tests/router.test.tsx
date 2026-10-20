@@ -11,6 +11,7 @@ import {
   Router,
   Routes,
   render,
+  renderToString,
   useNavigate,
   useParams,
   usePrefetch
@@ -145,6 +146,48 @@ describe("Visage Router", () => {
 
     navigateFn("/non-existent-page");
     expect(container.querySelector(".not-found")?.textContent).toBe("Custom 404");
+
+    unmount();
+  });
+
+  it("renders default 404 fallback during SSR renderToString and navigation without document crash", () => {
+    let navigateFn: any;
+    function Nav() {
+      navigateFn = useNavigate();
+      return null;
+    }
+
+    // SSR test
+    const html = renderToString(() => (
+      <Router initialUrl="/unmatched-ssr-route">
+        {() => (
+          <Routes>
+            <Route path="/home" component={() => <div>Home</div>} />
+          </Routes>
+        )}
+      </Router>
+    ));
+    expect(html).toContain("404 Not Found");
+
+    // Client navigation test
+    const unmount = render(
+      () => (
+        <Router>
+          {() => (
+            <>
+              <Nav />
+              <Routes>
+                <Route path="/" component={() => <div>Home</div>} />
+              </Routes>
+            </>
+          )}
+        </Router>
+      ),
+      container
+    );
+
+    navigateFn("/missing-route");
+    expect(container.textContent).toContain("404 Not Found");
 
     unmount();
   });

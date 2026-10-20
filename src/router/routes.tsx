@@ -43,7 +43,7 @@ export function Routes(props: RoutesProps): Child {
 
   return Show({
     when: () => router.matchedRoute() !== null,
-    fallback: props.fallback ?? (() => document.createTextNode("404 Not Found")),
+    fallback: props.fallback ?? (() => "404 Not Found"),
     children: () => {
       const match = router.matchedRoute();
       if (!match) return null;
