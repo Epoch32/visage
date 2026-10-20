@@ -1,11 +1,7 @@
 import type { Child } from "@dom/render";
 import type { ReadonlySignal } from "@signals";
 import { createContext, useContext } from "@signals/context";
-import { CommandDialog, type CommandDialogProps } from "./command-dialog";
 import { createControllableSignal, createId } from "./utils";
-
-export type { CommandDialogProps };
-export { CommandDialog };
 
 export interface CommandItemData {
   value?: string;
@@ -391,7 +387,6 @@ export function CommandItem(props: CommandItemProps): Child {
 
 export const Command = Object.assign(CommandRoot, {
   Root: CommandRoot,
-  Dialog: CommandDialog,
   Input: CommandInput,
   List: CommandList,
   Empty: CommandEmpty,

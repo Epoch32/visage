@@ -28,8 +28,6 @@ export {
 } from "./bottom-bar";
 export {
   Command,
-  CommandDialog,
-  type CommandDialogProps,
   CommandEmpty,
   CommandGroup,
   type CommandGroupData,
@@ -42,6 +40,10 @@ export {
   type CommandProps,
   useCommandContext
 } from "./command";
+export {
+  CommandDialog,
+  type CommandDialogProps
+} from "./command-dialog";
 export {
   type ColumnDef,
   DataTable,
