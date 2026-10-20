@@ -39,8 +39,8 @@ describe("BottomBar Component Primitives", () => {
 
     const nav = container.querySelector("nav");
     expect(nav).not.toBeNull();
-    expect(nav?.getAttribute("role")).toBe("toolbar");
-    expect(nav?.getAttribute("aria-label")).toBe("Mobile toolbar");
+    expect(nav?.getAttribute("role")).toBe("tablist");
+    expect(nav?.getAttribute("aria-label")).toBe("Mobile navigation");
     expect(nav?.getAttribute("data-variant")).toBe("floating");
 
     const items = container.querySelectorAll("button[role='tab']");

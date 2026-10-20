@@ -118,8 +118,8 @@ export function BottomBarRoot(props: BottomBarProps): Child {
     value: ctx,
     children: () => (
       <Tag
-        role="toolbar"
-        aria-label="Mobile toolbar"
+        role="tablist"
+        aria-label="Mobile navigation"
         data-variant={variant}
         data-state={() => (isVisible() ? "visible" : "hidden")}
         class={`visage-bottom-bar visage-bottom-bar-${variant} ${className ?? ""}`.trim()}
