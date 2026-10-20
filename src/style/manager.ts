@@ -5,6 +5,43 @@ export interface InjectedStyle {
   element?: HTMLStyleElement;
 }
 
+declare const require: any;
+
+let ssrStorage: any = null;
+try {
+  if (typeof window === "undefined") {
+    const nodeReq = typeof require === "function" ? require : null;
+    if (nodeReq) {
+      const asyncHooks = nodeReq("node:async_hooks");
+      if (asyncHooks?.AsyncLocalStorage) {
+        ssrStorage = new asyncHooks.AsyncLocalStorage();
+      }
+    }
+  }
+} catch {
+  // Graceful fallback when node:async_hooks is unavailable
+}
+
+/**
+ * Run an SSR render callback within an isolated style collection context.
+ * In a multi-tenant server, concurrent requests each collect their own scoped CSS
+ * without leaking into other requests or accumulating in the global singleton.
+ */
+export function runWithSSRStyles<T>(callback: () => T): { result: T; css: string; tags: string } {
+  const store = new Set<string>();
+  let result: T;
+
+  if (ssrStorage) {
+    result = ssrStorage.run(store, callback);
+  } else {
+    result = callback();
+  }
+
+  const css = Array.from(store).join("\n");
+  const tags = css ? `<style data-visage-ssr="true">${css}</style>` : "";
+  return { result, css, tags };
+}
+
 export class StyleManager {
   private _styles = new Map<string, InjectedStyle>();
   private _ssrStyles = new Set<string>();
@@ -35,7 +72,14 @@ export class StyleManager {
           }
         }
       }
-      this._ssrStyles.add(css);
+
+      // Collect into request-scoped store if running inside an active SSR context
+      const contextStore: Set<string> | undefined = ssrStorage?.getStore();
+      if (contextStore) {
+        contextStore.add(css);
+      } else {
+        this._ssrStyles.add(css);
+      }
     }
 
     entry.count++;
@@ -61,10 +105,26 @@ export class StyleManager {
   }
 
   /**
-   * Extract all styles collected during Server-Side Rendering (SSR)
+   * Extract all styles collected during Server-Side Rendering (SSR).
+   * Respects request-scoped SSR storage when executing inside runWithSSRStyles().
    */
-  extractSSRStyles(): string {
-    return Array.from(this._ssrStyles).join("\n");
+  extractSSRStyles(options?: { clear?: boolean } | boolean): string {
+    const shouldClear = typeof options === "boolean" ? options : (options?.clear ?? false);
+    const contextStore: Set<string> | undefined = ssrStorage?.getStore();
+
+    if (contextStore) {
+      const css = Array.from(contextStore).join("\n");
+      if (shouldClear) {
+        contextStore.clear();
+      }
+      return css;
+    }
+
+    const css = Array.from(this._ssrStyles).join("\n");
+    if (shouldClear) {
+      this._ssrStyles.clear();
+    }
+    return css;
   }
 
   /**
@@ -78,7 +138,26 @@ export class StyleManager {
     }
     this._styles.clear();
     this._ssrStyles.clear();
+    const contextStore: Set<string> | undefined = ssrStorage?.getStore();
+    if (contextStore) {
+      contextStore.clear();
+    }
   }
+
+  /**
+   * Clear only SSR accumulated styles
+   */
+  clearSSR() {
+    this._ssrStyles.clear();
+    const contextStore: Set<string> | undefined = ssrStorage?.getStore();
+    if (contextStore) {
+      contextStore.clear();
+    }
+  }
+}
+
+export function createStyleManager(): StyleManager {
+  return new StyleManager();
 }
 
 export const styleManager = new StyleManager();
@@ -86,7 +165,7 @@ export const styleManager = new StyleManager();
 /**
  * Helper to get SSR style tag HTML
  */
-export function extractStyleTags(): string {
-  const css = styleManager.extractSSRStyles();
+export function extractStyleTags(options?: { clear?: boolean } | boolean): string {
+  const css = styleManager.extractSSRStyles(options);
   return css ? `<style data-visage-ssr="true">${css}</style>` : "";
 }
