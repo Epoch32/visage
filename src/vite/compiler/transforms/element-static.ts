@@ -57,12 +57,19 @@ export function recordStaticOrigin(
     }
     if (relVal === "stylesheet" || asVal === "style" || /\.css($|\?)/i.test(strVal)) {
       context.recordOrigin("style", strVal);
+      if (strVal.includes("fonts.googleapis.com")) {
+        context.recordOrigin("font", "https://fonts.gstatic.com");
+        context.recordOrigin("connect", "https://fonts.gstatic.com");
+      }
     } else if (asVal === "font" || /\.(?:woff2?|ttf|otf|eot)($|\?)/i.test(strVal)) {
       context.recordOrigin("font", strVal);
     } else if (relVal === "icon" || relVal === "shortcut icon" || asVal === "image") {
       context.recordOrigin("img", strVal);
-    } else if (asVal === "fetch") {
+    } else if (asVal === "fetch" || relVal === "preconnect" || relVal === "dns-prefetch") {
       context.recordOrigin("connect", strVal);
+      if (strVal.includes("fonts.gstatic.com")) {
+        context.recordOrigin("font", "https://fonts.gstatic.com");
+      }
     }
   }
 }
