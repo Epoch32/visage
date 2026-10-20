@@ -1046,6 +1046,32 @@ describe("Visage UI Component Primitives", () => {
       unmount();
     });
 
+    it("shifts focus to SelectContent on ArrowDown trigger keydown", async () => {
+      const unmount = render(
+        () => (
+          <Select
+            defaultValue="light"
+            options={[
+              { value: "light", label: "Light Theme" },
+              { value: "dark", label: "Dark Theme" }
+            ]}
+          />
+        ),
+        container
+      );
+
+      const trigger = container.querySelector('[role="combobox"]') as HTMLElement;
+      const content = container.querySelector('[role="listbox"]') as HTMLElement;
+
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(document.activeElement).toBe(content);
+
+      unmount();
+    });
+
     it("renders Slider primitive with min, max, step and keyboard controls", () => {
       let sliderVal = 20;
       const unmount = render(
