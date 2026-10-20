@@ -1,5 +1,5 @@
 import type { Child } from "@dom/render";
-import { signal } from "@signals";
+import { onCleanup, signal } from "@signals";
 import { createControllableSignal, createId } from "../utils";
 import { BottomBarContext } from "./context";
 import { BottomBarItem } from "./item";
@@ -36,6 +36,9 @@ export function BottomBarRoot(props: BottomBarProps): Child {
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    onCleanup(() => {
+      window.removeEventListener("scroll", onScroll);
+    });
   }
 
   const ctx: BottomBarContextValue = {
