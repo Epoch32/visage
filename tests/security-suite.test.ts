@@ -71,8 +71,9 @@ describe("Security Transforms: Full Suite & Vite Plugin Integration", () => {
 
       // Aborts build / transform on dangerous static protocol
       const dangerousStaticCode = '<a href="javascript:alert(1)">Click</a>';
-      const failedTransform = (compilerPlugin as any).transform(dangerousStaticCode, "src/App.tsx");
-      expect(failedTransform).toBeNull();
+      expect(() => {
+        (compilerPlugin as any).transform(dangerousStaticCode, "src/App.tsx");
+      }).toThrow(/\[visage:security\] Blocked dangerous URI protocol/);
     });
 
     it("supports granular configuration object passed to experimental.secureTransforms", () => {

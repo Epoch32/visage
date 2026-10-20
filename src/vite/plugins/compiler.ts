@@ -116,7 +116,10 @@ export function createCompilerPlugin(
         if (err?.message?.includes("[visage:security]")) {
           vLog.error("visage:security", `${path.basename(id)}: ${err.message}`);
         }
-        return null;
+        if (typeof (this as any)?.error === "function") {
+          (this as any).error(err);
+        }
+        throw err;
       }
     },
     closeBundle() {
