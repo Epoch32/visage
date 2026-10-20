@@ -338,4 +338,81 @@ export function Component() {
       expect(nativePlugin).toBeDefined();
     });
   });
+
+  describe("Compiler Diagnostics & Build Summary", () => {
+    it("logs per-file transform diagnostics when verbose is enabled", () => {
+      const logs: string[] = [];
+      const mockLogger = {
+        info: (msg: string) => logs.push(msg),
+        warn: () => {},
+        error: () => {},
+        debug: () => {}
+      };
+
+      const plugins = visage({ verbose: true });
+      const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+      expect(compilerPlugin).toBeDefined();
+
+      compilerPlugin!.configResolved?.({ root: "/app", command: "build", logger: mockLogger });
+      compilerPlugin!.buildStart?.();
+
+      const sample = `export function Nav() { return <nav><button onClick={handleClick}>Menu</button></nav>; }`;
+      const res: any = compilerPlugin!.transform!(sample, "/app/src/Nav.tsx");
+      expect(res).not.toBeNull();
+
+      const verboseLog = logs.find((l) => l.includes("Transformed") && l.includes("Nav.tsx"));
+      expect(verboseLog).toBeDefined();
+      expect(verboseLog).toContain("1 template");
+      expect(verboseLog).toContain("events: [click]");
+    });
+
+    it("prints build summary dashboard on closeBundle() after transforming modules", () => {
+      const logs: string[] = [];
+      const mockLogger = {
+        info: (msg: string) => logs.push(msg),
+        warn: () => {},
+        error: () => {},
+        debug: () => {}
+      };
+
+      const plugins = visage({ verbose: false });
+      const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+      expect(compilerPlugin).toBeDefined();
+
+      compilerPlugin!.configResolved?.({ root: "/app", command: "build", logger: mockLogger });
+      compilerPlugin!.buildStart?.();
+
+      const sample = `export function Box() { return <a href="https://example.com" onClick={go}><span>Link</span></a>; }`;
+      compilerPlugin!.transform!(sample, "/app/src/Box.tsx");
+
+      compilerPlugin!.closeBundle?.();
+
+      const summaryLog = logs.find((l) => l.includes("AOT JSX Compiler Build Summary"));
+      expect(summaryLog).toBeDefined();
+      expect(summaryLog).toContain("Transformed:      1 modules");
+      expect(summaryLog).toContain("Templates:        1 hoisted DOM templates");
+      expect(summaryLog).toContain("click");
+    });
+
+    it("does not print build summary dashboard when 0 modules transformed", () => {
+      const logs: string[] = [];
+      const mockLogger = {
+        info: (msg: string) => logs.push(msg),
+        warn: () => {},
+        error: () => {},
+        debug: () => {}
+      };
+
+      const plugins = visage();
+      const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+      expect(compilerPlugin).toBeDefined();
+
+      compilerPlugin!.configResolved?.({ root: "/app", command: "build", logger: mockLogger });
+      compilerPlugin!.buildStart?.();
+      compilerPlugin!.closeBundle?.();
+
+      const summaryLog = logs.find((l) => l.includes("AOT JSX Compiler Build Summary"));
+      expect(summaryLog).toBeUndefined();
+    });
+  });
 });

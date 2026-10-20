@@ -46,6 +46,13 @@ export interface VisagePluginOptions {
   compiler?: boolean | import("./compiler/types").CompilerOptions;
 
   /**
+   * Enable verbose transform diagnostics.
+   * When true, prints per-file compiler transforms (templates hoisted, delegated events, security shields).
+   * @default false
+   */
+  verbose?: boolean;
+
+  /**
    * File-system driven Multi-Page Application (MPA) pages router.
    * Automatically discovers pages in src/pages (or configured dir),
    * synthesizes virtual HTML entry points, shared layouts, and dynamic routes.

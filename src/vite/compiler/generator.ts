@@ -14,6 +14,12 @@ export interface GenerateResult {
   code: string;
   ast: t.File;
   detectedOrigins: import("./types").DetectedOrigins;
+  stats?: {
+    templatesHoisted: number;
+    delegatedEvents: string[];
+    securityHelpers: string[];
+    helpersRequired: string[];
+  };
 }
 
 export function generateCode(ast: t.File, context: CompilerContext): GenerateResult {
@@ -129,6 +135,12 @@ export function generateCode(ast: t.File, context: CompilerContext): GenerateRes
   return {
     code: generated.code,
     ast,
-    detectedOrigins: context.detectedOrigins
+    detectedOrigins: context.detectedOrigins,
+    stats: {
+      templatesHoisted: context.templateMap.size,
+      delegatedEvents: Array.from(context.delegatedEvents),
+      securityHelpers: Array.from(context.securityHelpers),
+      helpersRequired: Array.from(context.importedHelpers)
+    }
   };
 }
