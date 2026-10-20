@@ -27,6 +27,7 @@ export {
   parseETag,
   parseETagList
 } from "./etag";
+export { resolveHeaders } from "./headers";
 export {
   badRequest,
   conflict,
