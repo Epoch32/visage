@@ -97,6 +97,28 @@ describe("Storage Preboot Experimental Transform (visage/vite)", () => {
       expect(script).toContain("data-sidebar");
     });
 
+    it("handles targetElement: 'body' safely when document.body is not yet constructed in head", () => {
+      const script = generateStoragePrebootScript([
+        {
+          key: "density",
+          attribute: "class",
+          fallback: "compact",
+          targetElement: "body"
+        },
+        {
+          key: "accent",
+          attribute: "data-accent",
+          fallback: "blue",
+          targetElement: "body"
+        }
+      ]);
+
+      expect(script).toContain("if(document.body)");
+      expect(script).toContain("DOMContentLoaded");
+      expect(script).toContain("d.classList.add");
+      expect(script).toContain("d.setAttribute");
+    });
+
     it("injects preboot script immediately after <head> in HTML shell", () => {
       const html = `<!DOCTYPE html><html><head><title>Test</title></head><body><div id="app"></div></body></html>`;
       const script = `<script data-visage-preboot="true">/* preboot */</script>`;
