@@ -64,12 +64,18 @@ function detectBrowserLocale(fallback: string): string {
   return fallback;
 }
 
+const pluralRulesCache = new Map<string, Intl.PluralRules>();
+
 /**
  * Evaluates plural rules for count
  */
 function resolvePlural(pluralMap: PluralForms, count: number, locale: string): string {
   try {
-    const pr = new Intl.PluralRules(locale);
+    let pr = pluralRulesCache.get(locale);
+    if (!pr) {
+      pr = new Intl.PluralRules(locale);
+      pluralRulesCache.set(locale, pr);
+    }
     const rule = pr.select(count); // 'zero', 'one', 'two', 'few', 'many', 'other'
 
     if (count === 0 && pluralMap.zero !== undefined) {
