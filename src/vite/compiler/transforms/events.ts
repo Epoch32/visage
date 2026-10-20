@@ -8,8 +8,15 @@ export function isEventAttribute(name: string): boolean {
 
 export function transformEventAttribute(ctx: AttributeTransformContext): AttributeTransformResult {
   const { attrName, valueExpr, targetVar, context } = ctx;
-  const isCapture = attrName.startsWith("onCapture");
-  const rawEventName = isCapture ? attrName.slice(9) : attrName.slice(2);
+  const isCapture = attrName.startsWith("onCapture") || attrName.endsWith("Capture");
+  let rawEventName: string;
+  if (attrName.startsWith("onCapture")) {
+    rawEventName = attrName.slice(9);
+  } else if (attrName.endsWith("Capture")) {
+    rawEventName = attrName.slice(2, -7);
+  } else {
+    rawEventName = attrName.slice(2);
+  }
   const eventName = rawEventName.toLowerCase();
 
   // If event delegation is enabled (default) and event is a delegable bubbling event
