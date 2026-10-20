@@ -11,22 +11,67 @@ import { formatStyleProp } from "@style/scale";
 
 export type { JSX } from "./jsx";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-const SVG_TAGS = new Set([
+export const SVG_NS = "http://www.w3.org/2000/svg";
+export const SVG_TAGS = new Set([
   "svg",
-  "path",
+  "animate",
+  "animateMotion",
+  "animateTransform",
   "circle",
-  "rect",
-  "g",
-  "line",
-  "polyline",
-  "polygon",
-  "text",
-  "defs",
   "clipPath",
+  "defs",
+  "desc",
+  "ellipse",
+  "feBlend",
+  "feColorMatrix",
+  "feComponentTransfer",
+  "feComposite",
+  "feConvolveMatrix",
+  "feDiffuseLighting",
+  "feDisplacementMap",
+  "feDistantLight",
+  "feDropShadow",
+  "feFlood",
+  "feFuncA",
+  "feFuncB",
+  "feFuncG",
+  "feFuncR",
+  "feGaussianBlur",
+  "feImage",
+  "feMerge",
+  "feMergeNode",
+  "feMorphology",
+  "feOffset",
+  "fePointLight",
+  "feSpecularLighting",
+  "feSpotLight",
+  "feTile",
+  "feTurbulence",
+  "filter",
+  "foreignObject",
+  "g",
+  "image",
+  "line",
   "linearGradient",
+  "marker",
+  "mask",
+  "metadata",
+  "mpath",
+  "path",
+  "pattern",
+  "polygon",
+  "polyline",
   "radialGradient",
-  "stop"
+  "rect",
+  "set",
+  "stop",
+  "switch",
+  "symbol",
+  "text",
+  "textPath",
+  "tspan",
+  "use",
+  "view"
 ]);
 
 let ssrDepth = 0;
@@ -140,7 +185,7 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
     }
 
     // Browser / JSDOM Environment
-    const isSvg = SVG_TAGS.has(type);
+    const isSvg = SVG_TAGS.has(type) || SVG_TAGS.has(type.toLowerCase());
     let element: HTMLElement | SVGElement | null = null;
     if (isHydrating()) {
       element = getNextHydrationElement(type) as HTMLElement | SVGElement | null;
