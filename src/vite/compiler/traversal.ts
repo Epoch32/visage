@@ -10,6 +10,10 @@ export function transformJsxNode(
   if (t.isJSXFragment(node)) {
     const children = node.children
       .map((c) => {
+        if (t.isJSXText(c)) {
+          const txt = c.value.trim();
+          return txt ? t.stringLiteral(txt) : null;
+        }
         if (t.isJSXElement(c) || t.isJSXFragment(c)) return transformJsxNode(c, context);
         if (t.isJSXExpressionContainer(c) && !t.isJSXEmptyExpression(c.expression)) {
           return c.expression as t.Expression;
