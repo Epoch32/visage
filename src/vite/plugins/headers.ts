@@ -112,15 +112,17 @@ export function createHeadersPlugin(
         }
       }
 
-      // 2. Ensure /* has revalidate rule (RFC 9111) unless overridden
-      if (!rulesMap.has("/*")) {
-        const docHeaders = new Map<string, string>();
-        docHeaders.set("Cache-Control", documentCacheControl);
-        rulesMap.set("/*", docHeaders);
-      } else {
-        const headers = rulesMap.get("/*")!;
-        if (!headers.has("Cache-Control")) {
-          headers.set("Cache-Control", documentCacheControl);
+      // 2. Only emit documentCacheControl if explicitly requested by user options.
+      // NOTE: We deliberately avoid emitting a `/*` catch-all by default because Cloudflare
+      // evaluates rules additively and joins duplicate headers with commas, which would append
+      // `max-age=0` to `/assets/*` and cancel out immutable caching.
+      // Cloudflare already defaults all non-asset files (HTML, public images) to
+      // `public, max-age=0, must-revalidate` automatically.
+      if (opts.documentCacheControl) {
+        if (!rulesMap.has("/index.html") && !rulesMap.has("/*")) {
+          const docHeaders = new Map<string, string>();
+          docHeaders.set("Cache-Control", opts.documentCacheControl);
+          rulesMap.set("/index.html", docHeaders);
         }
       }
 
