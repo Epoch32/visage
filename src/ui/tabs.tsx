@@ -318,6 +318,14 @@ export function createTabs(options: CreateTabsOptions = {}) {
   const orientation = options.orientation ?? "horizontal";
   const activationMode = options.activationMode ?? "automatic";
 
+  const ctxValue: TabsContextValue = {
+    value,
+    setValue,
+    orientation,
+    activationMode,
+    baseId
+  };
+
   const Root = (props: {
     as?: string;
     class?: any;
@@ -325,162 +333,42 @@ export function createTabs(options: CreateTabsOptions = {}) {
     children: Child;
     [key: string]: any;
   }) => {
-    const { as: Tag = "div", class: className, style, children, ...rest } = props;
+    const { children, ...rest } = props;
     return (
-      <Tag data-orientation={orientation} class={className} style={style} {...rest}>
-        {children}
-      </Tag>
+      <TabsContext.Provider value={ctxValue}>
+        <TabsRoot
+          value={() => value()}
+          orientation={orientation}
+          activationMode={activationMode}
+          {...rest}
+        >
+          {children}
+        </TabsRoot>
+      </TabsContext.Provider>
     );
   };
 
   const List = (props: TabsListProps) => {
-    const { as: Tag = "div", children, onKeyDown, class: className, style, ...rest } = props;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (onKeyDown) onKeyDown(e);
-      if (e.defaultPrevented) return;
-
-      const target = e.target as HTMLElement | null;
-      if (target?.getAttribute("role") !== "tab") return;
-
-      const list = target.closest('[role="tablist"]');
-      if (!list) return;
-
-      const tabs = Array.from(list.querySelectorAll<HTMLElement>('[role="tab"]:not([disabled])'));
-      const index = tabs.indexOf(target);
-      if (index === -1) return;
-
-      let nextIndex = index;
-      const isHorizontal = orientation === "horizontal";
-      const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
-      const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
-
-      if (e.key === prevKey) {
-        nextIndex = index === 0 ? tabs.length - 1 : index - 1;
-        e.preventDefault();
-      } else if (e.key === nextKey) {
-        nextIndex = index === tabs.length - 1 ? 0 : index + 1;
-        e.preventDefault();
-      } else if (e.key === "Home") {
-        nextIndex = 0;
-        e.preventDefault();
-      } else if (e.key === "End") {
-        nextIndex = tabs.length - 1;
-        e.preventDefault();
-      }
-
-      if (nextIndex !== index) {
-        const nextTab = tabs[nextIndex]!;
-        nextTab.focus();
-        if (activationMode === "automatic") {
-          const val = nextTab.getAttribute("data-value");
-          if (val) setValue(val);
-        }
-      }
-    };
-
     return (
-      <Tag
-        role="tablist"
-        aria-orientation={orientation}
-        class={className}
-        style={style}
-        onKeyDown={handleKeyDown}
-        {...rest}
-      >
-        {children}
-      </Tag>
+      <TabsContext.Provider value={ctxValue}>
+        <TabsList {...props} />
+      </TabsContext.Provider>
     );
   };
 
   const Trigger = (props: TabsTriggerProps) => {
-    const isSelected = () => value() === props.value;
-
-    const handleClick = (e: MouseEvent) => {
-      if (props.onClick) props.onClick(e);
-      if (!e.defaultPrevented) {
-        setValue(props.value);
-      }
-    };
-
-    const {
-      value: tabVal,
-      disabled,
-      as: Tag = "button",
-      children,
-      onClick,
-      class: className,
-      style,
-      ...rest
-    } = props;
-
     return (
-      <Tag
-        id={`${baseId}-trigger-${tabVal}`}
-        type={Tag === "button" ? "button" : undefined}
-        role="tab"
-        aria-selected={() => String(isSelected())}
-        aria-controls={`${baseId}-panel-${tabVal}`}
-        data-state={() => (isSelected() ? "active" : "inactive")}
-        data-active={() => (isSelected() ? "true" : "false")}
-        data-value={tabVal}
-        tabIndex={() => (isSelected() ? 0 : -1)}
-        disabled={disabled}
-        class={() => [className, isSelected() ? "active" : ""].filter(Boolean).join(" ")}
-        style={style}
-        onClick={handleClick}
-        {...rest}
-      >
-        {children}
-      </Tag>
+      <TabsContext.Provider value={ctxValue}>
+        <TabsTrigger {...props} />
+      </TabsContext.Provider>
     );
   };
 
   const Content = (props: TabsContentProps) => {
-    const isSelected = () => value() === props.value;
-    const {
-      value: tabVal,
-      forceMount,
-      as: Tag = "div",
-      children,
-      class: className,
-      style,
-      ...rest
-    } = props;
-
-    if (forceMount) {
-      return (
-        <Tag
-          id={`${baseId}-panel-${tabVal}`}
-          role="tabpanel"
-          aria-labelledby={`${baseId}-trigger-${tabVal}`}
-          data-state={() => (isSelected() ? "active" : "inactive")}
-          hidden={() => !isSelected()}
-          tabIndex={0}
-          class={className}
-          style={style}
-          {...rest}
-        >
-          {children}
-        </Tag>
-      );
-    }
-
     return (
-      <Show when={isSelected}>
-        <Tag
-          id={`${baseId}-panel-${tabVal}`}
-          role="tabpanel"
-          aria-labelledby={`${baseId}-trigger-${tabVal}`}
-          data-state="active"
-          tabIndex={0}
-          class={className}
-          style={style}
-          {...rest}
-        >
-          {children}
-        </Tag>
-      </Show>
+      <TabsContext.Provider value={ctxValue}>
+        <TabsContent {...props} />
+      </TabsContext.Provider>
     );
   };
 
