@@ -202,7 +202,8 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
       method: "OPTIONS",
       headers: {
         Origin: "https://my-app.com",
-        "Access-Control-Request-Method": "POST"
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type, authorization, x-visage-rpc"
       }
     });
 
@@ -210,6 +211,10 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://my-app.com");
     expect(res.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+    expect(res.headers.get("Access-Control-Allow-Methods")).toContain("POST");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toContain(
+      "content-type, authorization, x-visage-rpc"
+    );
     expect(res.headers.get("Vary")).toContain("Origin");
 
     // Unauthorized origin
