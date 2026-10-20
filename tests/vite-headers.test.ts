@@ -60,7 +60,26 @@ describe("Visage Static Hosting Headers Plugin (RFC 9111 & RFC 8246)", () => {
       expect(emittedFileName).toBe("_headers");
       expect(emittedSource).toContain("/assets/*");
       expect(emittedSource).toContain("Cache-Control: public, max-age=31536000, immutable");
-      expect(emittedSource).toContain("/*");
+      // Does not emit conflicting catch-all rule that would clobber /assets/* in Cloudflare
+      expect(emittedSource.split("\n")).not.toContain("/*");
+    });
+
+    it("emits /index.html when documentCacheControl is explicitly provided", () => {
+      const vLog = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
+      const plugin = createHeadersPlugin(
+        { documentCacheControl: "public, max-age=0, must-revalidate" },
+        vLog as any
+      );
+
+      let emittedSource = "";
+      const contextMock = {
+        emitFile: (opts: any) => {
+          emittedSource = opts.source;
+        }
+      };
+
+      (plugin as any).generateBundle.call(contextMock, {}, {});
+      expect(emittedSource).toContain("/index.html");
       expect(emittedSource).toContain("Cache-Control: public, max-age=0, must-revalidate");
     });
 
