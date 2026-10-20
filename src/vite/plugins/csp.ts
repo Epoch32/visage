@@ -23,10 +23,33 @@ export function extractOriginsFromHtml(html: string, detectedOrigins: DetectedOr
         else if (/^<iframe\b/i.test(tag)) detectedOrigins.frame.add(origin);
         else if (/^<(?:video|audio|source)\b/i.test(tag)) detectedOrigins.media.add(origin);
         else if (/^<link\b/i.test(tag)) {
-          if (/rel=["']stylesheet["']/i.test(tag)) detectedOrigins.style.add(origin);
-          else if (/as=["']font["']/i.test(tag)) detectedOrigins.font.add(origin);
+          if (/rel=["']stylesheet["']/i.test(tag)) {
+            detectedOrigins.style.add(origin);
+            if (origin.includes("fonts.googleapis.com")) {
+              detectedOrigins.font.add("https://fonts.gstatic.com");
+              detectedOrigins.connect.add("https://fonts.gstatic.com");
+            }
+          } else if (/as=["']font["']/i.test(tag)) {
+            detectedOrigins.font.add(origin);
+          } else if (/rel=["'](?:preconnect|dns-prefetch)["']/i.test(tag)) {
+            detectedOrigins.connect.add(origin);
+            if (origin.includes("fonts.gstatic.com")) {
+              detectedOrigins.font.add("https://fonts.gstatic.com");
+            }
+          }
         }
       }
+    }
+  }
+}
+
+export function extractScriptHashesFromHtml(html: string, hashes: Set<string>): void {
+  const scriptMatches = html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi);
+  for (const match of scriptMatches) {
+    const content = match[1]?.trim();
+    if (content) {
+      const hash = crypto.createHash("sha256").update(content, "utf8").digest("base64");
+      hashes.add(`'sha256-${hash}'`);
     }
   }
 }
@@ -35,7 +58,8 @@ export function scanProjectOrigins(
   dir: string,
   cspOpts: boolean | CSPOptions,
   detectedOrigins: DetectedOrigins,
-  compilerOpts: any
+  compilerOpts: any,
+  knownScriptHashes?: Set<string>
 ): void {
   if (!fs.existsSync(dir)) return;
   try {
@@ -53,7 +77,7 @@ export function scanProjectOrigins(
       }
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        scanProjectOrigins(fullPath, cspOpts, detectedOrigins, compilerOpts);
+        scanProjectOrigins(fullPath, cspOpts, detectedOrigins, compilerOpts, knownScriptHashes);
       } else if (/\.[jt]sx$/.test(entry.name)) {
         try {
           const code = fs.readFileSync(fullPath, "utf8");
@@ -68,6 +92,16 @@ export function scanProjectOrigins(
           });
         } catch {
           // Ignore parse errors on scratch files
+        }
+      } else if (/\.html$/i.test(entry.name)) {
+        try {
+          const html = fs.readFileSync(fullPath, "utf8");
+          extractOriginsFromHtml(html, detectedOrigins);
+          if (knownScriptHashes) {
+            extractScriptHashesFromHtml(html, knownScriptHashes);
+          }
+        } catch {
+          // Ignore read errors
         }
       }
     }
@@ -85,6 +119,7 @@ export function createCspPlugin(
 ): VisageVitePlugin {
   let hasPreScanned = false;
   let projectRoot = typeof process !== "undefined" ? process.cwd() : ".";
+  const knownScriptHashes = new Set<string>();
 
   return {
     name: "visage:csp",
@@ -101,7 +136,7 @@ export function createCspPlugin(
       );
       const shouldAutoDetect = typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
       if (shouldAutoDetect && !hasPreScanned) {
-        scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts);
+        scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts, knownScriptHashes);
         hasPreScanned = true;
         const originCount =
           detectedOrigins.connect.size +
@@ -129,7 +164,7 @@ export function createCspPlugin(
     transformIndexHtml(html: string) {
       const shouldAutoDetect = typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
       if (shouldAutoDetect && !hasPreScanned) {
-        scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts);
+        scanProjectOrigins(projectRoot, cspOpts, detectedOrigins, compilerOpts, knownScriptHashes);
         hasPreScanned = true;
       }
       extractOriginsFromHtml(html, detectedOrigins);
@@ -142,19 +177,10 @@ export function createCspPlugin(
         );
       }
       const shouldHashInline = typeof cspOpts !== "object" || cspOpts.hashInlineScripts !== false;
-      const inlineScriptHashes: string[] = [];
       if (shouldHashInline) {
-        const scriptMatches = transformedHtml.matchAll(
-          /<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi
-        );
-        for (const match of scriptMatches) {
-          const content = match[1]?.trim();
-          if (content) {
-            const hash = crypto.createHash("sha256").update(content, "utf8").digest("base64");
-            inlineScriptHashes.push(`'sha256-${hash}'`);
-          }
-        }
+        extractScriptHashesFromHtml(transformedHtml, knownScriptHashes);
       }
+      const inlineScriptHashes = Array.from(knownScriptHashes);
       const cspString = buildCspString(cspOpts, detectedOrigins, inlineScriptHashes, "meta");
       vLog.debug(
         "visage:csp",
@@ -171,8 +197,40 @@ export function createCspPlugin(
             typeof accept === "string" &&
             (accept.includes("text/html") || req.url === "/" || req.url?.endsWith(".html"))
           ) {
-            const headerCsp = buildCspString(cspOpts, detectedOrigins, undefined, "header");
-            res.setHeader("Content-Security-Policy", headerCsp);
+            const shouldAutoDetect =
+              typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
+            if (shouldAutoDetect && !hasPreScanned) {
+              scanProjectOrigins(
+                projectRoot,
+                cspOpts,
+                detectedOrigins,
+                compilerOpts,
+                knownScriptHashes
+              );
+              hasPreScanned = true;
+            }
+
+            const setCspHeader = () => {
+              const headerCsp = buildCspString(
+                cspOpts,
+                detectedOrigins,
+                knownScriptHashes.size > 0 ? Array.from(knownScriptHashes) : undefined,
+                "header"
+              );
+              res.setHeader("Content-Security-Policy", headerCsp);
+            };
+
+            setCspHeader();
+
+            if (typeof res.end === "function") {
+              const originalEnd = res.end;
+              res.end = function (this: any, chunk?: any, encoding?: any, cb?: any) {
+                if (!res.headersSent) {
+                  setCspHeader();
+                }
+                return originalEnd.call(this, chunk, encoding, cb);
+              };
+            }
           }
           next();
         });
@@ -187,8 +245,40 @@ export function createCspPlugin(
             typeof accept === "string" &&
             (accept.includes("text/html") || req.url === "/" || req.url?.endsWith(".html"))
           ) {
-            const headerCsp = buildCspString(cspOpts, detectedOrigins, undefined, "header");
-            res.setHeader("Content-Security-Policy", headerCsp);
+            const shouldAutoDetect =
+              typeof cspOpts !== "object" || cspOpts.autoDetectOrigins !== false;
+            if (shouldAutoDetect && !hasPreScanned) {
+              scanProjectOrigins(
+                projectRoot,
+                cspOpts,
+                detectedOrigins,
+                compilerOpts,
+                knownScriptHashes
+              );
+              hasPreScanned = true;
+            }
+
+            const setCspHeader = () => {
+              const headerCsp = buildCspString(
+                cspOpts,
+                detectedOrigins,
+                knownScriptHashes.size > 0 ? Array.from(knownScriptHashes) : undefined,
+                "header"
+              );
+              res.setHeader("Content-Security-Policy", headerCsp);
+            };
+
+            setCspHeader();
+
+            if (typeof res.end === "function") {
+              const originalEnd = res.end;
+              res.end = function (this: any, chunk?: any, encoding?: any, cb?: any) {
+                if (!res.headersSent) {
+                  setCspHeader();
+                }
+                return originalEnd.call(this, chunk, encoding, cb);
+              };
+            }
           }
           next();
         });

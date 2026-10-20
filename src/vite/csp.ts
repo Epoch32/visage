@@ -130,6 +130,17 @@ export function buildCspString(
     for (const origin of detectedOrigins.frame) addSource("frame-src", origin);
   }
 
+  // If Google Fonts style origin is enabled or detected, automatically allow fonts.gstatic.com for font binaries
+  const hasGoogleFontsStyle =
+    opts.styleSrc?.some((s) => s.includes("fonts.googleapis.com")) ||
+    (shouldAutoDetect &&
+      detectedOrigins &&
+      Array.from(detectedOrigins.style).some((s) => s.includes("fonts.googleapis.com")));
+  if (hasGoogleFontsStyle) {
+    addSource("font-src", "https://fonts.gstatic.com");
+    addSource("connect-src", "https://fonts.gstatic.com");
+  }
+
   if (opts.upgradeInsecureRequests) {
     directives["upgrade-insecure-requests"] = new Set();
   }

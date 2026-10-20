@@ -558,5 +558,70 @@ describe("Content Security Policy (CSP): Core, Generator & Vite Integration", ()
       expect(headersSet["Content-Security-Policy"]).toContain("default-src 'self'");
       expect(headersSet["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
     });
+
+    it("automatically whitelists fonts.gstatic.com in font-src and connect-src when Google Fonts is used", () => {
+      const plugins = visage({ csp: true });
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(cspPlugin).toBeDefined();
+
+      const htmlWithGoogleFonts = `<!DOCTYPE html><html><head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap" rel="stylesheet" />
+      </head><body></body></html>`;
+
+      const resultHtml = (cspPlugin as any).transformIndexHtml(htmlWithGoogleFonts);
+      expect(resultHtml).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
+      expect(resultHtml).toContain("font-src 'self' data: https://fonts.gstatic.com");
+      expect(resultHtml).toContain(
+        "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com"
+      );
+    });
+
+    it("automatically synchronizes inline script hashes into dev server HTTP headers via res.end", () => {
+      const plugins = visage({
+        csp: true,
+        storagePreboot: {
+          states: [{ key: "visage-theme", fallback: "light", attribute: "data-theme" }]
+        }
+      });
+
+      const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
+      const cspPlugin = plugins.find((p) => p.name === "visage:csp");
+      expect(prebootPlugin).toBeDefined();
+      expect(cspPlugin).toBeDefined();
+
+      let middlewareFn: any;
+      const fakeServer = {
+        middlewares: {
+          use(fn: any) {
+            middlewareFn = fn;
+          }
+        }
+      };
+      (cspPlugin as any).configureServer(fakeServer);
+
+      const headersSet: Record<string, string> = {};
+      const fakeReq = { headers: { accept: "text/html" }, url: "/" };
+      const fakeRes: any = {
+        setHeader(name: string, val: string) {
+          headersSet[name] = val;
+        },
+        end() {}
+      };
+
+      middlewareFn(fakeReq, fakeRes, () => {});
+
+      // Simulate Vite HTML transform pipeline
+      const initialHtml = "<!DOCTYPE html><html><head></head><body></body></html>";
+      const prebootHtml = (prebootPlugin as any).transformIndexHtml(initialHtml);
+      (cspPlugin as any).transformIndexHtml(prebootHtml);
+
+      // Now trigger res.end() when the HTML is flushed
+      fakeRes.end();
+
+      expect(headersSet["Content-Security-Policy"]).toBeDefined();
+      expect(headersSet["Content-Security-Policy"]).toContain("script-src 'self' 'sha256-");
+    });
   });
 });
