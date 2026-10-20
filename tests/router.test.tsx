@@ -70,11 +70,15 @@ describe("Visage Router", () => {
 
     expect(container.querySelector(".home")).not.toBeNull();
     expect(container.querySelector(".about")).toBeNull();
+    expect(container.querySelector(".nav-home")?.getAttribute("aria-current")).toBe("page");
+    expect(container.querySelector(".nav-about")?.hasAttribute("aria-current")).toBe(false);
 
     // Navigate to /about
     navigateFn("/about");
     expect(container.querySelector(".home")).toBeNull();
     expect(container.querySelector(".about")?.textContent).toBe("About Page");
+    expect(container.querySelector(".nav-home")?.hasAttribute("aria-current")).toBe(false);
+    expect(container.querySelector(".nav-about")?.getAttribute("aria-current")).toBe("page");
 
     unmount();
   });
