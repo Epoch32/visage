@@ -7,7 +7,7 @@ describe("Security Transform: Spread Attribute Sanitizer", () => {
       const code = "<button {...buttonProps}>Click</button>";
       const result = compileJsx(code);
 
-      expect(result.code).toContain("Object.entries(buttonProps)");
+      expect(result.code).toContain("Object.entries(buttonProps || {})");
       expect(result.code).not.toContain("_cleanSpread");
     });
   });
@@ -20,7 +20,7 @@ describe("Security Transform: Spread Attribute Sanitizer", () => {
       expect(result.code).toContain("const _cleanSpread =");
       expect(result.code).toContain("const _safeUrl =");
       expect(result.code).toContain("const _safeName =");
-      expect(result.code).toContain("Object.entries(_cleanSpread(buttonProps))");
+      expect(result.code).toContain("Object.entries(_cleanSpread(buttonProps) || {})");
     });
 
     it("wraps spreads on links, inputs, and containers", () => {
@@ -148,7 +148,7 @@ describe("Security Transform: Spread Attribute Sanitizer", () => {
       });
 
       expect(result.code).not.toContain("_cleanSpread");
-      expect(result.code).toContain("Object.entries(buttonProps)");
+      expect(result.code).toContain("Object.entries(buttonProps || {})");
     });
   });
 });

@@ -282,7 +282,21 @@ describe("Visage AOT JSX Compiler", () => {
     const { code } = compileJsx(input);
 
     expect(code).toContain(
-      "Object.entries(props).forEach(([_k, _v]) => setAttribute(_el$, _k, _v));"
+      "Object.entries(props || {}).forEach(([_k, _v]) => setAttribute(_el$, _k, _v));"
+    );
+  });
+
+  it("guards against null or undefined JSX spreads on elements", () => {
+    const input = `
+      function Box(props) {
+        return <div {...props.extra}>Content</div>;
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    expect(code).toContain(
+      "Object.entries(props.extra || {}).forEach(([_k, _v]) => setAttribute(_el$, _k, _v));"
     );
   });
 
