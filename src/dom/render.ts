@@ -340,33 +340,36 @@ function applyProp(el: HTMLElement | SVGElement, key: string, value: any) {
   }
 }
 
+function getSinglePlaceholderWhitespaceNode(parent: Node, before: Node | null): Text | null {
+  if (
+    before === null &&
+    parent.firstChild !== null &&
+    parent.firstChild === parent.lastChild &&
+    parent.firstChild.nodeType === Node.TEXT_NODE &&
+    (parent.firstChild as Text).data === " "
+  ) {
+    return parent.firstChild as Text;
+  }
+  return null;
+}
+
 /**
  * Insert a child node into a parent container with reactive fine-grained updates
  */
 export function insertChild(parent: Node, child: Child, before: Node | null = null): Node | null {
+  const placeholderText = getSinglePlaceholderWhitespaceNode(parent, before);
+
   if (child === null || child === undefined || child === false || child === true) {
-    if (
-      before === null &&
-      parent.firstChild !== null &&
-      parent.firstChild === parent.lastChild &&
-      parent.firstChild.nodeType === Node.TEXT_NODE &&
-      (parent.firstChild as Text).data === " "
-    ) {
-      (parent.firstChild as Text).data = "";
+    if (placeholderText !== null) {
+      placeholderText.data = "";
     }
     return null;
   }
 
   if (typeof child === "string" || typeof child === "number") {
-    if (
-      before === null &&
-      parent.firstChild !== null &&
-      parent.firstChild === parent.lastChild &&
-      parent.firstChild.nodeType === Node.TEXT_NODE &&
-      (parent.firstChild as Text).data === " "
-    ) {
-      (parent.firstChild as Text).data = String(child);
-      return parent.firstChild;
+    if (placeholderText !== null) {
+      placeholderText.data = String(child);
+      return placeholderText;
     }
     const node = document.createTextNode(String(child));
     if (before === null) {
@@ -377,30 +380,16 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
     return node;
   }
 
+  if (placeholderText !== null) {
+    parent.removeChild(placeholderText);
+  }
+
   if (child instanceof Node) {
-    if (
-      before === null &&
-      parent.firstChild !== null &&
-      parent.firstChild === parent.lastChild &&
-      parent.firstChild.nodeType === Node.TEXT_NODE &&
-      (parent.firstChild as Text).data === " "
-    ) {
-      parent.removeChild(parent.firstChild);
-    }
     parent.insertBefore(child, before);
     return child;
   }
 
   if (Array.isArray(child)) {
-    if (
-      before === null &&
-      parent.firstChild !== null &&
-      parent.firstChild === parent.lastChild &&
-      parent.firstChild.nodeType === Node.TEXT_NODE &&
-      (parent.firstChild as Text).data === " "
-    ) {
-      parent.removeChild(parent.firstChild);
-    }
     const fragment = document.createDocumentFragment();
     for (const item of child) {
       insertChild(fragment, item);
@@ -440,15 +429,6 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
     }
 
     // Dynamic / polymorphic reactive binding
-    if (
-      before === null &&
-      parent.firstChild !== null &&
-      parent.firstChild === parent.lastChild &&
-      parent.firstChild.nodeType === Node.TEXT_NODE &&
-      (parent.firstChild as Text).data === " "
-    ) {
-      parent.removeChild(parent.firstChild);
-    }
     const marker = document.createTextNode("");
     parent.insertBefore(marker, before);
 
