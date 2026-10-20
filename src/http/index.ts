@@ -28,6 +28,7 @@ export {
   parseETagList
 } from "./etag";
 export { resolveHeaders } from "./headers";
+export { matchesRulePattern } from "./pattern";
 export {
   badRequest,
   conflict,
