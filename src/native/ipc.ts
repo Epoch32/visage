@@ -18,6 +18,14 @@ export interface NativeEventMessage {
   payload?: any;
 }
 
+export interface InvokeOptions {
+  /**
+   * Timeout in milliseconds before rejecting the pending call.
+   * Defaults to 30000 (30 seconds). Set to 0 or Infinity to disable.
+   */
+  timeout?: number;
+}
+
 declare const process: any;
 
 declare global {
@@ -41,14 +49,29 @@ declare global {
   }
 }
 
+let defaultIpcTimeout = 30000;
+
+export function setDefaultIpcTimeout(ms: number) {
+  defaultIpcTimeout = ms;
+}
+
+export function getDefaultIpcTimeout(): number {
+  return defaultIpcTimeout;
+}
+
 // In-flight call resolution map
 const pendingCalls = new Map<
   string,
   {
     resolve: (val: any) => void;
     reject: (err: any) => void;
+    timer?: ReturnType<typeof setTimeout>;
   }
 >();
+
+export function getPendingCallCount(): number {
+  return pendingCalls.size;
+}
 
 // Event listeners map
 const eventListeners = new Map<string, Set<(payload: any) => void>>();
@@ -62,6 +85,9 @@ export function ensureInitialized() {
   window.__visage_native_response = (res: NativeResponseMessage) => {
     const pending = pendingCalls.get(res.id);
     if (!pending) return;
+    if (pending.timer) {
+      clearTimeout(pending.timer);
+    }
     pendingCalls.delete(res.id);
 
     if (res.error) {
@@ -122,12 +148,30 @@ export function isNativeApp(): boolean {
 /**
  * Invoke a native command on the Zig platform host.
  */
-export function invoke<T = any>(command: string, payload?: any): Promise<T> {
+export function invoke<T = any>(
+  command: string,
+  payload?: any,
+  options?: InvokeOptions
+): Promise<T> {
   ensureInitialized();
 
   return new Promise<T>((resolve, reject) => {
     const id = `native_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    pendingCalls.set(id, { resolve, reject });
+    const timeoutMs = options?.timeout ?? defaultIpcTimeout;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (timeoutMs > 0 && Number.isFinite(timeoutMs)) {
+      timer = setTimeout(() => {
+        if (pendingCalls.has(id)) {
+          pendingCalls.delete(id);
+          reject(
+            new Error(`[visage:native] IPC call to "${command}" timed out after ${timeoutMs}ms`)
+          );
+        }
+      }, timeoutMs);
+    }
+
+    pendingCalls.set(id, { resolve, reject, timer });
 
     const message: NativeCallMessage = { id, command, payload };
 
@@ -139,12 +183,14 @@ export function invoke<T = any>(command: string, payload?: any): Promise<T> {
           ret
             .then((val: any) => {
               if (pendingCalls.has(id)) {
+                if (timer) clearTimeout(timer);
                 pendingCalls.delete(id);
                 resolve(val);
               }
             })
             .catch((err: any) => {
               if (pendingCalls.has(id)) {
+                if (timer) clearTimeout(timer);
                 pendingCalls.delete(id);
                 reject(err);
               }
@@ -153,6 +199,7 @@ export function invoke<T = any>(command: string, payload?: any): Promise<T> {
         }
         return;
       } catch (err) {
+        if (timer) clearTimeout(timer);
         pendingCalls.delete(id);
         reject(err);
         return;
@@ -165,6 +212,7 @@ export function invoke<T = any>(command: string, payload?: any): Promise<T> {
         window.chrome.webview.postMessage(message);
         return;
       } catch (err) {
+        if (timer) clearTimeout(timer);
         pendingCalls.delete(id);
         reject(err);
         return;
@@ -177,6 +225,7 @@ export function invoke<T = any>(command: string, payload?: any): Promise<T> {
         window.webkit.messageHandlers.visage.postMessage(message);
         return;
       } catch (err) {
+        if (timer) clearTimeout(timer);
         pendingCalls.delete(id);
         reject(err);
         return;
@@ -184,6 +233,7 @@ export function invoke<T = any>(command: string, payload?: any): Promise<T> {
     }
 
     // 4. Fallback in standard browser dev mode
+    if (timer) clearTimeout(timer);
     pendingCalls.delete(id);
     if (typeof process !== "undefined" && process.env?.NODE_ENV !== "production") {
       console.warn(

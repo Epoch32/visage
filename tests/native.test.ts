@@ -115,6 +115,52 @@ describe("Visage Native IPC Bridge (visage/native)", () => {
     expect(res).toEqual({ ok: true, mock: true, command: "customCommand" });
   });
 
+  it("times out and evicts pending call when native host does not respond", async () => {
+    (globalThis as any).window = {};
+    // Simulate webview postMessage that never sends a response back
+    (globalThis as any).window.chrome = {
+      webview: {
+        postMessage: () => {}
+      }
+    };
+
+    expect(native.getPendingCallCount()).toBe(0);
+
+    const callPromise = native.invoke("slowOrHangingCommand", {}, { timeout: 20 });
+    expect(native.getPendingCallCount()).toBe(1);
+
+    let thrownError: any = null;
+    try {
+      await callPromise;
+    } catch (e) {
+      thrownError = e;
+    }
+
+    expect(thrownError).toBeDefined();
+    expect(thrownError?.message).toContain(
+      '[visage:native] IPC call to "slowOrHangingCommand" timed out after 20ms'
+    );
+
+    // Call map is evicted, avoiding leak
+    expect(native.getPendingCallCount()).toBe(0);
+  });
+
+  it("clears timeout timer if response arrives before timeout", async () => {
+    (globalThis as any).window = {};
+    (globalThis as any).window.__visage_native_call = (id: string) => {
+      setTimeout(() => {
+        (globalThis as any).window.__visage_native_response({
+          id,
+          result: { fast: true }
+        });
+      }, 5);
+    };
+
+    const res = await native.invoke("fastCommand", {}, { timeout: 50 });
+    expect(res).toEqual({ fast: true });
+    expect(native.getPendingCallCount()).toBe(0);
+  });
+
   it("invokes window control functions (close, minimize, maximize, setDecorations, setBorder, startDrag)", async () => {
     (globalThis as any).window = {};
     const calls: { cmd: string; payload: any }[] = [];

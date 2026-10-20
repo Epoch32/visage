@@ -2,12 +2,16 @@
  * Visage Native IPC Bridge & Desktop OS Primitives
  */
 import {
+  getDefaultIpcTimeout,
+  getPendingCallCount,
+  type InvokeOptions,
   invoke,
   isNativeApp,
   type NativeCallMessage,
   type NativeEventMessage,
   type NativeResponseMessage,
-  on
+  on,
+  setDefaultIpcTimeout
 } from "./ipc";
 import {
   closeWindow,
@@ -35,6 +39,7 @@ import {
 export type {
   DragOptions,
   FileFilter,
+  InvokeOptions,
   MessageDialogOptions,
   NativeCallMessage,
   NativeEventMessage,
@@ -48,6 +53,8 @@ export type {
 export {
   closeWindow,
   dialog,
+  getDefaultIpcTimeout,
+  getPendingCallCount,
   invoke,
   isNativeApp,
   isNotificationSupported,
@@ -61,6 +68,7 @@ export {
   sendNotification,
   setBorder,
   setDecorations,
+  setDefaultIpcTimeout,
   startDrag
 };
 
@@ -83,6 +91,9 @@ export const native = {
   setDecorations,
   setBorder,
   startDrag,
+  setDefaultIpcTimeout,
+  getDefaultIpcTimeout,
+  getPendingCallCount,
   window: windowControls,
   dialog,
   notification
