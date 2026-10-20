@@ -222,12 +222,23 @@ export function CommandInput(props: CommandInputProps): Child {
     }
   };
 
+  const listId = ctx ? `${ctx.commandId}-list` : undefined;
+  const activeDescendant = () => {
+    if (!ctx) return undefined;
+    const val = ctx.activeValue();
+    return val ? `${ctx.commandId}-item-${String(val).replace(/[^a-zA-Z0-9_-]/g, "-")}` : undefined;
+  };
+
   const { placeholder = "Type a command...", class: className, style, ...rest } = props;
 
   return (
     <input
       type="text"
-      role="searchbox"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded="true"
+      aria-controls={listId}
+      aria-activedescendant={activeDescendant}
       placeholder={placeholder}
       value={() => ctx?.search() ?? ""}
       onInput={(e: any) => ctx?.setSearch(e.target.value)}
@@ -248,9 +259,17 @@ export interface CommandListProps {
 }
 
 export function CommandList(props: CommandListProps): Child {
-  const { as: Tag = "div", children, class: className, style, ...rest } = props;
+  const ctx = useContext(CommandContext);
+  const { as: Tag = "div", children, class: className, style, id, ...rest } = props;
+  const listId = id ?? (ctx ? `${ctx.commandId}-list` : undefined);
   return (
-    <Tag role="listbox" class={className} style={{ overflowY: "auto", ...style }} {...rest}>
+    <Tag
+      id={listId}
+      role="listbox"
+      class={className}
+      style={{ overflowY: "auto", ...style }}
+      {...rest}
+    >
       {children}
     </Tag>
   );
@@ -348,10 +367,25 @@ export function CommandItem(props: CommandItemProps): Child {
     if (props.onSelect) props.onSelect();
   };
 
-  const { as: Tag = "div", shortcut, disabled, children, class: className, style, ...rest } = props;
+  const {
+    as: Tag = "div",
+    shortcut,
+    disabled,
+    children,
+    class: className,
+    style,
+    id,
+    ...rest
+  } = props;
+  const itemId =
+    id ??
+    (ctx
+      ? `${ctx.commandId}-item-${String(itemValue).replace(/[^a-zA-Z0-9_-]/g, "-")}`
+      : undefined);
 
   return (
     <Tag
+      id={itemId}
       role="option"
       data-value={itemValue}
       aria-selected={isSelected}

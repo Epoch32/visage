@@ -824,9 +824,12 @@ describe("Visage UI Component Primitives", () => {
         container
       );
 
-      const input = container.querySelector('input[role="searchbox"]') as HTMLInputElement;
+      const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
       expect(input).not.toBeNull();
       expect(input.placeholder).toBe("Search commands...");
+      expect(input.getAttribute("aria-expanded")).toBe("true");
+      expect(input.getAttribute("aria-autocomplete")).toBe("list");
+      expect(input.hasAttribute("aria-controls")).toBe(true);
 
       const options = container.querySelectorAll('[role="option"]');
       expect(options.length).toBe(2);
