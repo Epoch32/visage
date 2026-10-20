@@ -16,7 +16,7 @@ export class DevToolsHub {
   readonly queriesList = signal<QueryRecord[]>([], { internal: true });
 
   readonly rpcLogs = signal<RpcRecord[]>([], { internal: true });
-  private _queryClients = new Set<QueryClient>();
+  private _queryClients = new Map<QueryClient, () => void>();
 
   private _signalCounter = 0;
 
@@ -94,9 +94,9 @@ export class DevToolsHub {
   }
 
   // --- Query Cache Tracking ---
-  attachQueryClient(client: QueryClient) {
-    if (this._queryClients.has(client)) return;
-    this._queryClients.add(client);
+  attachQueryClient(client: QueryClient): () => void {
+    const existing = this._queryClients.get(client);
+    if (existing) return existing;
 
     const syncQueries = () => {
       const cache = client.getQueryCache();
@@ -120,11 +120,25 @@ export class DevToolsHub {
       this.queriesList.set(records);
     };
 
-    client.getQueryCache().subscribe(() => {
+    const unsubscribe = client.getQueryCache().subscribe(() => {
       syncQueries();
     });
 
+    const cleanup = () => {
+      unsubscribe();
+      this._queryClients.delete(client);
+    };
+
+    this._queryClients.set(client, cleanup);
     syncQueries();
+    return cleanup;
+  }
+
+  detachQueryClient(client: QueryClient): void {
+    const cleanup = this._queryClients.get(client);
+    if (cleanup) {
+      cleanup();
+    }
   }
 
   // --- RPC & SSE Logging ---
