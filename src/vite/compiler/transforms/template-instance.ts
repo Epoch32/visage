@@ -72,7 +72,7 @@ export function generateTemplateInstance(
               t.memberExpression(
                 t.callExpression(
                   t.memberExpression(t.identifier("Object"), t.identifier("entries")),
-                  [spreadArg]
+                  [t.logicalExpression("||", spreadArg, t.objectExpression([]))]
                 ),
                 t.identifier("forEach")
               ),
