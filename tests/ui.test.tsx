@@ -508,6 +508,9 @@ describe("Visage UI Component Primitives", () => {
       );
 
       const trigger = container.querySelector(".tip-trigger") as HTMLButtonElement;
+      expect(trigger.hasAttribute("aria-describedby")).toBe(false);
+
+      trigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
       expect(trigger.getAttribute("aria-describedby")).toContain("tooltip-");
 
       unmount();
@@ -630,10 +633,11 @@ describe("Visage UI Component Primitives", () => {
       const button = container.querySelector("button")!;
       expect(button).not.toBeNull();
       expect(button.textContent).toBe("Hover Me");
-      expect(button.getAttribute("aria-describedby")).toContain("tooltip-");
+      expect(button.hasAttribute("aria-describedby")).toBe(false);
 
       // Hover
       button.dispatchEvent(new Event("mouseenter"));
+      expect(button.getAttribute("aria-describedby")).toContain("tooltip-");
       const tooltipEl = container.querySelector('[role="tooltip"]');
       expect(tooltipEl).not.toBeNull();
       expect(tooltipEl?.textContent).toBe("Tooltip text");

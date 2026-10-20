@@ -1,6 +1,6 @@
 import { Portal } from "@dom/control-flow";
 import type { Child } from "@dom/render";
-import type { ReadonlySignal } from "@signals";
+import { onCleanup, type ReadonlySignal, signal, type WritableSignal } from "@signals";
 import { createContext, useContext } from "@signals/context";
 import { useDismiss } from "./overlay";
 import { createControllableSignal, createId } from "./utils";
@@ -10,6 +10,8 @@ export interface DialogContextValue {
   setOpen: (open: boolean) => void;
   titleId: string;
   descriptionId: string;
+  hasTitle: WritableSignal<boolean>;
+  hasDescription: WritableSignal<boolean>;
   contentRef: { current: HTMLElement | null };
 }
 
@@ -47,6 +49,8 @@ export function DialogRoot(props: DialogProps): Child {
 
   const titleId = createId("dialog-title");
   const descriptionId = createId("dialog-desc");
+  const hasTitle = signal(props.title !== undefined);
+  const hasDescription = signal(props.description !== undefined);
   const contentRef: { current: HTMLElement | null } = { current: null };
 
   const ctx: DialogContextValue = {
@@ -54,6 +58,8 @@ export function DialogRoot(props: DialogProps): Child {
     setOpen,
     titleId,
     descriptionId,
+    hasTitle,
+    hasDescription,
     contentRef
   };
 
@@ -242,6 +248,17 @@ export function DialogContent(props: DialogContentProps): Child {
     ...rest
   } = props;
 
+  const ariaLabelledBy = () => {
+    if (rest["aria-labelledby"]) return rest["aria-labelledby"];
+    if (rest["aria-label"]) return undefined;
+    return ctx?.hasTitle() ? ctx.titleId : undefined;
+  };
+
+  const ariaDescribedBy = () => {
+    if (rest["aria-describedby"]) return rest["aria-describedby"];
+    return ctx?.hasDescription() ? ctx.descriptionId : undefined;
+  };
+
   const content = (
     <Tag
       ref={(el: HTMLElement | null) => {
@@ -259,8 +276,8 @@ export function DialogContent(props: DialogContentProps): Child {
       }}
       role="dialog"
       aria-modal="true"
-      aria-labelledby={ctx?.titleId}
-      aria-describedby={ctx?.descriptionId}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
       data-state={() => (ctx?.open() ? "open" : "closed")}
       style={() => ({
         display: ctx?.open() ? undefined : "none",
@@ -289,6 +306,12 @@ export interface DialogTitleProps {
 
 export function DialogTitle(props: DialogTitleProps): Child {
   const ctx = useContext(DialogContext);
+  if (ctx) {
+    ctx.hasTitle.set(true);
+    onCleanup(() => {
+      ctx.hasTitle.set(false);
+    });
+  }
   const { as: Tag = "h2", children, class: className, style, ...rest } = props;
 
   return (
@@ -308,6 +331,12 @@ export interface DialogDescriptionProps {
 
 export function DialogDescription(props: DialogDescriptionProps): Child {
   const ctx = useContext(DialogContext);
+  if (ctx) {
+    ctx.hasDescription.set(true);
+    onCleanup(() => {
+      ctx.hasDescription.set(false);
+    });
+  }
   const { as: Tag = "p", children, class: className, style, ...rest } = props;
 
   return (
