@@ -1,3 +1,5 @@
+import { matchesRulePattern } from "./pattern";
+
 /**
  * Resolve client headers with path-matching pattern rules and async resolvers
  */
@@ -7,7 +9,7 @@ export async function resolveHeaders(
     | Record<string, any>
     | (() => Promise<Record<string, string>> | Record<string, string>),
   fullPath = "",
-  matcher?: (pattern: string, path: string, fullPath: string) => boolean
+  matcher: (pattern: string, path: string, fullPath: string) => boolean = matchesRulePattern
 ): Promise<Record<string, string>> {
   if (!headers) return {};
   if (typeof headers === "function") {

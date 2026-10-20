@@ -1,11 +1,10 @@
 /**
  * Visage File-Based API Typed Client SDK (visage/api)
  */
-import { isProblemDetails, resolveHeaders as resolveHttpHeaders } from "@http";
+import { isProblemDetails, matchesRulePattern, resolveHeaders as resolveHttpHeaders } from "@http";
 import { createMutation } from "@query/create-mutation";
 import { createQuery } from "@query/create-query";
 import { RPCError } from "@rpc/error";
-import { matchesRulePattern } from "@rpc/server";
 import type {
   ApiCallOptions,
   ApiClient,

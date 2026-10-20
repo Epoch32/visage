@@ -1,8 +1,7 @@
-import { isProblemDetails, resolveHeaders as resolveHttpHeaders } from "@http";
+import { isProblemDetails, matchesRulePattern, resolveHeaders as resolveHttpHeaders } from "@http";
 import { createMutation } from "@query/create-mutation";
 import { createQuery } from "@query/create-query";
 import { RPCError } from "./error";
-import { matchesRulePattern } from "./server";
 import type {
   ClientOptions,
   ClientRouter,
