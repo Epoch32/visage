@@ -111,11 +111,15 @@ export function createBandScale(
   const bandwidth = step * (1 - paddingInner);
 
   const fn = ((val: any): number => {
-    let idx = -1;
-    if (typeof val === "number" && Number.isInteger(val) && val >= 0 && val < domain.length) {
+    let idx = domain.indexOf(val);
+    if (
+      idx === -1 &&
+      typeof val === "number" &&
+      Number.isInteger(val) &&
+      val >= 0 &&
+      val < domain.length
+    ) {
       idx = val;
-    } else {
-      idx = domain.indexOf(val);
     }
     if (idx === -1) return range[0];
     return range[0] + (idx + paddingOuter) * step;
