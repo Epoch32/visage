@@ -1,6 +1,6 @@
 import { onCleanup, type ReadonlySignal, signal } from "@signals";
 
-export type FileRejectionReason = "MAX_SIZE" | "INVALID_TYPE" | "MAX_FILES";
+export type FileRejectionReason = "MAX_SIZE" | "MIN_SIZE" | "INVALID_TYPE" | "MAX_FILES";
 
 export interface FileRejection {
   file: File;
@@ -190,6 +190,15 @@ export function createDropZone(
         file,
         reason: "MAX_SIZE",
         message: `File size (${file.size} bytes) exceeds maximum limit (${options.maxSize} bytes).`
+      });
+      return;
+    }
+
+    if (options.minSize !== undefined && file.size < options.minSize) {
+      rejections.push({
+        file,
+        reason: "MIN_SIZE",
+        message: `File size (${file.size} bytes) is below minimum limit (${options.minSize} bytes).`
       });
       return;
     }
