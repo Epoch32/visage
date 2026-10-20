@@ -1,4 +1,4 @@
-import { isProblemDetails } from "@http";
+import { isProblemDetails, resolveHeaders as resolveHttpHeaders } from "@http";
 import { createMutation } from "@query/create-mutation";
 import { createQuery } from "@query/create-query";
 import { RPCError } from "./error";
@@ -19,25 +19,7 @@ async function resolveHeaders(
     | (() => Promise<Record<string, string>> | Record<string, string>),
   fullPath = ""
 ): Promise<Record<string, string>> {
-  if (!headers) return {};
-  if (typeof headers === "function") {
-    return await headers();
-  }
-
-  const result: Record<string, string> = {};
-  for (const [key, val] of Object.entries(headers)) {
-    if (typeof val === "object" || typeof val === "function") {
-      if (matchesRulePattern(key, fullPath, fullPath)) {
-        const resolved = typeof val === "function" ? await val() : val;
-        if (resolved && typeof resolved === "object") {
-          Object.assign(result, resolved);
-        }
-      }
-    } else if (typeof val === "string") {
-      result[key] = val;
-    }
-  }
-  return result;
+  return resolveHttpHeaders(headers, fullPath, matchesRulePattern);
 }
 
 function createProxyPath(options: ClientOptions, path: string[] = []): any {
