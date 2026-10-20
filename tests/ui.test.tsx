@@ -336,6 +336,38 @@ describe("Visage UI Component Primitives", () => {
 
       unmount();
     });
+
+    it("renders hidden input checkbox when name is provided for form submissions", () => {
+      const isChecked = signal(false);
+      const unmount = render(
+        () => (
+          <form id="test-form">
+            <Switch
+              name="terms"
+              value="accepted"
+              checked={isChecked}
+              onCheckedChange={(val) => isChecked.set(val)}
+              class="switch-btn"
+            />
+          </form>
+        ),
+        container
+      );
+
+      const input = container.querySelector(
+        'input[type="checkbox"][name="terms"]'
+      ) as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.value).toBe("accepted");
+      expect(input.checked).toBe(false);
+
+      const btn = container.querySelector(".switch-btn") as HTMLButtonElement;
+      btn.click();
+      expect(isChecked()).toBe(true);
+      expect(input.checked).toBe(true);
+
+      unmount();
+    });
   });
 
   describe("Popover", () => {
