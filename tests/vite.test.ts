@@ -281,6 +281,26 @@ export function Component() {
     expect(res.code).toContain("_tmpl$");
   });
 
+  it("throws and halts the build on security errors during transformation", () => {
+    const plugins = visage({ compiler: { security: true } });
+    const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
+    expect(compilerPlugin).toBeDefined();
+
+    let pluginErrorCalled = false;
+    const mockContext = {
+      error() {
+        pluginErrorCalled = true;
+      }
+    };
+
+    const maliciousSample = `export function Attack() { return <a href="javascript:alert(1)">Click</a>; }`;
+    expect(() => {
+      (compilerPlugin!.transform as any).call(mockContext, maliciousSample, "/app/src/Attack.tsx");
+    }).toThrow(/\[visage:security\] Blocked dangerous URI protocol/);
+
+    expect(pluginErrorCalled).toBe(true);
+  });
+
   it("allows disabling the AOT compiler via visage({ compiler: false })", () => {
     const plugins = visage({ compiler: false });
     const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
