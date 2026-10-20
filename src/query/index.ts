@@ -1,8 +1,6 @@
+export { createInfiniteQuery } from "./create-infinite-query";
 export { createMutation } from "./create-mutation";
-export {
-  createInfiniteQuery,
-  createQuery
-} from "./create-query";
+export { createQuery } from "./create-query";
 export {
   type FocusListener,
   FocusManager,
