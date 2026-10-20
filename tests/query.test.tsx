@@ -396,7 +396,7 @@ describe("Visage Query & Cache Manager (visage/query)", () => {
       container
     );
 
-    expect(retrievedClient).toBe(customClient);
+    expect(retrievedClient as QueryClient | null).toBe(customClient);
     expect(dataValue).toBe("Scoped Value");
     unmount();
   });

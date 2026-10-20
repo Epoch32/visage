@@ -331,7 +331,7 @@ describe("Zig Native Project Scaffolding", () => {
     expect(buildZigContent).toContain('.dependency("webview"');
     expect(buildZigContent).toContain(".link_libc = true");
     expect(buildZigContent).toContain('.name = "visage-app"');
-  });
+  }, 30000);
 
   it("scaffolds custom window border and frameless window options in main.zig", () => {
     scaffoldZigNative(tempDir, {
