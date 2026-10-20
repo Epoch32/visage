@@ -215,3 +215,17 @@ export default new Proxy({}, {
     }
   };
 }
+
+/**
+ * Official Visage Lucide Vite Plugin
+ *
+ * Statically transforms `import { Icon } from "lucide-react"` at build time into
+ * native, tree-shaken Visage SVG component instances using `createIcon` and `lucide`.
+ *
+ * @deprecated `visageLucide()` is deprecated in Version 2 and will be fully removed in Version 3.
+ * Lucide icon integration is now built directly into the main `visage()` plugin.
+ */
+export function visageLucide(options: VisageLucideOptions = {}): VisageVitePlugin {
+  const vLog = createVisageLogger();
+  return createLucidePlugin(options, vLog, true);
+}
