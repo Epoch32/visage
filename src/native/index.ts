@@ -1,334 +1,69 @@
 /**
- * Visage Native IPC Bridge
- *
- * Provides a unified, type-safe communication channel between the Visage UI
- * and the native Zig platform host (WebView2, WKWebView, WebKitGTK).
+ * Visage Native IPC Bridge & Desktop OS Primitives
  */
+import {
+  invoke,
+  isNativeApp,
+  type NativeCallMessage,
+  type NativeEventMessage,
+  type NativeResponseMessage,
+  on
+} from "./ipc";
+import {
+  closeWindow,
+  type DragOptions,
+  dialog,
+  type FileFilter,
+  isNotificationSupported,
+  type MessageDialogOptions,
+  maximizeWindow,
+  messageDialog,
+  minimizeWindow,
+  type NotificationOptions,
+  notification,
+  type OpenDialogOptions,
+  openDialog,
+  type SaveDialogOptions,
+  saveDialog,
+  sendNotification,
+  setBorder,
+  setDecorations,
+  startDrag,
+  type WindowBorderOptions
+} from "./native-apis";
 
-export interface NativeCallMessage {
-  id: string;
-  command: string;
-  payload?: any;
-}
+export type {
+  DragOptions,
+  FileFilter,
+  MessageDialogOptions,
+  NativeCallMessage,
+  NativeEventMessage,
+  NativeResponseMessage,
+  NotificationOptions,
+  OpenDialogOptions,
+  SaveDialogOptions,
+  WindowBorderOptions
+};
 
-export interface NativeResponseMessage {
-  id: string;
-  result?: any;
-  error?: string;
-}
+export {
+  closeWindow,
+  dialog,
+  invoke,
+  isNativeApp,
+  isNotificationSupported,
+  maximizeWindow,
+  messageDialog,
+  minimizeWindow,
+  notification,
+  on,
+  openDialog,
+  saveDialog,
+  sendNotification,
+  setBorder,
+  setDecorations,
+  startDrag
+};
 
-export interface NativeEventMessage {
-  event: string;
-  payload?: any;
-}
-
-declare const process: any;
-
-declare global {
-  interface Window {
-    __visage_native?: boolean;
-    __visage_native_call?: (id: string, command: string, payload?: any) => void;
-    __visage_native_response?: (response: NativeResponseMessage) => void;
-    __visage_native_event?: (event: NativeEventMessage) => void;
-    chrome?: {
-      webview?: {
-        postMessage: (message: any) => void;
-      };
-    };
-    webkit?: {
-      messageHandlers?: {
-        visage?: {
-          postMessage: (message: any) => void;
-        };
-      };
-    };
-  }
-}
-
-// In-flight call resolution map
-const pendingCalls = new Map<
-  string,
-  {
-    resolve: (val: any) => void;
-    reject: (err: any) => void;
-  }
->();
-
-// Event listeners map
-const eventListeners = new Map<string, Set<(payload: any) => void>>();
-
-function ensureInitialized() {
-  if (typeof window === "undefined" || typeof window.__visage_native_response === "function") {
-    return;
-  }
-
-  // Global handler invoked by the native host when a response is ready
-  window.__visage_native_response = (res: NativeResponseMessage) => {
-    const pending = pendingCalls.get(res.id);
-    if (!pending) return;
-    pendingCalls.delete(res.id);
-
-    if (res.error) {
-      pending.reject(new Error(res.error));
-    } else {
-      pending.resolve(res.result);
-    }
-  };
-
-  // Global handler invoked by the native host when an asynchronous event fires
-  window.__visage_native_event = (msg: NativeEventMessage) => {
-    const listeners = eventListeners.get(msg.event);
-    if (listeners) {
-      for (const cb of listeners) {
-        try {
-          cb(msg.payload);
-        } catch (err) {
-          console.error(`[visage:native] Error in event listener for "${msg.event}":`, err);
-        }
-      }
-    }
-  };
-
-  // Automatic drag region listener for frameless native windows
-  if (typeof document !== "undefined") {
-    document.addEventListener("mousedown", (e) => {
-      if (e.button !== 0) return;
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (target.closest("button, input, textarea, select, a, [data-visage-no-drag]")) {
-        return;
-      }
-      if (
-        target.closest("[data-visage-drag-region]") ||
-        target.closest("[data-tauri-drag-region]")
-      ) {
-        startDrag({ button: 1, screenX: e.screenX, screenY: e.screenY }).catch(() => {});
-      }
-    });
-  }
-}
-
-/**
- * Check whether the current application is running inside a native Visage host.
- */
-export function isNativeApp(): boolean {
-  if (typeof window === "undefined") return false;
-  return Boolean(
-    window.__visage_native ||
-      window.chrome?.webview ||
-      window.webkit?.messageHandlers?.visage ||
-      typeof (window as any).ipcRenderer !== "undefined"
-  );
-}
-
-/**
- * Invoke a native command on the Zig platform host.
- *
- * @param command - The identifier of the native action (e.g., "getSystemInfo", "readDirectory")
- * @param payload - Optional JSON-serializable argument payload
- * @returns Promise resolving with the host's returned data
- */
-export function invoke<T = any>(command: string, payload?: any): Promise<T> {
-  ensureInitialized();
-
-  return new Promise<T>((resolve, reject) => {
-    const id = `native_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    pendingCalls.set(id, { resolve, reject });
-
-    const message: NativeCallMessage = { id, command, payload };
-
-    // 1. Host has injected direct custom dispatch function
-    if (typeof window.__visage_native_call === "function") {
-      try {
-        const ret = (window as any).__visage_native_call(id, command, payload);
-        if (ret && typeof ret.then === "function") {
-          ret
-            .then((val: any) => {
-              if (pendingCalls.has(id)) {
-                pendingCalls.delete(id);
-                resolve(val);
-              }
-            })
-            .catch((err: any) => {
-              if (pendingCalls.has(id)) {
-                pendingCalls.delete(id);
-                reject(err);
-              }
-            });
-          return;
-        }
-        return;
-      } catch (err) {
-        pendingCalls.delete(id);
-        reject(err);
-        return;
-      }
-    }
-
-    // 2. Windows WebView2
-    if (window.chrome?.webview?.postMessage) {
-      try {
-        window.chrome.webview.postMessage(message);
-        return;
-      } catch (err) {
-        pendingCalls.delete(id);
-        reject(err);
-        return;
-      }
-    }
-
-    // 3. macOS WKWebView / Linux WebKitGTK
-    if (window.webkit?.messageHandlers?.visage?.postMessage) {
-      try {
-        window.webkit.messageHandlers.visage.postMessage(message);
-        return;
-      } catch (err) {
-        pendingCalls.delete(id);
-        reject(err);
-        return;
-      }
-    }
-
-    // 4. Fallback in standard browser dev mode
-    pendingCalls.delete(id);
-    if (typeof process !== "undefined" && process.env?.NODE_ENV !== "production") {
-      console.warn(
-        `[visage:native] Running in standard browser mode. Mocking native command: "${command}"`
-      );
-    }
-
-    if (command === "dialog:open") {
-      resolve(
-        (payload?.multiple
-          ? ["/mock/documents/sample.txt"]
-          : "/mock/documents/sample.txt") as unknown as T
-      );
-      return;
-    }
-    if (command === "dialog:save") {
-      resolve("/mock/documents/saved-file.txt" as unknown as T);
-      return;
-    }
-    if (command === "dialog:message") {
-      const confirmed =
-        typeof window !== "undefined" && typeof window.confirm === "function"
-          ? window.confirm(payload?.message || "")
-          : true;
-      resolve(confirmed as unknown as T);
-      return;
-    }
-    if (command === "notification:send") {
-      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        new Notification(payload?.title || "Visage", { body: payload?.body });
-      } else {
-        console.info(`[visage:notification] ${payload?.title}: ${payload?.body || ""}`);
-      }
-      resolve(undefined as unknown as T);
-      return;
-    }
-    if (command === "notification:isSupported") {
-      resolve(true as unknown as T);
-      return;
-    }
-
-    resolve({ ok: true, mock: true, command } as unknown as T);
-  });
-}
-
-/**
- * Subscribe to native events dispatched from the Zig host.
- *
- * @param event - The name of the event to listen for
- * @param callback - Function invoked when the host emits the event
- * @returns Unsubscribe function
- */
-export function on(event: string, callback: (payload: any) => void): () => void {
-  ensureInitialized();
-
-  let listeners = eventListeners.get(event);
-  if (!listeners) {
-    listeners = new Set();
-    eventListeners.set(event, listeners);
-  }
-  listeners.add(callback);
-
-  return () => {
-    listeners?.delete(callback);
-    if (listeners && listeners.size === 0) {
-      eventListeners.delete(event);
-    }
-  };
-}
-
-/**
- * Request the native host to close the application window.
- */
-export function closeWindow(): Promise<void> {
-  return invoke("window:close");
-}
-
-/**
- * Request the native host to minimize the application window.
- */
-export function minimizeWindow(): Promise<void> {
-  return invoke("window:minimize");
-}
-
-/**
- * Request the native host to maximize or restore the application window.
- */
-export function maximizeWindow(): Promise<void> {
-  return invoke("window:maximize");
-}
-
-export interface WindowBorderOptions {
-  /**
-   * Border color (e.g., "#3b82f6", "rgb(59, 130, 246)")
-   */
-  color?: string;
-  /**
-   * Border width in pixels
-   */
-  width?: number;
-  /**
-   * Border corner radius in pixels
-   */
-  radius?: number;
-}
-
-/**
- * Toggle native window decorations (frameless vs standard titlebar/borders).
- */
-export function setDecorations(decorated: boolean): Promise<void> {
-  return invoke("window:setDecorations", { decorated });
-}
-
-/**
- * Set custom native window border styling (color, width, radius).
- */
-export function setBorder(options: WindowBorderOptions): Promise<void> {
-  return invoke("window:setBorder", options);
-}
-
-/**
- * Initiate an interactive native window move/drag operation.
- * Automatically triggered when clicking elements with `data-visage-drag-region`.
- */
-export function startDrag(event?: {
-  button?: number;
-  screenX?: number;
-  screenY?: number;
-}): Promise<void> {
-  return invoke("window:startDrag", {
-    button: event?.button ?? 1,
-    screenX: event?.screenX ?? 0,
-    screenY: event?.screenY ?? 0
-  });
-}
-
-/**
- * Window control functions namespace
- */
 export const windowControls = {
   close: closeWindow,
   minimize: minimizeWindow,
@@ -338,89 +73,6 @@ export const windowControls = {
   startDrag
 };
 
-export interface OpenDialogOptions {
-  title?: string;
-  defaultPath?: string;
-  multiple?: boolean;
-  directory?: boolean;
-}
-
-export interface SaveDialogOptions {
-  title?: string;
-  defaultPath?: string;
-  defaultName?: string;
-}
-
-export interface MessageDialogOptions {
-  title?: string;
-  message: string;
-  level?: "info" | "warning" | "error" | "question";
-  buttons?: "ok" | "okCancel" | "yesNo";
-}
-
-export interface NotificationOptions {
-  title: string;
-  body?: string;
-  icon?: string;
-  urgency?: "low" | "normal" | "critical";
-}
-
-/**
- * Open native OS file or directory picker dialog.
- */
-export function openDialog(options?: OpenDialogOptions): Promise<string[] | string | null> {
-  return invoke("dialog:open", options);
-}
-
-/**
- * Open native OS file save dialog.
- */
-export function saveDialog(options?: SaveDialogOptions): Promise<string | null> {
-  return invoke("dialog:save", options);
-}
-
-/**
- * Show a native OS message / confirmation dialog.
- * Returns true if confirmed (OK / Yes), false if cancelled (Cancel / No).
- */
-export function messageDialog(options: MessageDialogOptions): Promise<boolean> {
-  return invoke("dialog:message", options);
-}
-
-/**
- * Send a native desktop notification.
- */
-export function sendNotification(options: NotificationOptions): Promise<void> {
-  return invoke("notification:send", options);
-}
-
-/**
- * Check if desktop notifications are supported by the host.
- */
-export function isNotificationSupported(): Promise<boolean> {
-  return invoke("notification:isSupported");
-}
-
-/**
- * Dialog functions namespace
- */
-export const dialog = {
-  open: openDialog,
-  save: saveDialog,
-  message: messageDialog
-};
-
-/**
- * Desktop notification functions namespace
- */
-export const notification = {
-  send: sendNotification,
-  isSupported: isNotificationSupported
-};
-
-/**
- * Default native namespace export
- */
 export const native = {
   invoke,
   on,
