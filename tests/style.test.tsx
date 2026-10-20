@@ -9,6 +9,7 @@ import {
   cx,
   extractStyleTags,
   render,
+  runWithSSRStyles,
   Style,
   scopeCSS,
   scopeSelector,
@@ -279,6 +280,51 @@ describe("Visage Scoped Styles & CSS Engine (visage/style)", () => {
       expect(afterCount).toBe(1);
 
       uninject();
+    });
+
+    it("isolates styles per request context in runWithSSRStyles without leaking into global or other requests", () => {
+      styleManager.clear();
+
+      // Request A renders Tenant A styles
+      const requestA = runWithSSRStyles(() => {
+        createStyle(`
+          .tenantAHeader { color: purple; }
+        `);
+        return "rendered-page-a";
+      });
+
+      // Request B renders Tenant B styles
+      const requestB = runWithSSRStyles(() => {
+        createStyle(`
+          .tenantBFooter { color: orange; }
+        `);
+        return "rendered-page-b";
+      });
+
+      expect(requestA.result).toBe("rendered-page-a");
+      expect(requestA.css).toContain(".tenantAHeader_");
+      expect(requestA.css.includes(".tenantBFooter_")).toBe(false);
+
+      expect(requestB.result).toBe("rendered-page-b");
+      expect(requestB.css).toContain(".tenantBFooter_");
+      expect(requestB.css.includes(".tenantAHeader_")).toBe(false);
+
+      // Global singleton remains clean
+      expect(styleManager.extractSSRStyles()).toBe("");
+    });
+
+    it("clears SSR styles when clear: true option is provided", () => {
+      styleManager.clear();
+
+      createStyle(`
+        .oneTimeStyle { display: flex; }
+      `);
+
+      const firstExtract = styleManager.extractSSRStyles({ clear: true });
+      expect(firstExtract).toContain(".oneTimeStyle_");
+
+      const secondExtract = styleManager.extractSSRStyles();
+      expect(secondExtract).toBe("");
     });
   });
 });
