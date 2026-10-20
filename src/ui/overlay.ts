@@ -1,4 +1,4 @@
-import { onCleanup } from "@signals";
+import { effect, onCleanup } from "@signals";
 import { onClickOutside, trapFocus } from "./utils";
 
 export interface UseDismissOptions {
@@ -97,54 +97,57 @@ export function useDismiss(
     }
   };
 
-  // Setup outside pointer listener and global escape key listener
+  // Setup outside pointer listener and global escape key listener reactively only when enabled
   if (typeof document !== "undefined") {
-    const unbindPointer = onClickOutside(
-      () => {
-        const el = element();
-        const rawIgnores =
-          typeof options.outsideIgnore === "function"
-            ? options.outsideIgnore()
-            : options.outsideIgnore;
-        const ignores = Array.isArray(rawIgnores) ? rawIgnores : rawIgnores ? [rawIgnores] : [];
-        return [el, ...ignores];
-      },
-      (event) => {
-        if (!isEnabled()) return;
-        if (options.outsidePointer === false) return;
-        if (options.onOutsidePointer) {
-          options.onOutsidePointer(event);
-        }
-        if (!event.defaultPrevented) {
-          options.onDismiss();
-        }
-      }
-    );
+    effect(() => {
+      if (!isEnabled()) return;
 
-    const onGlobalKeyDown = (e: KeyboardEvent) => {
-      if (!isEnabled() || e.defaultPrevented) return;
-      if (e.key === "Escape" && (options.escapeKey ?? true)) {
-        if (options.onEscapeKeyDown) {
-          options.onEscapeKeyDown(e);
+      const unbindPointer = onClickOutside(
+        () => {
+          const el = element();
+          const rawIgnores =
+            typeof options.outsideIgnore === "function"
+              ? options.outsideIgnore()
+              : options.outsideIgnore;
+          const ignores = Array.isArray(rawIgnores) ? rawIgnores : rawIgnores ? [rawIgnores] : [];
+          return [el, ...ignores];
+        },
+        (event) => {
+          if (options.outsidePointer === false) return;
+          if (options.onOutsidePointer) {
+            options.onOutsidePointer(event);
+          }
+          if (!event.defaultPrevented) {
+            options.onDismiss();
+          }
         }
-        if (!e.defaultPrevented) {
-          options.onDismiss();
-          e.stopPropagation();
-        }
-      } else if (e.key === "Tab" && options.trapFocus) {
-        const el = element();
-        if (el) {
-          trapFocus(el, e);
-        }
-      }
-    };
+      );
 
-    const targetWindow = typeof window !== "undefined" ? window : document;
-    targetWindow.addEventListener("keydown", onGlobalKeyDown as any);
+      const onGlobalKeyDown = (e: KeyboardEvent) => {
+        if (e.defaultPrevented) return;
+        if (e.key === "Escape" && (options.escapeKey ?? true)) {
+          if (options.onEscapeKeyDown) {
+            options.onEscapeKeyDown(e);
+          }
+          if (!e.defaultPrevented) {
+            options.onDismiss();
+            e.stopPropagation();
+          }
+        } else if (e.key === "Tab" && options.trapFocus) {
+          const el = element();
+          if (el) {
+            trapFocus(el, e);
+          }
+        }
+      };
 
-    onCleanup(() => {
-      unbindPointer();
-      targetWindow.removeEventListener("keydown", onGlobalKeyDown as any);
+      const targetWindow = typeof window !== "undefined" ? window : document;
+      targetWindow.addEventListener("keydown", onGlobalKeyDown as any);
+
+      onCleanup(() => {
+        unbindPointer();
+        targetWindow.removeEventListener("keydown", onGlobalKeyDown as any);
+      });
     });
   }
 
