@@ -12,6 +12,8 @@ import { matchRoute } from "../pages/matcher";
 import { resolvePagesDir, scanPages } from "../pages/scanner";
 import type { PageRoute, PageSpecialFiles, PagesOptions } from "../pages/types";
 import type { VisageVitePlugin } from "../types";
+import { handlePreviewRouting } from "./pages/preview-middleware";
+import { buildSsgAssets } from "./pages/ssg-builder";
 
 declare const process: any;
 
@@ -240,55 +242,7 @@ export function createPagesPlugin(
       if (!pagesDir) return;
 
       server.middlewares.use((req: any, res: any, next: any) => {
-        if (!req.url || req.method !== "GET") return next();
-
-        const [pathname, queryString] = req.url.split("?");
-        const query = queryString ? `?${queryString}` : "";
-
-        // Pass through Vite internals, node_modules, and files with static extensions
-        if (
-          pathname.startsWith("/@") ||
-          pathname.startsWith("/node_modules") ||
-          /\.[a-zA-Z0-9_-]+$/.test(pathname)
-        ) {
-          return next();
-        }
-
-        let cleanPath = pathname;
-        if (basePrefix && basePrefix !== "/" && cleanPath.startsWith(basePrefix)) {
-          cleanPath = cleanPath.slice(basePrefix.length - 1);
-        }
-        cleanPath = cleanPath.replace(/^\/+|\/+$/g, "");
-
-        // Root path is handled by sirv (dist/index.html)
-        if (!cleanPath) {
-          return next();
-        }
-
-        // 1. Check directory index HTML: dist/about/index.html
-        const dirIndexPath = path.join(outDir, cleanPath, "index.html");
-        if (fs.existsSync(dirIndexPath)) {
-          req.url = `/${cleanPath}/index.html${query}`;
-          return next();
-        }
-
-        // 2. Check clean HTML file: dist/about.html
-        const cleanHtmlPath = path.join(outDir, `${cleanPath}.html`);
-        if (fs.existsSync(cleanHtmlPath)) {
-          req.url = `/${cleanPath}.html${query}`;
-          return next();
-        }
-
-        // 3. Fallback to 404.html if exists
-        const notFoundPath = path.join(outDir, "404.html");
-        if (fs.existsSync(notFoundPath)) {
-          res.statusCode = 404;
-          res.setHeader("Content-Type", "text/html; charset=utf-8");
-          res.end(fs.readFileSync(notFoundPath));
-          return;
-        }
-
-        next();
+        handlePreviewRouting(req, res, next, outDir, basePrefix);
       });
     },
 
@@ -373,107 +327,14 @@ export function createPagesPlugin(
         }
       }
 
-      let generatedCount = 0;
-
-      const allPathsToRender: { path: string; name: string }[] = [];
-      for (const route of routes) {
-        if (!route.isDynamic && !route.isCatchAll) {
-          const name =
-            route.path === "/"
-              ? "index"
-              : route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
-          allPathsToRender.push({ path: route.path, name });
-        }
-      }
-      if (options.staticPaths && Array.isArray(options.staticPaths)) {
-        for (const sp of options.staticPaths) {
-          const cleanSp = sp.startsWith("/") ? sp : `/${sp}`;
-          const name = cleanSp.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]/g, "-");
-          if (!allPathsToRender.some((p) => p.path === cleanSp)) {
-            allPathsToRender.push({ path: cleanSp, name });
-          }
-        }
-      }
-
-      for (const item of allPathsToRender) {
-        const chunk = entryChunks.get(`page-${item.name}`);
-        if (!chunk) continue;
-
-        const clientEntryUrl = `${base}/${chunk.fileName}`;
-
-        let cssTags = "";
-        const importedCss = (chunk as any).viteMetadata?.importedCss as Set<string> | undefined;
-        if (importedCss) {
-          for (const cssFile of importedCss) {
-            cssTags += `\n    <link rel="stylesheet" crossorigin href="${base}/${cssFile}">`;
-          }
-        }
-
-        const headTags = (options.headTags || "") + cssTags;
-        const targetHtmlPath =
-          item.path === "/" ? "index.html" : `${item.path.replace(/^\/+/, "")}/index.html`;
-
-        const html = generateHtmlShell({
-          title: options.title,
-          rootId,
-          clientEntryUrl,
-          headTags,
-          viewTransitions: options.viewTransitions !== false
-        });
-
-        this.emitFile({
-          type: "asset",
-          fileName: targetHtmlPath,
-          source: html
-        });
-        generatedCount++;
-
-        if (item.path !== "/") {
-          const cleanHtmlPath = `${item.path.replace(/^\/+/, "")}.html`;
-          this.emitFile({
-            type: "asset",
-            fileName: cleanHtmlPath,
-            source: html
-          });
-          generatedCount++;
-        }
-      }
-
-      if (special.notFound) {
-        const chunk = entryChunks.get("page-404");
-        if (chunk) {
-          const clientEntryUrl = `${base}/${chunk.fileName}`;
-          let cssTags = "";
-          const importedCss = (chunk as any).viteMetadata?.importedCss as Set<string> | undefined;
-          if (importedCss) {
-            for (const cssFile of importedCss) {
-              cssTags += `\n    <link rel="stylesheet" crossorigin href="${base}/${cssFile}">`;
-            }
-          }
-          const headTags = (options.headTags || "") + cssTags;
-          const html = generateHtmlShell({
-            title: "404 - Not Found",
-            rootId,
-            clientEntryUrl,
-            headTags,
-            viewTransitions: options.viewTransitions !== false
-          });
-
-          this.emitFile({
-            type: "asset",
-            fileName: "404.html",
-            source: html
-          });
-          generatedCount++;
-        }
-      }
-
-      if (generatedCount > 0) {
-        vLog.info(
-          "visage:pages",
-          `SSG static site generation complete ${pc.dim(`(${generatedCount} static HTML file${generatedCount === 1 ? "" : "s"} bundled)`)}`
-        );
-      }
+      buildSsgAssets(this, entryChunks, {
+        options,
+        routes,
+        special,
+        base,
+        rootId,
+        vLog
+      });
     }
   };
 }
