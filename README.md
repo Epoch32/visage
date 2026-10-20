@@ -25,6 +25,10 @@
   </a>
 </p>
 
+<p align="center">
+  <a href="https://visage.epoch32.org">Documentation</a>
+</p>
+
 Visage is a lightning-fast, zero-VDOM, fine-grained reactive UI library and full-stack application toolkit. It combines a push-pull signals architecture, direct DOM bindings, an ahead-of-time (AOT) template compiler, and integrated desktop capabilities into a cohesive, high-performance developer experience.
 
 ## What Visage Solves
