@@ -127,6 +127,24 @@ export interface ArcOptions {
  */
 export function pathArc(options: ArcOptions): string {
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle } = options;
+  const deltaAngle = Math.abs(endAngle - startAngle);
+
+  // Full 360-degree circle: split into two semi-circular arcs so start/end points don't coincide
+  if (deltaAngle >= 2 * Math.PI - 1e-4) {
+    const rO = outerRadius.toFixed(2);
+    const rI = innerRadius.toFixed(2);
+    const topY = (cy - outerRadius).toFixed(2);
+    const botY = (cy + outerRadius).toFixed(2);
+    const cxStr = cx.toFixed(2);
+
+    if (innerRadius <= 0) {
+      return `M ${cxStr},${topY} A ${rO},${rO} 0 1 1 ${cxStr},${botY} A ${rO},${rO} 0 1 1 ${cxStr},${topY} Z`;
+    }
+
+    const inTopY = (cy - innerRadius).toFixed(2);
+    const inBotY = (cy + innerRadius).toFixed(2);
+    return `M ${cxStr},${topY} A ${rO},${rO} 0 1 1 ${cxStr},${botY} A ${rO},${rO} 0 1 1 ${cxStr},${topY} M ${cxStr},${inTopY} A ${rI},${rI} 0 1 0 ${cxStr},${inBotY} A ${rI},${rI} 0 1 0 ${cxStr},${inTopY} Z`;
+  }
 
   const cosStart = Math.cos(startAngle);
   const sinStart = Math.sin(startAngle);
