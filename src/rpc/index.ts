@@ -1,4 +1,6 @@
 export {
+  type IssuePath,
+  normalizeIssuePath,
   Schema,
   type SchemaLike,
   type StandardSchemaV1,
