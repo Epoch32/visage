@@ -59,6 +59,18 @@ describe("Visage Charts (visage/charts)", () => {
       expect(scale("Feb") < scale("Mar")).toBe(true);
     });
 
+    it("correctly maps numeric categorical domain items without index collision", () => {
+      // Domain with numbers in reverse order
+      const scale = createBandScale([3, 2, 1], [0, 300]);
+      expect(scale(3) < scale(2)).toBe(true);
+      expect(scale(2) < scale(1)).toBe(true);
+
+      // Domain with years
+      const yearScale = createBandScale([2020, 2021, 2022], [0, 300]);
+      expect(yearScale(2020) < yearScale(2021)).toBe(true);
+      expect(yearScale(2021) < yearScale(2022)).toBe(true);
+    });
+
     it("generates linear and smooth SVG path coordinates", () => {
       const points = [
         { x: 0, y: 100 },
