@@ -1,46 +1,7 @@
 import type * as t from "@babel/types";
+import type { CSPOptions, SecureTransformsOptions } from "../types";
 
-export interface SecureTransformsOptions {
-  /**
-   * Shield href, src, action, and formAction against dangerous script execution protocols
-   * @default true
-   */
-  urlShield?: boolean;
-
-  /**
-   * Automatically ensure rel="noopener noreferrer" on target="_blank" links
-   * @default true
-   */
-  relShield?: boolean;
-
-  /**
-   * Disallow string literals or string expressions on event handlers
-   * @default true
-   */
-  eventShield?: boolean;
-
-  /**
-   * Guard dynamic id and name attributes against DOM clobbering collisions
-   * @default true
-   */
-  clobberShield?: boolean;
-
-  /**
-   * Guard innerHTML and dangerouslySetInnerHTML bindings against script injection
-   * @default true
-   */
-  htmlShield?: boolean;
-
-  /**
-   * Clean props spread onto native HTML elements
-   * @default true
-   */
-  spreadSanitizer?: boolean;
-}
-
-export type { CSPOptions } from "../types";
-
-import type { CSPOptions } from "../types";
+export type { CSPOptions, SecureTransformsOptions };
 
 export interface CompilerOptions {
   filename?: string;
