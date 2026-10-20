@@ -305,6 +305,14 @@ describe("Zig Native Project Scaffolding", () => {
     expect(fs.existsSync(buildZigPath)).toBe(true);
     expect(fs.existsSync(buildZonPath)).toBe(true);
 
+    const platformZigContent = fs.readFileSync(platformZigPath, "utf8");
+    expect(platformZigContent).toContain("for (urgency) |c|");
+    expect(platformZigContent).toContain("for (icon) |c|");
+
+    // Execute native Zig unit tests validating shell escape & injection prevention
+    const zigProc = Bun.spawnSync(["zig", "test", platformZigPath]);
+    expect(zigProc.exitCode).toBe(0);
+
     const zonContent = fs.readFileSync(buildZonPath, "utf8");
     expect(zonContent).toContain('.url = "git+https://github.com/happystraw/zig-webview"');
     expect(zonContent).toContain(".name = .visage_app");
