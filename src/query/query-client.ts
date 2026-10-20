@@ -20,6 +20,7 @@ export class QueryClient {
 
   private _unsubscribeFocus?: () => void;
   private _unsubscribeOnline?: () => void;
+  private _unsubscribeDevTools?: () => void;
   private _isMounted = false;
 
   constructor(config: QueryClientConfig = {}) {
@@ -29,7 +30,7 @@ export class QueryClient {
     this.mount();
 
     if (typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
-      (window as any).__VISAGE_DEVTOOLS__.attachQueryClient(this);
+      this._unsubscribeDevTools = (window as any).__VISAGE_DEVTOOLS__.attachQueryClient(this);
     }
   }
 
@@ -54,6 +55,7 @@ export class QueryClient {
     this._isMounted = false;
     this._unsubscribeFocus?.();
     this._unsubscribeOnline?.();
+    this._unsubscribeDevTools?.();
   }
 
   private onWindowFocus() {
