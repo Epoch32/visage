@@ -1,5 +1,4 @@
 export { colors, createVisageLogger, formatTag, pc, type VisageLogger } from "./logger";
-export { type VisageLucideOptions, visageLucide } from "./lucide";
 export { autoSyncZigFingerprint, scaffoldZigNative } from "./native-scaffold";
 export { matchRoute } from "./pages/matcher";
 export { resolvePagesDir, scanPages } from "./pages/scanner";
@@ -10,7 +9,7 @@ export {
   formatHeadersFile,
   parseHeadersFile
 } from "./plugins/headers";
-export { createLucidePlugin } from "./plugins/lucide";
+export { createLucidePlugin, type VisageLucideOptions, visageLucide } from "./plugins/lucide";
 export { createPagesPlugin, visagePages } from "./plugins/pages";
 export {
   generateStoragePrebootScript,
