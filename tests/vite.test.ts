@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
+import { EventEmitter } from "node:events";
 import { createRouter, v } from "../src/rpc";
 import { visage, visageLucide } from "../src/vite";
+import { createViteRpcMiddleware } from "../src/vite/rpc-middleware";
 
 describe("Visage Vite Plugin (visage/vite)", () => {
   it("generates the standard plugin pipeline with config, transform, and server hooks", () => {
@@ -432,6 +434,69 @@ export function Component() {
 
       const summaryLog = logs.find((l) => l.includes("AOT JSX Compiler Build Summary"));
       expect(summaryLog).toBeUndefined();
+    });
+  });
+
+  describe("Visage Vite RPC Middleware", () => {
+    it("cancels SSE stream reader when client disconnects", async () => {
+      let cancelled = false;
+      const streamRouter = createRouter().subscription("events", {
+        resolve: async function* () {
+          try {
+            while (true) {
+              yield { tick: Date.now() };
+              await new Promise((r) => setTimeout(r, 10));
+            }
+          } finally {
+            cancelled = true;
+          }
+        }
+      });
+
+      const middleware = createViteRpcMiddleware({
+        router: streamRouter,
+        endpoint: "/api/rpc"
+      });
+
+      class MockReq extends EventEmitter {
+        url = "/api/rpc/events";
+        method = "GET";
+        headers = { host: "localhost" };
+        [Symbol.asyncIterator]() {
+          return (async function* () {})();
+        }
+      }
+
+      class MockRes extends EventEmitter {
+        statusCode = 200;
+        headers = new Map<string, string>();
+        writes: any[] = [];
+        writableEnded = false;
+        setHeader(k: string, v: string) {
+          this.headers.set(k, v);
+        }
+        write(chunk: any) {
+          this.writes.push(chunk);
+        }
+        end() {
+          this.writableEnded = true;
+        }
+      }
+
+      const req = new MockReq();
+      const res = new MockRes();
+
+      const handlerPromise = middleware(req, res, () => {});
+
+      // Wait a brief tick for stream to start and first chunk to arrive
+      await new Promise((r) => setTimeout(r, 35));
+      expect(res.writes.length > 0).toBe(true);
+
+      // Simulate client disconnect
+      req.emit("close");
+
+      await handlerPromise;
+      expect(cancelled).toBe(true);
     });
   });
 });

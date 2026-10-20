@@ -63,12 +63,47 @@ export function createViteRpcMiddleware(options: NonNullable<VisagePluginOptions
       const isStream = webRes.headers.get("content-type")?.includes("text/event-stream");
       if (isStream && webRes.body) {
         const reader = webRes.body.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
+        let closed = false;
+        let cancelPromise: Promise<any> | null = null;
+        const onClose = () => {
+          if (!closed) {
+            closed = true;
+            cancelPromise = reader.cancel().catch(() => {});
+          }
+        };
+
+        req.on?.("close", onClose);
+        res.on?.("close", onClose);
+
+        try {
+          while (!closed) {
+            const { done, value } = await reader.read();
+            if (done || closed) break;
+            res.write(value);
+          }
+        } catch (_err) {
+          // Stream cancelled or client disconnected
+        } finally {
+          if (cancelPromise) {
+            await cancelPromise;
+          }
+
+          if (typeof req.off === "function") {
+            req.off("close", onClose);
+          } else {
+            req.removeListener?.("close", onClose);
+          }
+
+          if (typeof res.off === "function") {
+            res.off("close", onClose);
+          } else {
+            res.removeListener?.("close", onClose);
+          }
+
+          if (!closed && !res.writableEnded) {
+            res.end();
+          }
         }
-        res.end();
       } else {
         const text = await webRes.text();
         res.end(text);
