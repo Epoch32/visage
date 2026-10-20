@@ -3,6 +3,13 @@ import * as path from "node:path";
 import type { PageRoute, PageSpecialFiles } from "./types";
 
 /**
+ * Normalizes Windows backslashes to standard forward slashes
+ */
+export function normalizePath(p: string): string {
+  return p.replace(/\\/g, "/");
+}
+
+/**
  * Resolves the pages directory based on configuration and conventional locations
  */
 export function resolvePagesDir(root: string, configuredDir?: string): string | null {
