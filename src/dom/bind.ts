@@ -1,4 +1,4 @@
-import { effect, isSignal } from "@signals";
+import { effect, isSignal, onCleanup } from "@signals";
 
 /**
  * Handle two-way form bindings (bind:value, bind:checked, bind)
@@ -53,9 +53,13 @@ export function applyTwoWayBinding(
         (el as any).checked = checkedVal;
       }
     });
-    el.addEventListener("change", (e: any) => {
+    const handleChange = (e: any) => {
       const val = e?.target ? e.target.checked : (el as any).checked;
       set(val);
+    };
+    el.addEventListener("change", handleChange);
+    onCleanup(() => {
+      el.removeEventListener("change", handleChange);
     });
   } else {
     effect(() => {
@@ -68,6 +72,10 @@ export function applyTwoWayBinding(
     };
     el.addEventListener("input", updateValue);
     el.addEventListener("change", updateValue);
+    onCleanup(() => {
+      el.removeEventListener("input", updateValue);
+      el.removeEventListener("change", updateValue);
+    });
   }
 
   return true;
