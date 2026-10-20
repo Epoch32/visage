@@ -192,8 +192,15 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
 
     if (marker.parentNode) {
       const parentEl = marker.parentNode;
-      parentEl.textContent = "";
-      parentEl.appendChild(marker);
+      const firstNode = items[0]?.firstNode;
+      if (firstNode && parentEl.firstChild === firstNode && parentEl.lastChild === marker) {
+        parentEl.textContent = "";
+        parentEl.appendChild(marker);
+      } else {
+        for (const rec of items) {
+          rec.remove();
+        }
+      }
       parentEl.insertBefore(frag, marker);
     }
     return newItems;

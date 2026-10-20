@@ -254,6 +254,39 @@ describe("Visage JSX & Direct DOM", () => {
     unmount();
   });
 
+  it("does not destroy sibling DOM elements during 100% key replacement in <For>", () => {
+    const list = signal(["Item 1", "Item 2"]);
+
+    const unmount = render(
+      () => (
+        <div>
+          <h1 id="header">Header Title</h1>
+          <For each={list}>{(item) => <p class="list-item">{item}</p>}</For>
+          <footer id="footer">Footer Note</footer>
+        </div>
+      ),
+      container
+    );
+
+    expect(container.querySelector("#header")?.textContent).toBe("Header Title");
+    expect(container.querySelector("#footer")?.textContent).toBe("Footer Note");
+    let items = container.querySelectorAll(".list-item");
+    expect(items.length).toBe(2);
+    expect(items[0]?.textContent).toBe("Item 1");
+
+    // 100% key replacement (completely new items)
+    list.set(["Item 3", "Item 4", "Item 5"]);
+
+    // Sibling elements must be preserved!
+    expect(container.querySelector("#header")?.textContent).toBe("Header Title");
+    expect(container.querySelector("#footer")?.textContent).toBe("Footer Note");
+    items = container.querySelectorAll(".list-item");
+    expect(items.length).toBe(3);
+    expect(items[0]?.textContent).toBe("Item 3");
+
+    unmount();
+  });
+
   it("supports two-way form bindings with bind:value and bind:checked", () => {
     const textSignal = signal("Hello Visage");
     const checkedSignal = signal(false);
