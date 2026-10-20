@@ -286,6 +286,65 @@ pub fn messageDialog(
     return false;
 }
 
+pub fn buildNotificationCommand(
+    cmd_buf: []u8,
+    app_name: []const u8,
+    title: []const u8,
+    body: []const u8,
+    urgency: []const u8,
+    icon: []const u8,
+) ?[:0]const u8 {
+    var bw = BufferWriter{ .buf = cmd_buf };
+
+    bw.writeSlice("notify-send");
+    if (app_name.len > 0) {
+        bw.writeSlice(" -a '");
+        for (app_name) |c| {
+            if (c == '\'') bw.writeSlice("'\\''")
+            else bw.writeByte(c);
+        }
+        bw.writeSlice("'");
+    }
+    if (urgency.len > 0) {
+        bw.writeSlice(" -u '");
+        for (urgency) |c| {
+            if (c == '\'') bw.writeSlice("'\\''")
+            else bw.writeByte(c);
+        }
+        bw.writeSlice("'");
+    }
+    if (icon.len > 0) {
+        bw.writeSlice(" -i '");
+        for (icon) |c| {
+            if (c == '\'') bw.writeSlice("'\\''")
+            else bw.writeByte(c);
+        }
+        bw.writeSlice("'");
+    }
+    bw.writeSlice(" '");
+    for (title) |c| {
+        if (c == '\'') bw.writeSlice("'\\''")
+        else bw.writeByte(c);
+    }
+    bw.writeSlice("'");
+
+    if (body.len > 0) {
+        bw.writeSlice(" '");
+        for (body) |c| {
+            if (c == '\'') bw.writeSlice("'\\''")
+            else bw.writeByte(c);
+        }
+        bw.writeSlice("'");
+    }
+
+    const written = bw.getWritten();
+    if (written.len < cmd_buf.len) {
+        cmd_buf[written.len] = 0;
+        return @ptrCast(cmd_buf[0..written.len]);
+    }
+    return null;
+}
+
 pub fn sendNotification(
     app_name: []const u8,
     title: []const u8,
@@ -295,47 +354,7 @@ pub fn sendNotification(
 ) void {
     if (builtin.os.tag == .linux) {
         var cmd_buf: [2048]u8 = undefined;
-        var bw = BufferWriter{ .buf = &cmd_buf };
-
-        bw.writeSlice("notify-send");
-        if (app_name.len > 0) {
-            bw.writeSlice(" -a '");
-            for (app_name) |c| {
-                if (c == '\'') bw.writeSlice("'\\''")
-                else bw.writeByte(c);
-            }
-            bw.writeSlice("'");
-        }
-        if (urgency.len > 0) {
-            bw.writeSlice(" -u '");
-            bw.writeSlice(urgency);
-            bw.writeSlice("'");
-        }
-        if (icon.len > 0) {
-            bw.writeSlice(" -i '");
-            bw.writeSlice(icon);
-            bw.writeSlice("'");
-        }
-        bw.writeSlice(" '");
-        for (title) |c| {
-            if (c == '\'') bw.writeSlice("'\\''")
-            else bw.writeByte(c);
-        }
-        bw.writeSlice("'");
-
-        if (body.len > 0) {
-            bw.writeSlice(" '");
-            for (body) |c| {
-                if (c == '\'') bw.writeSlice("'\\''")
-                else bw.writeByte(c);
-            }
-            bw.writeSlice("'");
-        }
-
-        const written = bw.getWritten();
-        if (written.len < cmd_buf.len) {
-            cmd_buf[written.len] = 0;
-            const cmd_z: [*:0]const u8 = @ptrCast(cmd_buf[0..written.len]);
+        if (buildNotificationCommand(&cmd_buf, app_name, title, body, urgency, icon)) |cmd_z| {
             _ = linux.system(cmd_z);
         }
     }
@@ -343,4 +362,25 @@ pub fn sendNotification(
 
 pub fn isNotificationSupported() bool {
     return builtin.os.tag == .linux;
+}
+
+test "buildNotificationCommand properly escapes quotes preventing command injection" {
+    var buf: [1024]u8 = undefined;
+    const cmd = buildNotificationCommand(
+        &buf,
+        "app'inject",
+        "title'inject",
+        "body'inject",
+        "normal'; rm -rf /; '",
+        "icon.png' $(whoami) '",
+    ) orelse return error.BufferTooSmall;
+
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "-u 'normal'\\''") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "-i 'icon.png'\\''") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "-a 'app'\\''inject'") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "'title'\\''inject'") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "'body'\\''inject'") != null);
+
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "normal'; rm") == null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "icon.png' $(") == null);
 }
