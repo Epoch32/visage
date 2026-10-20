@@ -21,6 +21,7 @@ export function Link(props: LinkProps): Child {
     onFocus,
     onClick,
     children,
+    "aria-current": ariaCurrentProp,
     ...rest
   } = props;
   const rawClass = classProp ?? classNameProp;
@@ -81,10 +82,18 @@ export function Link(props: LinkProps): Child {
     return baseCls;
   });
 
+  const computedAriaCurrent = computed(() => {
+    if (ariaCurrentProp !== undefined) {
+      return typeof ariaCurrentProp === "function" ? (ariaCurrentProp as any)() : ariaCurrentProp;
+    }
+    return isActive() ? "page" : undefined;
+  });
+
   return (
     <a
       href={href}
       class={computedClass}
+      aria-current={computedAriaCurrent}
       onClick={handleClick}
       onPointerEnter={handlePointerEnter}
       onFocus={handleFocus}
