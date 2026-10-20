@@ -3,7 +3,7 @@ import type * as t from "@babel/types";
 import type { SecureTransformsOptions } from "../../types";
 
 export const DANGEROUS_HTML_REGEX =
-  /<(?:\/)?(?:script|iframe|object|embed|base)\b|\s+on[a-z]+\s*=|(?:\bhref|\bsrc)\s*=\s*['"]\s*(?:javascript|vbscript):/i;
+  /<(?:\/)?(?:script|iframe|object|embed|base)\b|[\s/]+on[a-z0-9_-]+\s*=|(?:\bhref|\bsrc)\s*=\s*(?:['"]\s*|\s*)(?:javascript|vbscript):/i;
 
 export function isHtmlShieldActive(security?: boolean | SecureTransformsOptions): boolean {
   if (!security) return false;
@@ -33,8 +33,8 @@ const _safeHtml = (h) => {
   const s = String(typeof raw === "function" ? raw() : raw ?? "");
   const clean = s
     .replace(/<(?:script|iframe|object|embed|base)\b[^>]*>[\s\S]*?<\/(?:script|iframe|object|embed|base)>|<(?:script|iframe|object|embed|base)\b[^>]*\/?>/gi, "")
-    .replace(/\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
-    .replace(/(?:href|src)\s*=\s*['"]\s*(?:javascript|vbscript):[^'"]*['"]/gi, 'href="about:blank"');
+    .replace(/[\s/]+on[a-z0-9_-]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
+    .replace(/(?:href|src)\s*=\s*(?:['"]\s*(?:javascript|vbscript):[^'"]*['"]|(?:javascript|vbscript):[^\s>]*)/gi, 'href="about:blank"');
   return typeof h === "object" && h !== null && "__html" in h ? { ...h, __html: clean } : clean;
 };
 `;
