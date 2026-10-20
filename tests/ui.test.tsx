@@ -1011,6 +1011,24 @@ describe("Visage UI Component Primitives", () => {
       unmount();
     });
 
+    it("renders DataTable rows without id without key collisions", () => {
+      const items = [{ name: "Item A" }, { name: "Item B" }, { name: "Item C" }];
+      const unmount = render(
+        () => (
+          <DataTable data={items} columns={[{ id: "name", header: "Name", accessorKey: "name" }]} />
+        ),
+        container
+      );
+
+      const rows = container.querySelectorAll("tbody tr");
+      expect(rows.length).toBe(3);
+      expect(rows[0]?.textContent).toContain("Item A");
+      expect(rows[1]?.textContent).toContain("Item B");
+      expect(rows[2]?.textContent).toContain("Item C");
+
+      unmount();
+    });
+
     it("renders Select primitive with options and handles selection", () => {
       let selectedVal = "light";
       const unmount = render(

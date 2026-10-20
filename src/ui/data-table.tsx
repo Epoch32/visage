@@ -61,9 +61,10 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
   const selectionMode = props.selection ?? "none";
 
   const getRowId = (row: T, index?: number): string => {
-    if (props.getRowId) return props.getRowId(row, index ?? 0);
+    const idx = index !== undefined ? index : paginatedData().indexOf(row);
+    if (props.getRowId) return props.getRowId(row, idx >= 0 ? idx : 0);
     if (row && typeof row === "object" && "id" in row) return String(row.id);
-    return String(index ?? 0);
+    return String(idx >= 0 ? idx : 0);
   };
 
   // 1. Filtered Data (memoized)
@@ -224,7 +225,7 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
           <tbody>
             <For
               each={paginatedData}
-              by={(row: T) => getRowId(row)}
+              by={(row: T) => getRowId(row, paginatedData().indexOf(row))}
               fallback={
                 <tr>
                   <td
