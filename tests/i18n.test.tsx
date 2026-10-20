@@ -172,4 +172,21 @@ describe("Visage Fine-Grained I18n & Community Translation Engine (visage/i18n)"
 
     expect(i18n.t("newSection.feature")).toBe("New Feature Title");
   });
+
+  it("prevents prototype pollution when querying Object prototype properties", () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      translations: baseTranslations
+    });
+
+    // None of these prototype properties exist in the dictionary
+    expect(i18n.t("toString")).toBe("toString");
+    expect(i18n.t("valueOf")).toBe("valueOf");
+    expect(i18n.t("constructor")).toBe("constructor");
+    expect(i18n.t("__proto__")).toBe("__proto__");
+
+    // Nested prototype pollution traversal
+    expect(i18n.t("common.__proto__.polluted")).toBe("common.__proto__.polluted");
+    expect(i18n.t("common.constructor")).toBe("common.constructor");
+  });
 });

@@ -8,18 +8,27 @@ import type {
   TranslationsDict
 } from "./types";
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 /**
  * Traverses nested object path like "nav.header.title"
  */
 function getPath(obj: any, path: string): any {
   if (!obj || typeof obj !== "object") return undefined;
-  if (path in obj) return obj[path];
+  if (path === "__proto__" || path === "constructor" || path === "prototype") return undefined;
+  if (hasOwn.call(obj, path)) return obj[path];
 
   const parts = path.split(".");
   let curr = obj;
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]!;
+    if (part === "__proto__" || part === "constructor" || part === "prototype") {
+      return undefined;
+    }
     if (curr === null || curr === undefined || typeof curr !== "object") {
+      return undefined;
+    }
+    if (!hasOwn.call(curr, part)) {
       return undefined;
     }
     curr = curr[part];
@@ -33,6 +42,9 @@ function getPath(obj: any, path: string): any {
 function deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
   const output = { ...target };
   for (const key of Object.keys(source)) {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      continue;
+    }
     const srcVal = source[key];
     const tgtVal = output[key];
     if (
@@ -82,7 +94,7 @@ function resolvePlural(pluralMap: PluralForms, count: number, locale: string): s
       return pluralMap.zero;
     }
 
-    if (rule in pluralMap && (pluralMap as any)[rule] !== undefined) {
+    if (hasOwn.call(pluralMap, rule) && (pluralMap as any)[rule] !== undefined) {
       return (pluralMap as any)[rule];
     }
   } catch {
