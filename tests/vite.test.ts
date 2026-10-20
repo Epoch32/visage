@@ -340,6 +340,9 @@ export function Component() {
   });
 
   describe("Compiler Diagnostics & Build Summary", () => {
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: strip ANSI escape codes in test assertion
+    const stripAnsi = (str: string) => str.replace(/\u001b\[[0-9;]*m/g, "");
+
     it("logs per-file transform diagnostics when verbose is enabled", () => {
       const logs: string[] = [];
       const mockLogger = {
@@ -362,8 +365,9 @@ export function Component() {
 
       const verboseLog = logs.find((l) => l.includes("Transformed") && l.includes("Nav.tsx"));
       expect(verboseLog).toBeDefined();
-      expect(verboseLog).toContain("1 template");
-      expect(verboseLog).toContain("events: [click]");
+      const cleanVerbose = stripAnsi(verboseLog!);
+      expect(cleanVerbose).toContain("1 template");
+      expect(cleanVerbose).toContain("events: [click]");
     });
 
     it("prints build summary dashboard on closeBundle() after transforming modules", () => {
@@ -389,9 +393,10 @@ export function Component() {
 
       const summaryLog = logs.find((l) => l.includes("AOT JSX Compiler Build Summary"));
       expect(summaryLog).toBeDefined();
-      expect(summaryLog).toContain("Transformed:      1 modules");
-      expect(summaryLog).toContain("Templates:        1 hoisted DOM templates");
-      expect(summaryLog).toContain("click");
+      const cleanSummary = stripAnsi(summaryLog!);
+      expect(cleanSummary).toContain("Transformed:      1 modules");
+      expect(cleanSummary).toContain("Templates:        1 hoisted DOM templates");
+      expect(cleanSummary).toContain("click");
     });
 
     it("does not print build summary dashboard when 0 modules transformed", () => {
