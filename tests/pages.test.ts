@@ -376,5 +376,40 @@ describe("Visage File-System MPA Pages Router (visage/pages)", () => {
       expect(status).toBe(404);
       expect(body).toContain("Custom 404");
     });
+
+    it("normalizes Windows backslash paths in dev watcher and client entry loader", () => {
+      const plugin = visagePages({ dir: tmpPagesDir });
+      (plugin as any).configResolved({
+        root: tmpPagesDir,
+        command: "serve",
+        build: { outDir: "dist" }
+      });
+
+      const watcherHandlers: Record<string, (file: string) => void> = {};
+      const mockServer = {
+        watcher: {
+          on: (event: string, handler: (file: string) => void) => {
+            watcherHandlers[event] = handler;
+          }
+        },
+        middlewares: { use: () => {} }
+      };
+
+      (plugin as any).configureServer(mockServer);
+
+      // Simulate watcher emitting Windows backslash path
+      const windowsPath = `${tmpPagesDir.replace(/\//g, "\\")}\\blog\\new-post.tsx`;
+      expect(typeof watcherHandlers.add).toBe("function");
+
+      // Does not throw when handling Windows path
+      expect(() => watcherHandlers.add!(windowsPath)).not.toThrow();
+
+      // Load client entry using Windows-style path parameter
+      const windowsVirtualId = `/@visage-pages-entry?file=${encodeURIComponent(windowsPath)}`;
+      const resolved = (plugin as any).resolveId(windowsVirtualId);
+      const loaded = (plugin as any).load(resolved);
+      expect(loaded).toBeDefined();
+      expect(loaded).toContain("new-post.tsx");
+    });
   });
 });

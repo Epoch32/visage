@@ -9,7 +9,7 @@ import {
   generateNotFoundEntry
 } from "../pages/generator";
 import { matchRoute } from "../pages/matcher";
-import { resolvePagesDir, scanPages } from "../pages/scanner";
+import { normalizePath, resolvePagesDir, scanPages } from "../pages/scanner";
 import type { PageRoute, PageSpecialFiles, PagesOptions } from "../pages/types";
 import type { VisageVitePlugin } from "../types";
 import { handlePreviewRouting } from "./pages/preview-middleware";
@@ -135,9 +135,15 @@ export function createPagesPlugin(
     configureServer(server) {
       if (!pagesDir) return;
 
+      const normalizedPagesDir = normalizePath(pagesDir);
+      const isPageFile = (file: string) => {
+        const normalizedFile = normalizePath(file);
+        return normalizedFile.startsWith(normalizedPagesDir) && /\.[jt]sx$/.test(normalizedFile);
+      };
+
       // Watch for added/deleted page files in dev
       server.watcher.on("add", (filePath: string) => {
-        if (filePath.startsWith(pagesDir!) && /\.[jt]sx$/.test(filePath)) {
+        if (isPageFile(filePath)) {
           refreshRoutes();
           vLog.info(
             "visage:pages",
@@ -146,7 +152,7 @@ export function createPagesPlugin(
         }
       });
       server.watcher.on("unlink", (filePath: string) => {
-        if (filePath.startsWith(pagesDir!) && /\.[jt]sx$/.test(filePath)) {
+        if (isPageFile(filePath)) {
           refreshRoutes();
           vLog.info("visage:pages", `Removed route component ${pc.dim(path.basename(filePath))}`);
         }
@@ -292,7 +298,8 @@ export function createPagesPlugin(
       }
 
       if (filePath) {
-        let matchedRoute = routes.find((r) => r.filePath === filePath);
+        const normalizedTarget = normalizePath(filePath);
+        let matchedRoute = routes.find((r) => normalizePath(r.filePath) === normalizedTarget);
         if (!matchedRoute) {
           matchedRoute = {
             path: "/",
