@@ -337,6 +337,23 @@ describe("Visage AOT JSX Compiler", () => {
     expect(code).toContain("children: [_tmpl$1(), _tmpl$2()]");
   });
 
+  it("preserves raw text nodes in JSX fragments", () => {
+    const input = `
+      function Mixed() {
+        return (
+          <>
+            Hello
+            <span>World</span>
+          </>
+        );
+      }
+    `;
+
+    const { code } = compileJsx(input);
+
+    expect(code).toContain('return ["Hello", _tmpl$1()];');
+  });
+
   it("merges required helper imports into existing import declarations", () => {
     const input = `
       import { createSignal } from "visage";
