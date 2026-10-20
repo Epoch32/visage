@@ -187,12 +187,15 @@ describe("Security Transform: URL Protocol Shield", () => {
 
     it("evaluates functional behavior of injected _safeUrl helper with string inputs", () => {
       const helperCode = String.raw`
-        const _safeUrl = (u) =>
-          /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
-            String(typeof u === "function" ? u() : u ?? "")
-          )
-            ? "about:blank"
-            : u;
+        const _safeUrl = (u) => {
+          const clean = (v) =>
+            /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
+              String(v ?? "")
+            )
+              ? "about:blank"
+              : v;
+          return typeof u === "function" ? () => clean(u()) : clean(u);
+        };
         return _safeUrl;
       `;
       const safeUrl = new Function(helperCode)();
@@ -215,36 +218,48 @@ describe("Security Transform: URL Protocol Shield", () => {
 
     it("evaluates functional behavior of injected _safeUrl helper with reactive signal getters", () => {
       const helperCode = String.raw`
-        const _safeUrl = (u) =>
-          /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
-            String(typeof u === "function" ? u() : u ?? "")
-          )
-            ? "about:blank"
-            : u;
+        const _safeUrl = (u) => {
+          const clean = (v) =>
+            /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
+              String(v ?? "")
+            )
+              ? "about:blank"
+              : v;
+          return typeof u === "function" ? () => clean(u()) : clean(u);
+        };
         return _safeUrl;
       `;
       const safeUrl = new Function(helperCode)();
 
-      // Dangerous signal returns about:blank
-      const maliciousSignal = () => "javascript:alert(1)";
-      expect(safeUrl(maliciousSignal)).toBe("about:blank");
+      // Function input returns a wrapped accessor function
+      let dynamicVal = "https://epoch32.com";
+      const reactiveSignal = () => dynamicVal;
+      const wrapped = safeUrl(reactiveSignal);
 
-      // Safe signal preserves original function reference for Visage reactive effects
-      const safeSignal = () => "https://epoch32.com";
-      const result = safeUrl(safeSignal);
-      expect(result).toBe(safeSignal);
-      expect(typeof result).toBe("function");
-      expect(result()).toBe("https://epoch32.com");
+      expect(typeof wrapped).toBe("function");
+      // Initially safe
+      expect(wrapped()).toBe("https://epoch32.com");
+
+      // Subsequent update to dangerous protocol is sanitized dynamically
+      dynamicVal = "javascript:alert(1)";
+      expect(wrapped()).toBe("about:blank");
+
+      // Subsequent update back to safe URL is restored
+      dynamicVal = "https://epoch32.com/docs";
+      expect(wrapped()).toBe("https://epoch32.com/docs");
     });
 
     it("handles nullish values gracefully", () => {
       const helperCode = String.raw`
-        const _safeUrl = (u) =>
-          /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
-            String(typeof u === "function" ? u() : u ?? "")
-          )
-            ? "about:blank"
-            : u;
+        const _safeUrl = (u) => {
+          const clean = (v) =>
+            /^(?:\s*|[\u0000-\u001F\u007F-\u009F])*(?:(?:javascript|vbscript):|data\s*:\s*(?:text\/(?:html|javascript|ecmascript)|application\/(?:javascript|ecmascript))(?:\s*|;|,))/i.test(
+              String(v ?? "")
+            )
+              ? "about:blank"
+              : v;
+          return typeof u === "function" ? () => clean(u()) : clean(u);
+        };
         return _safeUrl;
       `;
       const safeUrl = new Function(helperCode)();
