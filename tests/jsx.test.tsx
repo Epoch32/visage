@@ -384,4 +384,50 @@ describe("Visage JSX & Direct DOM", () => {
     setAttribute(el, "only", "sidebar");
     expect(el.getAttribute("only")).toBe("sidebar");
   });
+
+  it("instantiates SVG 2 elements in the SVG namespace", () => {
+    const unmount = render(
+      () => (
+        <svg viewBox="0 0 100 100">
+          <title>Test SVG</title>
+          <filter id="blur">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
+          <mask id="my-mask">
+            <rect width="100" height="100" fill="white" />
+          </mask>
+          <pattern id="pat" width="10" height="10" />
+          <marker id="arrow" />
+          <use href="#arrow" />
+          <foreignObject width="50" height="50">
+            <div>HTML content</div>
+          </foreignObject>
+        </svg>
+      ),
+      container
+    );
+
+    const svg = container.querySelector("svg")!;
+    expect(svg.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    const filter = container.querySelector("filter")!;
+    expect(filter.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    const mask = container.querySelector("mask")!;
+    expect(mask.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    const pattern = container.querySelector("pattern")!;
+    expect(pattern.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    const marker = container.querySelector("marker")!;
+    expect(marker.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    const use = container.querySelector("use")!;
+    expect(use.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    const foreignObject = container.querySelector("foreignObject")!;
+    expect(foreignObject.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    unmount();
+  });
 });
