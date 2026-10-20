@@ -233,6 +233,38 @@ describe("Visage Charts (visage/charts)", () => {
       expect(rects?.[0]?.getAttribute("rx")).toBe("4");
     });
 
+    it("renders negative and positive bars with dynamic zero-baseline without clipping", () => {
+      const data = [
+        { category: "Profit", val: 50 },
+        { category: "Loss", val: -30 }
+      ];
+
+      render(() => {
+        return (
+          <Chart data={data} width={300} height={200}>
+            <XAxis dataKey="category" />
+            <Bar dataKey="val" fill="#3b82f6" />
+          </Chart>
+        );
+      }, container);
+
+      const barGroup = container.querySelector(".visage-bar-val");
+      const rects = barGroup?.querySelectorAll("rect");
+      expect(rects?.length).toBe(2);
+
+      const posHeight = Number(rects?.[0]?.getAttribute("height"));
+      const negHeight = Number(rects?.[1]?.getAttribute("height"));
+      const posY = Number(rects?.[0]?.getAttribute("y"));
+      const negY = Number(rects?.[1]?.getAttribute("y"));
+
+      // Both bars must have positive non-zero height
+      expect(posHeight > 0).toBe(true);
+      expect(negHeight > 0).toBe(true);
+
+      // Positive bar is positioned above negative bar
+      expect(posY < negY).toBe(true);
+    });
+
     it("renders pie and donut chart slices", () => {
       const data = [
         { name: "Alpha", val: 40 },
