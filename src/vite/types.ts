@@ -102,9 +102,51 @@ export interface VisagePluginOptions {
   storagePreboot?: boolean | StoragePrebootOptions;
 
   /**
+   * Automated RFC 9111 & RFC 8246 HTTP cache headers generator for static hosting (Cloudflare, Netlify).
+   *
+   * When building for production (`vite build`):
+   * - Emits an optimized `_headers` file in the build output (`dist/`)
+   * - Applies `public, max-age=31536000, immutable` to content-hashed assets (`/assets/*`)
+   * - Applies `public, max-age=0, must-revalidate` to root documents and HTML shells (`/*`)
+   * - Enables 0ms instantaneous loads from disk cache for all static assets on repeat visits
+   *
+   * Enabled by default (`true`). Set to `false` to disable.
+   * @default true
+   */
+  headers?: boolean | HeadersPluginOptions;
+
+  /**
    * Opt-in experimental compiler and packager options
    */
   experimental?: ExperimentalOptions;
+}
+
+/**
+ * Options for the automated static hosting headers plugin
+ */
+export interface HeadersPluginOptions {
+  /**
+   * Whether to enable automatic _headers generation
+   * @default true
+   */
+  enabled?: boolean;
+
+  /**
+   * Cache-Control directive for hashed assets under /assets/* (RFC 8246)
+   * @default "public, max-age=31536000, immutable"
+   */
+  assetsCacheControl?: string;
+
+  /**
+   * Cache-Control directive for root documents and HTML shells under /* (RFC 9111)
+   * @default "public, max-age=0, must-revalidate"
+   */
+  documentCacheControl?: string;
+
+  /**
+   * Additional custom header blocks or rules to include in _headers
+   */
+  customRules?: Record<string, Record<string, string>>;
 }
 
 /**

@@ -6,13 +6,14 @@ describe("Visage Vite Plugin (visage/vite)", () => {
   it("generates the standard plugin pipeline with config, transform, and server hooks", () => {
     const plugins = visage();
     expect(Array.isArray(plugins)).toBe(true);
-    expect(plugins.length).toBe(6);
+    expect(plugins.length).toBe(7);
 
     const names = plugins.map((p) => p.name);
     expect(names).toContain("visage:config");
     expect(names).toContain("visage:lucide");
     expect(names).toContain("visage:compiler");
     expect(names).toContain("visage:storage-preboot");
+    expect(names).toContain("visage:headers");
     expect(names).toContain("visage:transform");
     expect(names).toContain("visage:server");
   });
@@ -274,7 +275,7 @@ export function Component() {
     const plugins = visage({ compiler: false });
     const compilerPlugin = plugins.find((p) => p.name === "visage:compiler");
     expect(compilerPlugin).toBeUndefined();
-    expect(plugins.length).toBe(5);
+    expect(plugins.length).toBe(6);
   });
 
   it("activates storage preboot by default in visage() plugin", () => {
@@ -287,7 +288,20 @@ export function Component() {
     const plugins = visage({ storagePreboot: false });
     const prebootPlugin = plugins.find((p) => p.name === "visage:storage-preboot");
     expect(prebootPlugin).toBeUndefined();
-    expect(plugins.length).toBe(5);
+    expect(plugins.length).toBe(6);
+  });
+
+  it("activates headers plugin by default in visage() plugin", () => {
+    const plugins = visage();
+    const headersPlugin = plugins.find((p) => p.name === "visage:headers");
+    expect(headersPlugin).toBeDefined();
+  });
+
+  it("allows disabling headers plugin via visage({ headers: false })", () => {
+    const plugins = visage({ headers: false });
+    const headersPlugin = plugins.find((p) => p.name === "visage:headers");
+    expect(headersPlugin).toBeUndefined();
+    expect(plugins.length).toBe(6);
   });
 
   describe("Native Desktop Host Options", () => {

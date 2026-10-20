@@ -5,6 +5,11 @@ export { matchRoute } from "./pages/matcher";
 export { resolvePagesDir, scanPages } from "./pages/scanner";
 export { default, visage } from "./plugin";
 export { createCspPlugin } from "./plugins/csp";
+export {
+  createHeadersPlugin,
+  formatHeadersFile,
+  parseHeadersFile
+} from "./plugins/headers";
 export { createLucidePlugin } from "./plugins/lucide";
 export { createPagesPlugin, visagePages } from "./plugins/pages";
 export {
@@ -16,6 +21,7 @@ export {
 export type {
   CSPOptions,
   ExperimentalOptions,
+  HeadersPluginOptions,
   PageRoute,
   PageSpecialFiles,
   PagesOptions,
