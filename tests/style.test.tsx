@@ -89,6 +89,33 @@ describe("Visage Scoped Styles & CSS Engine (visage/style)", () => {
       expect(scoped).toContain(".container[data-v-m1] { width: 750px; }");
       expect(scoped).toContain(".title[data-v-m1] { font-size: 2rem; }");
     });
+
+    it("correctly parses rules with string literals or comments containing braces without premature truncation", () => {
+      const rawCSS = `
+        .tooltip::after {
+          content: "}";
+          color: red;
+        }
+        .code::before {
+          /* { unescaped comment brace */
+          content: '{';
+        }
+        .card {
+          padding: 8px;
+          & .nested {
+            color: blue;
+          }
+        }
+      `;
+
+      const scoped = scopeCSS(rawCSS, { scopeId: "v-braces" });
+      expect(scoped).toContain(".tooltip[data-v-braces]::after {");
+      expect(scoped).toContain('content: "}";');
+      expect(scoped).toContain("color: red;");
+      expect(scoped).toContain(".code[data-v-braces]::before {");
+      expect(scoped).toContain(".card[data-v-braces] {");
+      expect(scoped).toContain("& .nested {");
+    });
   });
 
   describe("createStyle and tagged template css", () => {
