@@ -224,12 +224,24 @@ export function generateStoragePrebootScript(items: StoragePrebootItem[]): strin
     lines.push(`w.__VISAGE_PREBOOT__[${keyEscaped}]=${varName};`);
 
     // Apply attribute or class to target DOM element
-    const targetEl = item.targetElement === "body" ? "document.body" : "d";
-    if (item.attribute === "class") {
-      lines.push(`if(${varName}){${targetEl}.classList.add(${varName});}`);
+    if (item.targetElement === "body") {
+      if (item.attribute === "class") {
+        lines.push(
+          `if(${varName}){if(document.body){document.body.classList.add(${varName});}else{d.classList.add(${varName});` +
+            `d.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.classList.add(${varName});});}}`
+        );
+      } else {
+        const attrEscaped = JSON.stringify(item.attribute ?? `data-${item.key}`);
+        lines.push(
+          `if(${varName}){if(document.body){document.body.setAttribute(${attrEscaped},${varName});}else{d.setAttribute(${attrEscaped},${varName});` +
+            `d.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.setAttribute(${attrEscaped},${varName});});}}`
+        );
+      }
+    } else if (item.attribute === "class") {
+      lines.push(`if(${varName}){d.classList.add(${varName});}`);
     } else {
       const attrEscaped = JSON.stringify(item.attribute ?? `data-${item.key}`);
-      lines.push(`if(${varName}){${targetEl}.setAttribute(${attrEscaped},${varName});}`);
+      lines.push(`if(${varName}){d.setAttribute(${attrEscaped},${varName});}`);
     }
   }
 
