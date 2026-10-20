@@ -1,6 +1,6 @@
 import { Portal } from "@dom/control-flow";
 import type { Child } from "@dom/render";
-import { onCleanup, type ReadonlySignal, signal, type WritableSignal } from "@signals";
+import { effect, onCleanup, type ReadonlySignal, signal, type WritableSignal } from "@signals";
 import { createContext, useContext } from "@signals/context";
 import { useDismiss } from "./overlay";
 import { createControllableSignal, createId } from "./utils";
@@ -214,6 +214,40 @@ export interface DialogContentProps {
 export function DialogContent(props: DialogContentProps): Child {
   const ctx = useContext(DialogContext);
 
+  let previousActiveElement: HTMLElement | null = null;
+
+  effect(() => {
+    const isOpen = ctx?.open();
+    if (isOpen) {
+      if (typeof document !== "undefined") {
+        previousActiveElement = document.activeElement as HTMLElement | null;
+      }
+      setTimeout(() => {
+        const el = ctx?.contentRef.current;
+        if (el) {
+          const focusable = el.querySelector<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable) {
+            focusable.focus();
+          } else {
+            el.focus();
+          }
+        }
+      }, 0);
+    } else if (previousActiveElement) {
+      previousActiveElement.focus?.();
+      previousActiveElement = null;
+    }
+  });
+
+  onCleanup(() => {
+    if (previousActiveElement) {
+      previousActiveElement.focus?.();
+      previousActiveElement = null;
+    }
+  });
+
   const dismiss = useDismiss(() => ctx?.contentRef.current, {
     enabled: () => ctx?.open() ?? false,
     onDismiss: () => ctx?.setOpen(false),
@@ -264,14 +298,6 @@ export function DialogContent(props: DialogContentProps): Child {
       ref={(el: HTMLElement | null) => {
         if (ctx) {
           ctx.contentRef.current = el;
-          if (el && ctx.open()) {
-            const focusable = el.querySelector<HTMLElement>(
-              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-            );
-            if (focusable) {
-              setTimeout(() => focusable.focus(), 0);
-            }
-          }
         }
       }}
       role="dialog"

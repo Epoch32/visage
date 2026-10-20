@@ -62,6 +62,12 @@ export function trapFocus(container: HTMLElement, event: KeyboardEvent) {
   const first = focusables[0]!;
   const last = focusables[focusables.length - 1]!;
 
+  if (!container.contains(document.activeElement)) {
+    first.focus();
+    event.preventDefault();
+    return;
+  }
+
   if (event.shiftKey) {
     if (document.activeElement === first) {
       last.focus();
