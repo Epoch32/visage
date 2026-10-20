@@ -1,4 +1,5 @@
 import type { InferSchemaType, SchemaLike, ValidationIssue } from "@form/schema";
+import type { CacheControlDirectives } from "@http";
 import type {
   CreateQueryOptions,
   MutationOptions,
@@ -33,6 +34,7 @@ export interface ProcedureOptionsWithInput<
 > {
   input: TSchema;
   output?: SchemaLike<TOutput>;
+  cache?: CacheControlDirectives | string;
   resolve: (opts: {
     input: InferSchemaType<TSchema>;
     ctx: TContext;
@@ -44,6 +46,7 @@ export interface ProcedureOptionsWithInput<
 export interface ProcedureOptionsWithoutInput<TOutput = any, TContext = any> {
   input?: undefined;
   output?: SchemaLike<TOutput>;
+  cache?: CacheControlDirectives | string;
   resolve: (opts: {
     input: void;
     ctx: TContext;
@@ -55,6 +58,7 @@ export interface ProcedureOptionsWithoutInput<TOutput = any, TContext = any> {
 export type ProcedureOptions<TInput = any, TOutput = any, TContext = any> = {
   input?: SchemaLike<TInput>;
   output?: SchemaLike<TOutput>;
+  cache?: CacheControlDirectives | string;
   resolve: (opts: {
     input: TInput;
     ctx: TContext;
@@ -70,6 +74,7 @@ export interface Procedure<
   TContext = any
 > {
   type: TType;
+  cache?: CacheControlDirectives | string;
   inputSchema?: SchemaLike<TInput>;
   outputSchema?: SchemaLike<TOutput>;
   middlewares: MiddlewareFn<any, any>[];
@@ -162,6 +167,11 @@ export interface RouteRule {
   headers?: HeadersConfig;
 
   /**
+   * Optional Cache-Control directives or header string.
+   */
+  cache?: CacheControlDirectives | string;
+
+  /**
    * Required request headers. If any are missing, automatically rejects with HTTP 401 Unauthorized.
    */
   requireHeaders?: string[];
@@ -187,6 +197,8 @@ export interface FetchHandlerOptions<
 > {
   router: TRouter;
   endpoint?: string;
+  cache?: CacheControlDirectives | string;
+  etag?: boolean;
   createContext?: (opts: { req: Request; extra: any[] }) => Promise<TContext> | TContext;
   onError?: (opts: { error: any; path?: string; req: Request }) => void;
   cors?: boolean | CORSOptions;

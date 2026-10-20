@@ -2,6 +2,7 @@
  * Visage Web Standard API Fetch Handler & Request Dispatcher
  */
 import { validateWithSchema } from "@form/schema";
+import { formatCacheControl, handleConditionalResponse } from "@http";
 import { ERROR_CODE_TO_STATUS, RPCError } from "@rpc/error";
 import { buildFileRouter } from "./file-router";
 import { executeMiddlewareChain } from "./middleware";
@@ -137,8 +138,12 @@ export function createApiHandler(
       let procedure: ApiProcedure | undefined = matchedRoute.procedures.default;
 
       if (!procedure) {
-        if (method === "GET") {
-          procedure = matchedRoute.procedures.GET || matchedRoute.procedures.get;
+        if (method === "GET" || method === "HEAD") {
+          procedure =
+            matchedRoute.procedures.HEAD ||
+            matchedRoute.procedures.head ||
+            matchedRoute.procedures.GET ||
+            matchedRoute.procedures.get;
         } else if (method === "POST") {
           procedure = matchedRoute.procedures.POST || matchedRoute.procedures.post;
         } else if (method === "PUT") {
@@ -173,6 +178,12 @@ export function createApiHandler(
       // 4. Custom Raw Handler
       if (matchedRoute.handler) {
         const res = await matchedRoute.handler(req, ctx);
+        if (config.etag !== false && (method === "GET" || method === "HEAD")) {
+          const conditionalRes = await handleConditionalResponse(req, res, {
+            cacheControl: config.cache
+          });
+          return applyCorsHeaders(conditionalRes, req, config.cors);
+        }
         return applyCorsHeaders(res, req, config.cors);
       }
 
@@ -195,7 +206,7 @@ export function createApiHandler(
 
       // Parse Input
       let rawInput: any = {};
-      if (method === "GET") {
+      if (method === "GET" || method === "HEAD") {
         const inputQuery = url.searchParams.get("input");
         if (inputQuery) {
           try {
@@ -299,6 +310,33 @@ export function createApiHandler(
         status: 200,
         headers: { "Content-Type": "application/json" }
       });
+
+      if (config.etag !== false && (method === "GET" || method === "HEAD")) {
+        const conditionalRes = await handleConditionalResponse(req, successRes, {
+          cacheControl: procedure.options.cache ?? config.cache
+        });
+        return applyCorsHeaders(conditionalRes, req, config.cors);
+      }
+
+      if (procedure.options.cache ?? config.cache) {
+        successRes.headers.set(
+          "Cache-Control",
+          formatCacheControl(procedure.options.cache ?? config.cache)
+        );
+      }
+
+      if (method === "HEAD") {
+        return applyCorsHeaders(
+          new Response(null, {
+            status: successRes.status,
+            statusText: successRes.statusText,
+            headers: successRes.headers
+          }),
+          req,
+          config.cors
+        );
+      }
+
       return applyCorsHeaders(successRes, req, config.cors);
     } catch (err: any) {
       if (config.onError) {

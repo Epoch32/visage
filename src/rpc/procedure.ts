@@ -16,9 +16,11 @@ export function createProcedure<
   const resolve = isFn ? options : options?.resolve;
   const inputSchema = isFn ? undefined : options?.input;
   const outputSchema = isFn ? undefined : options?.output;
+  const cache = isFn ? undefined : options?.cache;
 
   return {
     type,
+    cache,
     inputSchema,
     outputSchema,
     middlewares: [...middlewares],

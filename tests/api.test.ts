@@ -409,4 +409,76 @@ export const middleware = () => {};
       expect(preflightRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
     });
   });
+
+  describe("HTTP Caching & Conditional Revalidation (RFC 9110 / RFC 9111)", () => {
+    const cacheFiles = {
+      "./routes/feed.ts": {
+        get: procedure
+          .cache({ public: true, maxAge: 0, sMaxAge: 3600, mustRevalidate: true })
+          .query(() => ({ items: ["article-1", "article-2"] }))
+      },
+      "./routes/raw-info.ts": {
+        default: async () =>
+          new Response("Visage Server v2.0", {
+            status: 200,
+            headers: { "Content-Type": "text/plain" }
+          })
+      }
+    };
+
+    const api = createApi(
+      cacheFiles,
+      {},
+      {
+        cors: { origin: "*" }
+      }
+    );
+
+    it("automatically generates weak ETag and attaches structured Cache-Control", async () => {
+      const req = new Request("http://localhost/feed");
+      const res = await api.fetch(req);
+      expect(res.status).toBe(200);
+
+      const etag = res.headers.get("etag");
+      expect(etag).not.toBeNull();
+      expect(etag?.startsWith('W/"')).toBe(true);
+
+      const cacheControl = res.headers.get("cache-control");
+      expect(cacheControl).toContain("public");
+      expect(cacheControl).toContain("s-maxage=3600");
+      expect(cacheControl).toContain("must-revalidate");
+
+      const body = await res.json();
+      expect(body.data.items).toEqual(["article-1", "article-2"]);
+    });
+
+    it("returns 304 Not Modified when client supplies matching If-None-Match", async () => {
+      // 1. Initial request to obtain ETag
+      const req1 = new Request("http://localhost/feed");
+      const res1 = await api.fetch(req1);
+      const etag = res1.headers.get("etag")!;
+
+      // 2. Revalidation request
+      const req2 = new Request("http://localhost/feed", {
+        headers: { "If-None-Match": etag }
+      });
+      const res2 = await api.fetch(req2);
+      expect(res2.status).toBe(304);
+      expect(res2.statusText).toBe("Not Modified");
+      expect(res2.headers.get("etag")).toBe(etag);
+      expect(res2.headers.get("cache-control")).toContain("s-maxage=3600");
+      expect(res2.headers.get("content-type")).toBeNull();
+      expect(await res2.text()).toBe("");
+    });
+
+    it("supports RFC 9110 §9.3.2 HEAD requests returning identical headers with empty body", async () => {
+      const headReq = new Request("http://localhost/feed", { method: "HEAD" });
+      const headRes = await api.fetch(headReq);
+      expect(headRes.status).toBe(200);
+      expect(headRes.headers.get("etag")).not.toBeNull();
+      expect(headRes.headers.get("cache-control")).toContain("s-maxage=3600");
+      expect(headRes.headers.get("content-type")).toBe("application/json");
+      expect(await headRes.text()).toBe("");
+    });
+  });
 });

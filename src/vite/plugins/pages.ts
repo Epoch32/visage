@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { generateETag, matchesETagHeader } from "../../http";
 import { createVisageLogger, pc, type VisageLogger } from "../logger";
 import {
   generateClientEntry,
@@ -184,8 +185,22 @@ export function createPagesPlugin(
 
           try {
             const html = await server.transformIndexHtml(req.url, rawHtml);
+            const etag = generateETag(html, { weak: true });
+            const ifNoneMatch = req.headers ? req.headers["if-none-match"] : undefined;
+
+            if (ifNoneMatch && matchesETagHeader(ifNoneMatch, etag)) {
+              res.statusCode = 304;
+              res.statusMessage = "Not Modified";
+              res.setHeader("ETag", etag);
+              res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+              res.end();
+              return;
+            }
+
             res.statusCode = 200;
             res.setHeader("Content-Type", "text/html; charset=utf-8");
+            res.setHeader("ETag", etag);
+            res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
             res.end(html);
             return;
           } catch (err: any) {
