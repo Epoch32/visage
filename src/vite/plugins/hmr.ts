@@ -5,8 +5,10 @@ import type { VisagePluginOptions, VisageVitePlugin } from "../types";
  * Transform JSX/TSX modules to attach Hot Module Replacement (HMR) acceptance
  */
 export function transformHmr(code: string, id: string): { code: string; map?: any } | null {
+  const cleanId = id.split("?")[0] || id;
+
   // Only target user code JSX/TSX files
-  if (!/\.[jt]sx$/.test(id) || id.includes("node_modules")) {
+  if (!/\.[jt]sx$/.test(cleanId) || cleanId.includes("node_modules")) {
     return null;
   }
 

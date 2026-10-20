@@ -52,6 +52,14 @@ describe("Visage Vite Plugin (visage/vite)", () => {
     expect(result?.code).toContain("/* @visage/vite-hmr */");
     expect(result?.code).toContain("import.meta.hot.accept");
 
+    // Transforms JSX files even when query parameters are present on id
+    const queryResult = (transformPlugin as any).transform(
+      sourceCode,
+      "/src/components/Counter.tsx?import"
+    );
+    expect(queryResult).not.toBeNull();
+    expect(queryResult?.code).toContain("/* @visage/vite-hmr */");
+
     // Does not transform non-JSX files or node_modules
     const jsResult = (transformPlugin as any).transform(sourceCode, "/src/utils.ts");
     expect(jsResult).toBeNull();
