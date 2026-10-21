@@ -137,6 +137,7 @@
     "example:auth": "vite examples/enterprise-auth",
     "example:api": "bun examples/api-showcase/server.ts",
     "example:benchmark": "vite examples/benchmark-showcase",
+    "example:problem": "vite examples/problem-decoder",
     "example:sim": "vite examples/traffic-sim"
   },
   "devDependencies": {
