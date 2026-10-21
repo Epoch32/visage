@@ -1,6 +1,6 @@
 # Visage File-Based API Showcase
 
-This example demonstrates how to build an opinionated full-stack application using **`visage/api`** — an ultra-fast, zero-baggage, file-based RPC framework.
+This example demonstrates how to build an opinionated full-stack application using **`visage/api`** - an ultra-fast, zero-baggage, file-based RPC framework.
 
 ## Key Features
 
