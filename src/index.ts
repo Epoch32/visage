@@ -107,6 +107,8 @@ export {
   isReactive,
   type LazyComponent,
   lazy,
+  NoScript,
+  type NoScriptProps,
   Portal,
   type PortalProps,
   type ReactiveValue,

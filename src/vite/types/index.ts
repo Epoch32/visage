@@ -13,6 +13,7 @@ export type { HeadersPluginOptions } from "./headers";
 export type { WindowBorderOptions, ZigNativeOptions } from "./native";
 export type {
   ExperimentalOptions,
+  NoScriptPluginOptions,
   VisagePluginOptions,
   VisageVitePlugin
 } from "./plugin";

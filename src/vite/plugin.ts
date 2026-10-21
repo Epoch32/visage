@@ -7,6 +7,7 @@ import { createHeadersPlugin } from "./plugins/headers";
 import { createHmrPlugin } from "./plugins/hmr";
 import { createLucidePlugin } from "./plugins/lucide";
 import { createNativePlugin } from "./plugins/native";
+import { createNoScriptPlugin } from "./plugins/noscript";
 import { createPagesPlugin } from "./plugins/pages";
 import { createServerPlugin } from "./plugins/server";
 import { createStoragePrebootPlugin } from "./plugins/storage-preboot";
@@ -129,6 +130,10 @@ export function visage(options: VisagePluginOptions = {}): VisageVitePlugin[] {
 
   if (options.headers !== false) {
     plugins.push(createHeadersPlugin(options.headers, vLog));
+  }
+
+  if (options.noscript) {
+    plugins.push(createNoScriptPlugin(options.noscript, vLog));
   }
 
   plugins.push(createHmrPlugin(options, vLog, isDev), createServerPlugin(options, vLog, isDev));
