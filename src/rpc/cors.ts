@@ -9,7 +9,10 @@ export function getCORSHeaders(cors: boolean | CORSOptions | undefined, req: Req
 
   let allowOrigin: string | null = null;
   if (!opts.origin || opts.origin === "*") {
-    allowOrigin = originHeader || "*";
+    // If credentials are enabled, wildcard or blind reflection is unsafe
+    if (!opts.credentials) {
+      allowOrigin = originHeader || "*";
+    }
   } else if (originHeader) {
     if (typeof opts.origin === "function") {
       const res = opts.origin(originHeader);

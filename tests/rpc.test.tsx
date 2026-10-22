@@ -229,6 +229,20 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     const evilRes = await handler(evilReq);
     expect(evilRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
     expect(evilRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
+
+    // Disallow wildcard origin reflection when credentials: true is configured without explicit origin
+    const insecureHandler = createFetchHandler({
+      router: appRouter,
+      endpoint: "/api/rpc",
+      cors: { credentials: true }
+    });
+    const insecureRes = await insecureHandler(
+      new Request("http://localhost/api/rpc/greeting", {
+        headers: { Origin: "https://arbitrary-attacker.com" }
+      })
+    );
+    expect(insecureRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    expect(insecureRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
   });
 
   it("integrates seamlessly with Hono-style sub-routing and context passing", async () => {
