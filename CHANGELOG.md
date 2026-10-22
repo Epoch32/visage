@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0](https://github.com/Epoch32/visage/compare/v2.1.0...v2.2.0) (2026-10-22)
+
+
+### Features
+
+* **dom,vite:** add NoScript component and automated noscript fallback plugin ([4236960](https://github.com/Epoch32/visage/commit/423696068a40d8d54b32879581c9a78604295621))
+* **examples:** add consumer-focused problem details decoder showcase ([6ae65f8](https://github.com/Epoch32/visage/commit/6ae65f86caf411d20b61a2343b1e2ecec4dea0ef))
+* **rpc,io,form:** add multipart FormData uploads, recursive directory drops, and binary file schemas ([9135ffc](https://github.com/Epoch32/visage/commit/9135ffc6e5352ebcd83120168535e6ec0a88bc6f))
+* security fixes, perforamcne improvements ([061cfe8](https://github.com/Epoch32/visage/commit/061cfe85c9dd693b70026118c883c462958dfedd))
+
 ## [2.1.0](https://github.com/Epoch32/visage/compare/v2.0.0...v2.1.0) (2026-10-20)
 
 
