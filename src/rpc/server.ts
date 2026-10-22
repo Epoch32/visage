@@ -24,7 +24,8 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     problemDetails: handlerProblemDetails,
     maxBatchSize = 50,
     maxBodySize = 10 * 1024 * 1024,
-    csrfProtection = true
+    csrfProtection = true,
+    heartbeatInterval = 15000
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -492,7 +493,9 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           signal: request.signal
         })) as AsyncIterable<any>;
 
-        return createSubscriptionResponse(iterable, request.signal, baseHeaders);
+        return createSubscriptionResponse(iterable, request.signal, baseHeaders, {
+          heartbeatInterval
+        });
       }
 
       // Standard Query or Mutation execution

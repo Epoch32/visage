@@ -230,6 +230,13 @@ export interface FetchHandlerOptions<
   csrfProtection?: boolean;
 
   /**
+   * Interval in milliseconds for Server-Sent Events (SSE) keep-alive heartbeat pings.
+   * When > 0, periodically sends SSE comment ': ping\n\n' to prevent proxy timeouts.
+   * Defaults to 15000 (15s). Set to 0 to disable.
+   */
+  heartbeatInterval?: number;
+
+  /**
    * Declarative pattern rules matching URL paths or procedure names (e.g. "*", "/api/*", "admin.*").
    * Supports wildcard matching with '*'.
    */

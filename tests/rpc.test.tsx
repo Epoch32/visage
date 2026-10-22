@@ -774,4 +774,43 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     const body3 = await res3.json();
     expect(body3.result.data.deleted).toBe(true);
   });
+
+  it("emits SSE keep-alive heartbeat pings and cleans up timers on stream close", async () => {
+    const streamRouter = createRouter().subscription("ticker", {
+      resolve: async function* () {
+        yield { msg: "start" };
+        // Wait longer than heartbeat interval to ensure ping is emitted
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        yield { msg: "end" };
+      }
+    });
+
+    const handler = createFetchHandler({
+      router: streamRouter,
+      endpoint: "/api/rpc",
+      heartbeatInterval: 25 // 25ms heartbeat for testing
+    });
+
+    const req = new Request("http://localhost/api/rpc/ticker", {
+      method: "GET"
+    });
+
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let text = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value);
+    }
+
+    expect(text).toContain('data: {"msg":"start"}');
+    expect(text).toContain(": ping\n\n");
+    expect(text).toContain('data: {"msg":"end"}');
+  });
 });
