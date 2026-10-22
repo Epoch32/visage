@@ -21,7 +21,8 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     rules,
     cache: handlerCache,
     etag: handlerEtag,
-    problemDetails: handlerProblemDetails
+    problemDetails: handlerProblemDetails,
+    maxBatchSize = 50
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -207,6 +208,26 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
       try {
         const body = await request.json();
         if (Array.isArray(body)) {
+          if (body.length > maxBatchSize) {
+            const error = new RPCError({
+              code: "BAD_REQUEST",
+              message: `Batch size (${body.length}) exceeds maximum limit (${maxBatchSize})`
+            });
+            baseHeaders.set("Content-Type", "application/json");
+            return new Response(
+              JSON.stringify({
+                error: {
+                  code: error.code,
+                  message: error.message
+                }
+              }),
+              {
+                status: 400,
+                headers: baseHeaders
+              }
+            );
+          }
+
           const batchResults = await Promise.all(
             body.map(async (item: { id?: string | number; path: string; input?: any }) => {
               try {

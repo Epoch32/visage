@@ -640,4 +640,33 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
       process.env.NODE_ENV = origEnv;
     }
   });
+
+  it("enforces maxBatchSize limit on batch requests to prevent resource starvation", async () => {
+    const pingRouter = createRouter().query("ping", { resolve: () => "pong" });
+    const handler = createFetchHandler({
+      router: pingRouter,
+      endpoint: "/api/rpc",
+      maxBatchSize: 3
+    });
+
+    const oversizedBatch = [
+      { id: 1, path: "ping" },
+      { id: 2, path: "ping" },
+      { id: 3, path: "ping" },
+      { id: 4, path: "ping" } // Exceeds limit of 3
+    ];
+
+    const res = await handler(
+      new Request("http://localhost/api/rpc/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(oversizedBatch)
+      })
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("BAD_REQUEST");
+    expect(body.error.message).toContain("exceeds maximum limit");
+  });
 });

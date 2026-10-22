@@ -210,6 +210,12 @@ export interface FetchHandlerOptions<
   problemDetails?: boolean;
 
   /**
+   * Maximum allowed procedures in a single batch request to prevent resource exhaustion.
+   * Defaults to 50.
+   */
+  maxBatchSize?: number;
+
+  /**
    * Declarative pattern rules matching URL paths or procedure names (e.g. "*", "/api/*", "admin.*").
    * Supports wildcard matching with '*'.
    */
