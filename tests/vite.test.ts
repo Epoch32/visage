@@ -527,4 +527,57 @@ export function Component() {
       expect(cancelled).toBe(true);
     });
   });
+
+  describe("Visage NoScript Plugin (visage:noscript)", () => {
+    const baseHtml = `<!DOCTYPE html><html><head><title>App</title></head><body><div id="root"></div></body></html>`;
+
+    it("injects default styled full-page fallback into HTML body when noscript: true", () => {
+      const plugins = visage({ noscript: true });
+      const noscriptPlugin = plugins.find((p) => p.name === "visage:noscript");
+      expect(noscriptPlugin).toBeDefined();
+      expect(noscriptPlugin?.transformIndexHtml).toBeDefined();
+
+      const result = noscriptPlugin!.transformIndexHtml!(baseHtml) as string;
+      expect(result).toContain("<noscript>");
+      expect(result).toContain("visage-noscript-page");
+      expect(result).toContain("JavaScript Required");
+      expect(result).toContain("requires JavaScript to function properly");
+      expect(result).toContain("<body>\n    <noscript>");
+    });
+
+    it("injects custom message string when noscript is a string", () => {
+      const plugins = visage({ noscript: "Custom JS warning message." });
+      const noscriptPlugin = plugins.find((p) => p.name === "visage:noscript");
+      const result = noscriptPlugin!.transformIndexHtml!(baseHtml) as string;
+
+      expect(result).toContain("Custom JS warning message.");
+      expect(result).toContain("visage-noscript-page");
+    });
+
+    it("injects banner mode when configured with options", () => {
+      const plugins = visage({
+        noscript: {
+          mode: "banner",
+          title: "Notice",
+          message: "Limited experience without JS",
+          className: "my-banner"
+        }
+      });
+      const noscriptPlugin = plugins.find((p) => p.name === "visage:noscript");
+      const result = noscriptPlugin!.transformIndexHtml!(baseHtml) as string;
+
+      expect(result).toContain("visage-noscript-banner");
+      expect(result).toContain("my-banner");
+      expect(result).toContain("<strong>Notice:</strong> Limited experience without JS");
+    });
+
+    it("prepends noscript when html does not contain a body tag", () => {
+      const plugins = visage({ noscript: true });
+      const noscriptPlugin = plugins.find((p) => p.name === "visage:noscript");
+      const result = noscriptPlugin!.transformIndexHtml!("<div id='partial'></div>") as string;
+
+      expect(result.startsWith("\n    <noscript>")).toBe(true);
+      expect(result).toContain("<div id='partial'></div>");
+    });
+  });
 });

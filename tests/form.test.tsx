@@ -167,4 +167,49 @@ describe("Visage Reactive Forms & Validation", () => {
 
     unmount();
   });
+
+  it("validates binary files, blobs, and formData with v.file, v.blob, and v.formData", () => {
+    const fileSchema = v.file({
+      maxSize: 1024 * 1024,
+      type: [".zip", "application/zip"]
+    });
+
+    const validZip = new File(["dummy content"], "bundle.zip", { type: "application/zip" });
+    const res1 = fileSchema.validate(validZip);
+    expect(res1.success).toBe(true);
+    expect(res1.data).toBe(validZip);
+
+    // Invalid extension/type
+    const invalidFile = new File(["text content"], "script.sh", { type: "text/x-sh" });
+    const res2 = fileSchema.validate(invalidFile);
+    expect(res2.success).toBe(false);
+    expect(res2.issues?.[0]?.message).toContain("does not match allowed patterns");
+
+    // Oversized file
+    const bigFile = new File([new Uint8Array(2 * 1024 * 1024)], "huge.zip", {
+      type: "application/zip"
+    });
+    const res3 = fileSchema.validate(bigFile);
+    expect(res3.success).toBe(false);
+    expect(res3.issues?.[0]?.message).toContain("exceeds maximum allowed");
+
+    // Optional file
+    const optionalFileSchema = v.file().optional();
+    expect(optionalFileSchema.validate(undefined).success).toBe(true);
+    expect(optionalFileSchema.validate(null).success).toBe(true);
+
+    // Blob schema
+    const blobSchema = v.blob().max(500);
+    const smallBlob = new Blob(["hello"], { type: "text/plain" });
+    expect(blobSchema.validate(smallBlob).success).toBe(true);
+    const bigBlob = new Blob([new Uint8Array(1000)], { type: "text/plain" });
+    expect(blobSchema.validate(bigBlob).success).toBe(false);
+
+    // FormData schema
+    const fdSchema = v.formData();
+    const fd = new FormData();
+    fd.append("name", "visage");
+    expect(fdSchema.validate(fd).success).toBe(true);
+    expect(fdSchema.validate({ notFormData: true }).success).toBe(false);
+  });
 });

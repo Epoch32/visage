@@ -18,6 +18,8 @@ export {
   type ForProps,
   Index,
   type IndexProps,
+  NoScript,
+  type NoScriptProps,
   Portal,
   type PortalProps,
   Show,

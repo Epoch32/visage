@@ -7,6 +7,10 @@ export {
 } from "./form";
 
 export {
+  BlobSchema,
+  FileSchema,
+  type FileValidationOptions,
+  FormDataSchema,
   type IssuePath,
   normalizeIssuePath,
   Schema,

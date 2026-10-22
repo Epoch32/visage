@@ -71,6 +71,7 @@ function createApiProxy(options: ApiClientOptions, path: string[] = []): any {
           const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
           const headers = {
             Accept: "application/json, application/problem+json",
+            "x-visage-api": "1",
             ...dynamicHeaders,
             ...callOpts?.headers
           };
@@ -156,6 +157,7 @@ function createApiProxy(options: ApiClientOptions, path: string[] = []): any {
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
             Accept: "application/json, application/problem+json",
+            "x-visage-api": "1",
             ...dynamicHeaders,
             ...callOpts?.headers
           };

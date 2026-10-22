@@ -153,9 +153,25 @@ export interface VisagePluginOptions {
   headers?: boolean | import("./headers").HeadersPluginOptions;
 
   /**
+   * Automated <noscript> fallback banner injection into the HTML entry shell.
+   * When enabled, injects an accessible warning banner for users with JavaScript disabled.
+   * Can be set to true, a custom message string, or an options object.
+   * @default false
+   */
+  noscript?: boolean | string | NoScriptPluginOptions;
+
+  /**
    * Opt-in experimental compiler and packager options
    */
   experimental?: ExperimentalOptions;
+}
+
+export interface NoScriptPluginOptions {
+  title?: string;
+  message?: string;
+  mode?: "page" | "banner";
+  style?: string;
+  className?: string;
 }
 
 /**

@@ -54,13 +54,34 @@ function formatErrorResponse(
 }
 
 /**
+ * Guard against prototype pollution keys
+ */
+function isDangerousKey(key: string): boolean {
+  return (
+    key === "__proto__" ||
+    key.startsWith("__proto__") ||
+    key === "constructor" ||
+    key.startsWith("constructor.") ||
+    key.startsWith("constructor[") ||
+    key === "prototype" ||
+    key.startsWith("prototype.") ||
+    key.startsWith("prototype[")
+  );
+}
+
+/**
  * Check whether origin matches configured CORS policy and return allowed origin string or null
  */
 function resolveAllowedOrigin(
   reqOrigin: string | null,
-  configOrigin?: NonNullable<ApiRouterConfig["cors"]>["origin"]
+  configOrigin?: NonNullable<ApiRouterConfig["cors"]>["origin"],
+  credentials?: boolean
 ): string | null {
   if (!configOrigin || configOrigin === "*") {
+    // If credentials are enabled, wildcard or blind reflection is unsafe
+    if (credentials) {
+      return null;
+    }
     return reqOrigin || "*";
   }
   if (!reqOrigin) {
@@ -85,7 +106,7 @@ function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | 
   if (!config) return null;
 
   const reqOrigin = req.headers.get("Origin");
-  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin);
+  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin, config.credentials);
 
   if (req.method === "OPTIONS") {
     const headers = new Headers();
@@ -113,18 +134,36 @@ function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | 
   return null;
 }
 
-function applyCorsHeaders(res: Response, req: Request, config?: ApiRouterConfig["cors"]): Response {
-  if (!config) return res;
-  const reqOrigin = req.headers.get("Origin");
-  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin);
+function applyCorsHeaders(
+  res: Response,
+  req: Request,
+  config?: ApiRouterConfig["cors"],
+  securityHeadersConfig?: ApiRouterConfig["securityHeaders"]
+): Response {
+  if (config) {
+    const reqOrigin = req.headers.get("Origin");
+    const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin, config.credentials);
 
-  if (allowedOrigin) {
-    res.headers.set("Access-Control-Allow-Origin", allowedOrigin);
-    if (config.credentials) {
-      res.headers.set("Access-Control-Allow-Credentials", "true");
+    if (allowedOrigin) {
+      res.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+      if (config.credentials) {
+        res.headers.set("Access-Control-Allow-Credentials", "true");
+      }
+      res.headers.append("Vary", "Origin");
     }
-    res.headers.append("Vary", "Origin");
   }
+
+  const security = securityHeadersConfig ?? true;
+  if (security) {
+    if (typeof security === "object") {
+      for (const [k, v] of Object.entries(security)) {
+        res.headers.set(k, v);
+      }
+    } else if (!res.headers.has("X-Content-Type-Options")) {
+      res.headers.set("X-Content-Type-Options", "nosniff");
+    }
+  }
+
   return res;
 }
 
@@ -138,6 +177,9 @@ export function createApiHandler(
   const prefix = config.prefix ? `/${config.prefix.replace(/^\/+|\/+$/g, "")}` : "";
 
   return async (req: Request): Promise<Response> => {
+    const applyHeaders = (res: Response): Response =>
+      applyCorsHeaders(res, req, config.cors, config.securityHeaders);
+
     // 1. CORS Preflight Check
     const corsPreflight = handleCors(req, config.cors);
     if (corsPreflight) return corsPreflight;
@@ -149,19 +191,60 @@ export function createApiHandler(
       pathname = pathname.slice(prefix.length) || "/";
     }
 
+    // Check payload size limits against Content-Length
+    const maxBodySize = config.maxBodySize ?? 10 * 1024 * 1024;
+    const contentLength = Number(req.headers.get("content-length") || 0);
+    if (maxBodySize > 0 && contentLength > maxBodySize) {
+      const problem: ProblemDetails = {
+        type: "about:blank",
+        title: "Payload Too Large",
+        status: 413,
+        detail: `Payload too large (${contentLength} bytes exceeds limit of ${maxBodySize} bytes)`,
+        instance: pathname,
+        code: "PAYLOAD_TOO_LARGE"
+      };
+      return applyHeaders(
+        formatErrorResponse(req, config, problem, {
+          ok: false,
+          error: {
+            code: "PAYLOAD_TOO_LARGE",
+            message: `Payload too large (${contentLength} bytes exceeds limit of ${maxBodySize} bytes)`
+          }
+        })
+      );
+    }
+
     // 2. Route Matching
     let matchedRoute: RouteMatch | null = null;
-    const pathParams: Record<string, string> = {};
+    const pathParams: Record<string, string> = Object.create(null);
 
-    for (const route of routes) {
-      const match = pathname.match(route.pattern);
-      if (match) {
-        matchedRoute = route;
-        route.paramNames.forEach((name, i) => {
-          pathParams[name] = decodeURIComponent(match[i + 1] || "");
-        });
-        break;
+    try {
+      for (const route of routes) {
+        const match = pathname.match(route.pattern);
+        if (match) {
+          matchedRoute = route;
+          route.paramNames.forEach((name, i) => {
+            if (isDangerousKey(name)) return;
+            pathParams[name] = decodeURIComponent(match[i + 1] || "");
+          });
+          break;
+        }
       }
+    } catch {
+      const problem: ProblemDetails = {
+        type: "about:blank",
+        title: "Bad Request",
+        status: 400,
+        detail: "Malformed percent-encoded URI path parameter",
+        instance: pathname,
+        code: "BAD_REQUEST"
+      };
+      return applyHeaders(
+        formatErrorResponse(req, config, problem, {
+          ok: false,
+          error: { code: "BAD_REQUEST", message: "Malformed percent-encoded URI path parameter" }
+        })
+      );
     }
 
     if (!matchedRoute) {
@@ -173,38 +256,53 @@ export function createApiHandler(
         instance: pathname,
         code: "NOT_FOUND"
       };
-      return applyCorsHeaders(
+      return applyHeaders(
         formatErrorResponse(req, config, problem, {
           ok: false,
           error: { code: "NOT_FOUND", message: `Route not found: ${pathname}` }
-        }),
-        req,
-        config.cors
+        })
       );
     }
 
     try {
       const method = req.method.toUpperCase();
-      let procedure: ApiProcedure | undefined = matchedRoute.procedures.default;
+      let procedure: ApiProcedure | undefined;
 
-      if (!procedure) {
-        if (method === "GET" || method === "HEAD") {
-          procedure =
-            matchedRoute.procedures.HEAD ||
-            matchedRoute.procedures.head ||
-            matchedRoute.procedures.GET ||
-            matchedRoute.procedures.get;
-        } else if (method === "POST") {
-          procedure = matchedRoute.procedures.POST || matchedRoute.procedures.post;
-        } else if (method === "PUT") {
-          procedure = matchedRoute.procedures.PUT || matchedRoute.procedures.put;
-        } else if (method === "DELETE") {
-          procedure =
-            matchedRoute.procedures.DELETE ||
-            matchedRoute.procedures.del ||
-            matchedRoute.procedures.delete;
-        } else if (method === "PATCH") {
-          procedure = matchedRoute.procedures.PATCH || matchedRoute.procedures.patch;
+      if (method === "GET" || method === "HEAD") {
+        procedure =
+          matchedRoute.procedures.HEAD ||
+          matchedRoute.procedures.head ||
+          matchedRoute.procedures.GET ||
+          matchedRoute.procedures.get;
+      } else if (method === "POST") {
+        procedure = matchedRoute.procedures.POST || matchedRoute.procedures.post;
+      } else if (method === "PUT") {
+        procedure = matchedRoute.procedures.PUT || matchedRoute.procedures.put;
+      } else if (method === "DELETE") {
+        procedure =
+          matchedRoute.procedures.DELETE ||
+          matchedRoute.procedures.del ||
+          matchedRoute.procedures.delete;
+      } else if (method === "PATCH") {
+        procedure = matchedRoute.procedures.PATCH || matchedRoute.procedures.patch;
+      }
+
+      if (!procedure && matchedRoute.procedures.default) {
+        const defaultProc = matchedRoute.procedures.default;
+        if (defaultProc.type === "mutation") {
+          if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+            procedure = defaultProc;
+          }
+        } else if (defaultProc.type === "subscription") {
+          if (method === "GET" || method === "HEAD") {
+            procedure = defaultProc;
+          }
+        } else if (defaultProc.type === "query") {
+          if (method === "GET" || method === "HEAD") {
+            procedure = defaultProc;
+          }
+        } else {
+          procedure = defaultProc;
         }
       }
 
@@ -222,7 +320,7 @@ export function createApiHandler(
       );
 
       if (earlyResponse) {
-        return applyCorsHeaders(earlyResponse, req, config.cors);
+        return applyHeaders(earlyResponse);
       }
 
       // 4. Custom Raw Handler
@@ -232,9 +330,9 @@ export function createApiHandler(
           const conditionalRes = await handleConditionalResponse(req, res, {
             cacheControl: config.cache
           });
-          return applyCorsHeaders(conditionalRes, req, config.cors);
+          return applyHeaders(conditionalRes);
         }
-        return applyCorsHeaders(res, req, config.cors);
+        return applyHeaders(res);
       }
 
       if (!procedure) {
@@ -246,16 +344,54 @@ export function createApiHandler(
           instance: pathname,
           code: "METHOD_NOT_ALLOWED"
         };
-        return applyCorsHeaders(
+        return applyHeaders(
           formatErrorResponse(req, config, problem, {
             ok: false,
             error: {
               code: "METHOD_NOT_ALLOWED",
               message: `Method ${method} not allowed on ${pathname}`
             }
-          }),
-          req,
-          config.cors
+          })
+        );
+      }
+
+      if (procedure.type === "mutation" && (method === "GET" || method === "HEAD")) {
+        const problem: ProblemDetails = {
+          type: "about:blank",
+          title: "Method Not Allowed",
+          status: 405,
+          detail: `Method ${method} not allowed for mutation procedure on ${pathname}`,
+          instance: pathname,
+          code: "METHOD_NOT_ALLOWED"
+        };
+        return applyHeaders(
+          formatErrorResponse(req, config, problem, {
+            ok: false,
+            error: {
+              code: "METHOD_NOT_ALLOWED",
+              message: `Method ${method} not allowed for mutation procedure on ${pathname}`
+            }
+          })
+        );
+      }
+
+      if (procedure.type === "subscription" && method !== "GET" && method !== "HEAD") {
+        const problem: ProblemDetails = {
+          type: "about:blank",
+          title: "Method Not Allowed",
+          status: 405,
+          detail: `Method ${method} not allowed for subscription procedure on ${pathname}`,
+          instance: pathname,
+          code: "METHOD_NOT_ALLOWED"
+        };
+        return applyHeaders(
+          formatErrorResponse(req, config, problem, {
+            ok: false,
+            error: {
+              code: "METHOD_NOT_ALLOWED",
+              message: `Method ${method} not allowed for subscription procedure on ${pathname}`
+            }
+          })
         );
       }
 
@@ -271,28 +407,125 @@ export function createApiHandler(
           }
         } else {
           // Flatten searchParams
-          const spObj: Record<string, string> = {};
+          const spObj: Record<string, string> = Object.create(null);
           url.searchParams.forEach((val, key) => {
-            spObj[key] = val;
+            if (!isDangerousKey(key)) {
+              spObj[key] = val;
+            }
           });
           if (Object.keys(spObj).length > 0) {
             rawInput = spObj;
           }
         }
       } else {
-        const contentType = req.headers.get("Content-Type") || "";
+        const contentType =
+          req.headers.get("Content-Type") || req.headers.get("content-type") || "";
+
+        // Anti-CSRF protection for state-changing mutation procedures
+        if (config.csrfProtection !== false) {
+          const secFetchSite = req.headers.get("sec-fetch-site");
+          const origin = req.headers.get("origin");
+          const hasCustomHeader = Boolean(
+            req.headers.get("x-visage-api") ||
+              req.headers.get("x-visage-rpc") ||
+              req.headers.get("authorization") ||
+              req.headers.get("x-requested-with")
+          );
+
+          if (secFetchSite === "cross-site" && !hasCustomHeader) {
+            throw new RPCError({
+              code: "FORBIDDEN",
+              message: "Cross-site request blocked by CSRF protection"
+            });
+          }
+
+          const isSimpleForm =
+            contentType.includes("application/x-www-form-urlencoded") ||
+            contentType.includes("multipart/form-data") ||
+            contentType.includes("text/plain");
+
+          if (isSimpleForm && !hasCustomHeader) {
+            const host = req.headers.get("host") || url.host;
+            if (origin) {
+              let originHost: string | null = null;
+              try {
+                originHost = new URL(origin).host;
+              } catch {
+                // Ignore invalid origin URL format
+              }
+              if (!originHost || (host && originHost !== host)) {
+                throw new RPCError({
+                  code: "FORBIDDEN",
+                  message: "Cross-origin form submission blocked by CSRF protection"
+                });
+              }
+            }
+          }
+        }
+
         if (contentType.includes("application/json")) {
           try {
             rawInput = await req.json();
           } catch {
             rawInput = {};
           }
+        } else if (
+          contentType.includes("multipart/form-data") ||
+          contentType.includes("application/x-www-form-urlencoded")
+        ) {
+          try {
+            const formData = await req.formData();
+            const parsedObj: Record<string, any> = {};
+            const keys = new Set<string>();
+            formData.forEach((_, k) => {
+              if (!isDangerousKey(k)) {
+                keys.add(k);
+              }
+            });
+            for (const k of keys) {
+              const all = formData.getAll(k);
+              if (all.length > 1) {
+                parsedObj[k] = all;
+              } else {
+                const val = all[0];
+                if (typeof val === "string") {
+                  try {
+                    parsedObj[k] = JSON.parse(val);
+                  } catch {
+                    parsedObj[k] = val;
+                  }
+                } else {
+                  parsedObj[k] = val;
+                }
+              }
+            }
+            rawInput = Object.assign(parsedObj, { __formData: formData });
+          } catch {
+            rawInput = {};
+          }
+        } else if (contentType.includes("application/octet-stream")) {
+          try {
+            rawInput = await req.arrayBuffer();
+          } catch {
+            rawInput = {};
+          }
         }
       }
 
-      // Merge Path Params into Input if object
+      // Merge Path Params into Input if object with prototype sanitization
       if (typeof rawInput === "object" && rawInput !== null) {
-        rawInput = { ...pathParams, ...rawInput };
+        const sanitizedInput: Record<string, any> = Object.create(null);
+        for (const [k, v] of Object.entries(pathParams)) {
+          if (!isDangerousKey(k)) {
+            sanitizedInput[k] = v;
+          }
+        }
+        for (const [k, v] of Object.entries(rawInput)) {
+          if (!isDangerousKey(k)) {
+            sanitizedInput[k] = v;
+          }
+        }
+        rawInput = sanitizedInput;
       }
 
       // Validate Input Schema
@@ -311,7 +544,7 @@ export function createApiHandler(
             invalidParams,
             issues: validation.issues
           };
-          return applyCorsHeaders(
+          return applyHeaders(
             formatErrorResponse(req, config, problem, {
               ok: false,
               error: {
@@ -319,9 +552,7 @@ export function createApiHandler(
                 message: "Validation Error",
                 issues: validation.issues
               }
-            }),
-            req,
-            config.cors
+            })
           );
         }
         validatedInput = validation.data;
@@ -337,17 +568,63 @@ export function createApiHandler(
           params: pathParams
         }) as AsyncGenerator<any, void, unknown>;
 
+        const heartbeatInterval = config.heartbeatInterval ?? 15000;
+        let heartbeatTimer: any = null;
+        const encoder = new TextEncoder();
+
         const stream = new ReadableStream({
           async start(controller) {
-            const encoder = new TextEncoder();
+            const cleanup = () => {
+              if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+              }
+            };
+
+            if (heartbeatInterval > 0) {
+              heartbeatTimer = setInterval(() => {
+                if (req.signal?.aborted) {
+                  cleanup();
+                  return;
+                }
+                try {
+                  controller.enqueue(encoder.encode(": ping\n\n"));
+                } catch {
+                  cleanup();
+                }
+              }, heartbeatInterval);
+            }
+
+            const abortHandler = () => {
+              cleanup();
+            };
+            req.signal?.addEventListener?.("abort", abortHandler, { once: true });
+
             try {
               for await (const chunk of generator) {
+                if (req.signal?.aborted) break;
                 const payload = `data: ${JSON.stringify(chunk)}\n\n`;
                 controller.enqueue(encoder.encode(payload));
               }
+              cleanup();
               controller.close();
             } catch (err: any) {
-              controller.error(err);
+              cleanup();
+              const errorMessage = `event: error\ndata: ${JSON.stringify({ message: err.message ?? "Stream error" })}\n\n`;
+              controller.enqueue(encoder.encode(errorMessage));
+              controller.close();
+            } finally {
+              cleanup();
+              req.signal?.removeEventListener?.("abort", abortHandler);
+            }
+          },
+          async cancel() {
+            if (heartbeatTimer) {
+              clearInterval(heartbeatTimer);
+              heartbeatTimer = null;
+            }
+            if (typeof (generator as any)?.return === "function") {
+              await (generator as any).return();
             }
           }
         });
@@ -355,11 +632,11 @@ export function createApiHandler(
         const sseRes = new Response(stream, {
           headers: {
             "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive"
           }
         });
-        return applyCorsHeaders(sseRes, req, config.cors);
+        return applyHeaders(sseRes);
       }
 
       const result = await procedure.options.resolve({
@@ -378,7 +655,7 @@ export function createApiHandler(
         const conditionalRes = await handleConditionalResponse(req, successRes, {
           cacheControl: procedure.options.cache ?? config.cache
         });
-        return applyCorsHeaders(conditionalRes, req, config.cors);
+        return applyHeaders(conditionalRes);
       }
 
       if (procedure.options.cache ?? config.cache) {
@@ -389,22 +666,20 @@ export function createApiHandler(
       }
 
       if (method === "HEAD") {
-        return applyCorsHeaders(
+        return applyHeaders(
           new Response(null, {
             status: successRes.status,
             statusText: successRes.statusText,
             headers: successRes.headers
-          }),
-          req,
-          config.cors
+          })
         );
       }
 
-      return applyCorsHeaders(successRes, req, config.cors);
+      return applyHeaders(successRes);
     } catch (err: any) {
       if (config.onError) {
         const customRes = await config.onError(err, req);
-        return applyCorsHeaders(customRes, req, config.cors);
+        return applyHeaders(customRes);
       }
 
       if (err instanceof ProblemError) {
@@ -419,15 +694,13 @@ export function createApiHandler(
             message: err.message
           }
         };
-        return applyCorsHeaders(
+        return applyHeaders(
           formatErrorResponse(
             req,
             config,
             { ...problem, instance: problem.instance ?? pathname },
             legacyPayload
-          ),
-          req,
-          config.cors
+          )
         );
       }
 
@@ -441,17 +714,15 @@ export function createApiHandler(
             issues: err.issues
           }
         };
-        return applyCorsHeaders(
-          formatErrorResponse(req, config, problem, legacyPayload),
-          req,
-          config.cors
-        );
+        return applyHeaders(formatErrorResponse(req, config, problem, legacyPayload));
       }
 
+      const isDev = typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
       const statusCode =
         ERROR_CODE_TO_STATUS[err?.code as keyof typeof ERROR_CODE_TO_STATUS] || 500;
       const code = (err?.code as RPCErrorCode) || "INTERNAL_SERVER_ERROR";
-      const message = err?.message || "Internal Server Error";
+      const rawMessage = err?.message || "Internal Server Error";
+      const message = statusCode === 500 && !isDev ? "Internal Server Error" : rawMessage;
 
       const problem: ProblemDetails = {
         type: "about:blank",
@@ -467,11 +738,7 @@ export function createApiHandler(
         error: { code, message }
       };
 
-      return applyCorsHeaders(
-        formatErrorResponse(req, config, problem, legacyPayload),
-        req,
-        config.cors
-      );
+      return applyHeaders(formatErrorResponse(req, config, problem, legacyPayload));
     }
   };
 }
@@ -480,7 +747,18 @@ function isApiRouterConfig(val: unknown): val is ApiRouterConfig {
   if (!val || typeof val !== "object") return false;
   const keys = Object.keys(val);
   return keys.some((k) =>
-    ["prefix", "cors", "cache", "etag", "problemDetails", "onError"].includes(k)
+    [
+      "prefix",
+      "cors",
+      "cache",
+      "etag",
+      "problemDetails",
+      "onError",
+      "csrfProtection",
+      "maxBodySize",
+      "heartbeatInterval",
+      "securityHeaders"
+    ].includes(k)
   );
 }
 

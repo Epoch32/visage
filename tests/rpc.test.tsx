@@ -229,6 +229,20 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     const evilRes = await handler(evilReq);
     expect(evilRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
     expect(evilRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
+
+    // Disallow wildcard origin reflection when credentials: true is configured without explicit origin
+    const insecureHandler = createFetchHandler({
+      router: appRouter,
+      endpoint: "/api/rpc",
+      cors: { credentials: true }
+    });
+    const insecureRes = await insecureHandler(
+      new Request("http://localhost/api/rpc/greeting", {
+        headers: { Origin: "https://arbitrary-attacker.com" }
+      })
+    );
+    expect(insecureRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    expect(insecureRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
   });
 
   it("integrates seamlessly with Hono-style sub-routing and context passing", async () => {
@@ -450,6 +464,22 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
       )
     );
     expect(res4.status).toBe(401);
+
+    // 5. Test route rules enforcement inside batch requests
+    const batchReq = new Request("http://localhost/api/rpc/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([
+        { id: 1, path: "greeting", input: { name: "Alice" } },
+        { id: 2, path: "secretData" } // missing required x-admin-token
+      ])
+    });
+    const batchRes = await handler(batchReq);
+    expect(batchRes.status).toBe(200);
+    const batchData = await batchRes.json();
+    expect(batchData[0].result.data.message).toBe("Hello, Alice!");
+    expect(batchData[1].error.code).toBe("UNAUTHORIZED");
+    expect(batchData[1].error.message).toContain("Missing required header 'x-admin-token'");
   });
 
   it("supports pattern-based client headers in createClient", async () => {
@@ -513,5 +543,274 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(res2.statusText).toBe("Not Modified");
     expect(res2.headers.get("etag")).toBe(etag);
     expect(await res2.text()).toBe("");
+  });
+
+  it("supports multipart/form-data and binary file uploads via RPC mutations", async () => {
+    const uploadRouter = createRouter()
+      .mutation("uploadRaw", {
+        input: v.formData(),
+        resolve: async ({ input }) => {
+          const file = input.get("bundle") as File;
+          const site = input.get("siteId") as string;
+          return {
+            fileName: file.name,
+            fileSize: file.size,
+            site
+          };
+        }
+      })
+      .mutation("deploySite", {
+        input: v.object({
+          siteId: v.string(),
+          archive: v.file({ maxSize: 1024 * 1024 })
+        }),
+        resolve: async ({ input }) => {
+          return {
+            deployed: true,
+            siteId: input.siteId,
+            archiveName: input.archive.name,
+            bytes: input.archive.size
+          };
+        }
+      });
+
+    const handler = createFetchHandler({ router: uploadRouter, endpoint: "/api/rpc" });
+    const client = createClient<typeof uploadRouter>({
+      baseUrl: "http://localhost/api/rpc",
+      fetch: (url, init) => handler(new Request(url, init))
+    });
+
+    // 1. Direct FormData mutation
+    const fd = new FormData();
+    const mockFile = new File(["console.log('hello')"], "index.js", { type: "text/javascript" });
+    fd.append("siteId", "blog-app");
+    fd.append("bundle", mockFile);
+
+    const res1 = await client.uploadRaw.mutate(fd);
+    expect(res1.fileName).toBe("index.js");
+    expect(res1.site).toBe("blog-app");
+
+    // 2. Object with File payload auto-marshaled into FormData
+    const zipFile = new File(["<html/>"], "site.zip", { type: "application/zip" });
+    const res2 = await client.deploySite.mutate({
+      siteId: "my-site",
+      archive: zipFile
+    });
+    expect(res2.deployed).toBe(true);
+    expect(res2.siteId).toBe("my-site");
+    expect(res2.archiveName).toBe("site.zip");
+  });
+
+  it("blocks prototype traversal and prototype pollution attempts in procedure resolution", async () => {
+    const testRouter = createRouter().query("hello", {
+      resolve: () => "world"
+    });
+
+    const handler = createFetchHandler({ router: testRouter, endpoint: "/api/rpc" });
+
+    // Try accessing __proto__, constructor, prototype
+    const req1 = new Request("http://localhost/api/rpc/__proto__", { method: "GET" });
+    const res1 = await handler(req1);
+    expect(res1.status).toBe(404);
+
+    const req2 = new Request("http://localhost/api/rpc/constructor/prototype", { method: "GET" });
+    const res2 = await handler(req2);
+    expect(res2.status).toBe(404);
+  });
+
+  it("masks raw internal exception messages in production mode to prevent information disclosure", async () => {
+    const errorRouter = createRouter().query("crash", {
+      resolve: () => {
+        throw new Error("Sensitive database table user_credentials failed at 10.0.1.5:5432");
+      }
+    });
+
+    const origEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = "production";
+      const handler = createFetchHandler({ router: errorRouter, endpoint: "/api/rpc" });
+
+      const res = await handler(new Request("http://localhost/api/rpc/crash"));
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data.error.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(data.error.message).toBe("Internal Server Error");
+      expect(data.error.message).not.toContain("Sensitive database table");
+    } finally {
+      process.env.NODE_ENV = origEnv;
+    }
+  });
+
+  it("enforces maxBatchSize limit on batch requests to prevent resource starvation", async () => {
+    const pingRouter = createRouter().query("ping", { resolve: () => "pong" });
+    const handler = createFetchHandler({
+      router: pingRouter,
+      endpoint: "/api/rpc",
+      maxBatchSize: 3
+    });
+
+    const oversizedBatch = [
+      { id: 1, path: "ping" },
+      { id: 2, path: "ping" },
+      { id: 3, path: "ping" },
+      { id: 4, path: "ping" } // Exceeds limit of 3
+    ];
+
+    const res = await handler(
+      new Request("http://localhost/api/rpc/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(oversizedBatch)
+      })
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("BAD_REQUEST");
+    expect(body.error.message).toContain("exceeds maximum limit");
+  });
+
+  it("enforces maxBodySize limit and returns 413 Payload Too Large when exceeded", async () => {
+    const pingRouter = createRouter().mutation("submit", {
+      resolve: () => ({ success: true })
+    });
+
+    const handler = createFetchHandler({
+      router: pingRouter,
+      endpoint: "/api/rpc",
+      maxBodySize: 50 // Limit to 50 bytes
+    });
+
+    const res = await handler(
+      new Request("http://localhost/api/rpc/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": "500" // Exceeds 50
+        },
+        body: JSON.stringify({ data: "x".repeat(500) })
+      })
+    );
+
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
+    expect(body.error.message).toContain("Payload too large");
+  });
+
+  it("enforces allowed HTTP methods for queries and subscriptions (405 Method Not Allowed)", async () => {
+    const testRouter = createRouter()
+      .query("getInfo", { resolve: () => ({ info: "ok" }) })
+      .subscription("events", {
+        resolve: async function* () {
+          yield 1;
+        }
+      });
+
+    const handler = createFetchHandler({ router: testRouter, endpoint: "/api/rpc" });
+
+    // DELETE on a query procedure
+    const res1 = await handler(
+      new Request("http://localhost/api/rpc/getInfo", { method: "DELETE" })
+    );
+    expect(res1.status).toBe(405);
+    const body1 = await res1.json();
+    expect(body1.error.code).toBe("METHOD_NOT_ALLOWED");
+
+    // POST on a subscription procedure
+    const res2 = await handler(new Request("http://localhost/api/rpc/events", { method: "POST" }));
+    expect(res2.status).toBe(405);
+    const body2 = await res2.json();
+    expect(body2.error.code).toBe("METHOD_NOT_ALLOWED");
+  });
+
+  it("blocks unauthorized cross-site and cross-origin form submissions with anti-CSRF protection", async () => {
+    const actionRouter = createRouter().mutation("deleteAccount", {
+      resolve: () => ({ deleted: true })
+    });
+
+    const handler = createFetchHandler({ router: actionRouter, endpoint: "/api/rpc" });
+
+    // 1. Cross-site request without custom header
+    const crossSiteReq = new Request("http://localhost/api/rpc/deleteAccount", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Sec-Fetch-Site": "cross-site"
+      },
+      body: "confirm=true"
+    });
+    const res1 = await handler(crossSiteReq);
+    expect(res1.status).toBe(403);
+    const body1 = await res1.json();
+    expect(body1.error.code).toBe("FORBIDDEN");
+    expect(body1.error.message).toContain("CSRF");
+
+    // 2. Cross-origin form submission from another host without custom header
+    const crossOriginFormReq = new Request("http://victim.com/api/rpc/deleteAccount", {
+      method: "POST",
+      headers: {
+        Host: "victim.com",
+        Origin: "https://evil-attacker.com",
+        "Content-Type": "multipart/form-data; boundary=----boundary"
+      },
+      body: '------boundary\r\nContent-Disposition: form-data; name="confirm"\r\n\r\ntrue\r\n------boundary--\r\n'
+    });
+    const res2 = await handler(crossOriginFormReq);
+    expect(res2.status).toBe(403);
+
+    // 3. Legitimate mutation with custom x-visage-rpc header is allowed
+    const legitReq = new Request("http://victim.com/api/rpc/deleteAccount", {
+      method: "POST",
+      headers: {
+        Host: "victim.com",
+        "Content-Type": "application/json",
+        "x-visage-rpc": "1"
+      },
+      body: JSON.stringify({ input: {} })
+    });
+    const res3 = await handler(legitReq);
+    expect(res3.status).toBe(200);
+    const body3 = await res3.json();
+    expect(body3.result.data.deleted).toBe(true);
+  });
+
+  it("emits SSE keep-alive heartbeat pings and cleans up timers on stream close", async () => {
+    const streamRouter = createRouter().subscription("ticker", {
+      resolve: async function* () {
+        yield { msg: "start" };
+        // Wait longer than heartbeat interval to ensure ping is emitted
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        yield { msg: "end" };
+      }
+    });
+
+    const handler = createFetchHandler({
+      router: streamRouter,
+      endpoint: "/api/rpc",
+      heartbeatInterval: 25 // 25ms heartbeat for testing
+    });
+
+    const req = new Request("http://localhost/api/rpc/ticker", {
+      method: "GET"
+    });
+
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let text = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value);
+    }
+
+    expect(text).toContain('data: {"msg":"start"}');
+    expect(text).toContain(": ping\n\n");
+    expect(text).toContain('data: {"msg":"end"}');
   });
 });

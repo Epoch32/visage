@@ -12,6 +12,11 @@ export interface CreateFilePickerOptions {
    */
   multiple?: boolean;
   /**
+   * Whether to select folders/directories instead of individual files.
+   * Enables the browser's folder selector dialog.
+   */
+  directory?: boolean;
+  /**
    * Capture camera or microphone on mobile devices.
    */
   capture?: string;
@@ -46,6 +51,11 @@ export function createFilePicker(options: CreateFilePickerOptions = {}): FilePic
 
       if (options.multiple) {
         input.multiple = true;
+      }
+
+      if (options.directory) {
+        input.setAttribute("webkitdirectory", "");
+        input.setAttribute("directory", "");
       }
 
       if (options.accept) {

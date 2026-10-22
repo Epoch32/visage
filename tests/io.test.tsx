@@ -280,6 +280,77 @@ describe("Visage IO Primitives (visage/io)", () => {
       expect(selected.length).toBe(1);
       expect(selected[0]!.name).toBe("upload.jpg");
     });
+
+    it("enables directory selection when directory: true is configured", () => {
+      const picker = createFilePicker({ directory: true });
+      picker.open();
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(input.hasAttribute("webkitdirectory")).toBe(true);
+      expect(input.hasAttribute("directory")).toBe(true);
+    });
+  });
+
+  describe("Directory Dropping & Recursive Folder Scanning", () => {
+    it("extracts files recursively from dropped directory entries", async () => {
+      const htmlFile = new File(["<h1>Index</h1>"], "index.html", { type: "text/html" });
+      const cssFile = new File(["body { color: red; }"], "styles.css", { type: "text/css" });
+
+      const mockHtmlEntry = {
+        isFile: true,
+        isDirectory: false,
+        name: "index.html",
+        file: (cb: (f: File) => void) => cb(htmlFile)
+      };
+
+      const mockCssEntry = {
+        isFile: true,
+        isDirectory: false,
+        name: "styles.css",
+        file: (cb: (f: File) => void) => cb(cssFile)
+      };
+
+      let cssRead = false;
+      const mockDirEntry = {
+        isFile: false,
+        isDirectory: true,
+        name: "assets",
+        createReader: () => ({
+          readEntries: (cb: (entries: any[]) => void) => {
+            if (!cssRead) {
+              cssRead = true;
+              cb([mockCssEntry]);
+            } else {
+              cb([]);
+            }
+          }
+        })
+      };
+
+      const mockDataTransfer = {
+        items: [
+          {
+            kind: "file",
+            webkitGetAsEntry: () => mockHtmlEntry
+          },
+          {
+            kind: "file",
+            webkitGetAsEntry: () => mockDirEntry
+          }
+        ],
+        files: [htmlFile]
+      } as any;
+
+      const { extractFilesFromDataTransfer } = await import("../src/io");
+      const files = await extractFilesFromDataTransfer(mockDataTransfer, true);
+
+      expect(files.length).toBe(2);
+      expect(files[0]!.name).toBe("index.html");
+      expect((files[0] as any).relativePath).toBe("index.html");
+
+      expect(files[1]!.name).toBe("styles.css");
+      expect((files[1] as any).relativePath).toBe("assets/styles.css");
+    });
   });
 
   describe("DropZone Component", () => {

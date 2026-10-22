@@ -112,6 +112,32 @@ export interface ApiRouterConfig {
    */
   problemDetails?: boolean;
 
+  /**
+   * Anti-CSRF protection for state-changing mutation procedures.
+   * When true (default), blocks cross-site form submissions and simple cross-origin mutations.
+   * Defaults to true.
+   */
+  csrfProtection?: boolean;
+
+  /**
+   * Maximum allowed request body size in bytes to prevent memory exhaustion DoS.
+   * Defaults to 10MB (10 * 1024 * 1024). Set to 0 or Infinity to disable.
+   */
+  maxBodySize?: number;
+
+  /**
+   * Interval in milliseconds for Server-Sent Events (SSE) keep-alive heartbeat pings.
+   * When > 0, periodically sends SSE comment ': ping\n\n' to prevent proxy timeouts.
+   * Defaults to 15000 (15s). Set to 0 to disable.
+   */
+  heartbeatInterval?: number;
+
+  /**
+   * Automatically apply secure HTTP response headers (e.g. X-Content-Type-Options: nosniff).
+   * Defaults to true. Pass an object to customize or false to disable.
+   */
+  securityHeaders?: boolean | Record<string, string>;
+
   cors?: {
     origin?: string | string[] | ((origin: string) => boolean);
     methods?: string[];

@@ -15,6 +15,7 @@ export type RPCErrorCode =
   | "METHOD_NOT_ALLOWED"
   | "TIMEOUT"
   | "CONFLICT"
+  | "PAYLOAD_TOO_LARGE"
   | "UNPROCESSABLE_CONTENT"
   | "INTERNAL_SERVER_ERROR";
 
@@ -208,6 +209,32 @@ export interface FetchHandlerOptions<
    * Emit RFC 9457 Problem Details (`application/problem+json`) on error responses
    */
   problemDetails?: boolean;
+
+  /**
+   * Maximum allowed procedures in a single batch request to prevent resource exhaustion.
+   * Defaults to 50.
+   */
+  maxBatchSize?: number;
+
+  /**
+   * Maximum allowed request body size in bytes to prevent memory exhaustion DoS.
+   * Defaults to 10MB (10 * 1024 * 1024). Set to 0 or Infinity to disable.
+   */
+  maxBodySize?: number;
+
+  /**
+   * Anti-CSRF protection for mutation procedures.
+   * When true (default), blocks cross-site form submissions and simple cross-origin mutations.
+   * Defaults to true.
+   */
+  csrfProtection?: boolean;
+
+  /**
+   * Interval in milliseconds for Server-Sent Events (SSE) keep-alive heartbeat pings.
+   * When > 0, periodically sends SSE comment ': ping\n\n' to prevent proxy timeouts.
+   * Defaults to 15000 (15s). Set to 0 to disable.
+   */
+  heartbeatInterval?: number;
 
   /**
    * Declarative pattern rules matching URL paths or procedure names (e.g. "*", "/api/*", "admin.*").

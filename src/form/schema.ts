@@ -305,6 +305,269 @@ class AnySchema extends Schema<any> {
   }
 }
 
+export interface FileValidationOptions {
+  maxSize?: number;
+  minSize?: number;
+  type?: string | string[];
+}
+
+function isFileLike(val: unknown): val is File {
+  if (typeof File !== "undefined" && val instanceof File) return true;
+  return (
+    typeof val === "object" &&
+    val !== null &&
+    "name" in val &&
+    "size" in val &&
+    typeof (val as any).arrayBuffer === "function"
+  );
+}
+
+function isBlobLike(val: unknown): val is Blob {
+  if (typeof Blob !== "undefined" && val instanceof Blob) return true;
+  return (
+    typeof val === "object" &&
+    val !== null &&
+    "size" in val &&
+    typeof (val as any).arrayBuffer === "function"
+  );
+}
+
+function isFormDataLike(val: unknown): val is FormData {
+  if (typeof FormData !== "undefined" && val instanceof FormData) return true;
+  return (
+    typeof val === "object" &&
+    val !== null &&
+    (typeof (val as any).get === "function" || "__formData" in val)
+  );
+}
+
+function matchesFileType(name: string, type: string, patterns: string | string[]): boolean {
+  const patternList = Array.isArray(patterns)
+    ? patterns.map((p) => p.trim().toLowerCase())
+    : patterns.split(",").map((p) => p.trim().toLowerCase());
+
+  const lowerName = name.toLowerCase();
+  const lowerType = type.toLowerCase();
+
+  return patternList.some((pat) => {
+    if (pat.startsWith(".")) {
+      return lowerName.endsWith(pat);
+    }
+    if (pat.endsWith("/*")) {
+      const prefix = pat.slice(0, -2);
+      return lowerType.startsWith(prefix);
+    }
+    return lowerType === pat;
+  });
+}
+
+export class FileSchema extends Schema<File> {
+  private _isOptional = false;
+  private _maxSize?: { val: number; msg?: string };
+  private _minSize?: { val: number; msg?: string };
+  private _allowedTypes?: { patterns: string | string[]; msg?: string };
+
+  constructor(options: FileValidationOptions = {}) {
+    super();
+    if (options.maxSize !== undefined) this._maxSize = { val: options.maxSize };
+    if (options.minSize !== undefined) this._minSize = { val: options.minSize };
+    if (options.type !== undefined) this._allowedTypes = { patterns: options.type };
+  }
+
+  optional(): Schema<File | undefined> {
+    this._isOptional = true;
+    return this as any;
+  }
+
+  max(size: number, msg?: string): this {
+    this._maxSize = { val: size, msg };
+    return this;
+  }
+
+  min(size: number, msg?: string): this {
+    this._minSize = { val: size, msg };
+    return this;
+  }
+
+  type(types: string | string[], msg?: string): this {
+    this._allowedTypes = { patterns: types, msg };
+    return this;
+  }
+
+  validate(value: unknown, path = ""): ValidationResult<File> {
+    if (value === undefined || value === null) {
+      if (this._isOptional) return { success: true, data: undefined as any };
+      return { success: false, issues: [{ path, message: "File is required" }] };
+    }
+
+    if (!isFileLike(value)) {
+      return { success: false, issues: [{ path, message: "Expected a File object" }] };
+    }
+
+    if (this._maxSize && value.size > this._maxSize.val) {
+      return {
+        success: false,
+        issues: [
+          {
+            path,
+            message:
+              this._maxSize.msg ||
+              `File size (${value.size}B) exceeds maximum allowed (${this._maxSize.val}B)`
+          }
+        ]
+      };
+    }
+
+    if (this._minSize && value.size < this._minSize.val) {
+      return {
+        success: false,
+        issues: [
+          {
+            path,
+            message:
+              this._minSize.msg ||
+              `File size (${value.size}B) is below minimum required (${this._minSize.val}B)`
+          }
+        ]
+      };
+    }
+
+    if (
+      this._allowedTypes &&
+      !matchesFileType(value.name, value.type, this._allowedTypes.patterns)
+    ) {
+      return {
+        success: false,
+        issues: [
+          {
+            path,
+            message:
+              this._allowedTypes.msg ||
+              `File type "${value.type || value.name}" does not match allowed patterns: ${Array.isArray(this._allowedTypes.patterns) ? this._allowedTypes.patterns.join(", ") : this._allowedTypes.patterns}`
+          }
+        ]
+      };
+    }
+
+    return { success: true, data: value };
+  }
+}
+
+export class BlobSchema extends Schema<Blob> {
+  private _isOptional = false;
+  private _maxSize?: { val: number; msg?: string };
+  private _minSize?: { val: number; msg?: string };
+  private _allowedTypes?: { patterns: string | string[]; msg?: string };
+
+  constructor(options: FileValidationOptions = {}) {
+    super();
+    if (options.maxSize !== undefined) this._maxSize = { val: options.maxSize };
+    if (options.minSize !== undefined) this._minSize = { val: options.minSize };
+    if (options.type !== undefined) this._allowedTypes = { patterns: options.type };
+  }
+
+  optional(): Schema<Blob | undefined> {
+    this._isOptional = true;
+    return this as any;
+  }
+
+  max(size: number, msg?: string): this {
+    this._maxSize = { val: size, msg };
+    return this;
+  }
+
+  min(size: number, msg?: string): this {
+    this._minSize = { val: size, msg };
+    return this;
+  }
+
+  type(types: string | string[], msg?: string): this {
+    this._allowedTypes = { patterns: types, msg };
+    return this;
+  }
+
+  validate(value: unknown, path = ""): ValidationResult<Blob> {
+    if (value === undefined || value === null) {
+      if (this._isOptional) return { success: true, data: undefined as any };
+      return { success: false, issues: [{ path, message: "Blob is required" }] };
+    }
+
+    if (!isBlobLike(value)) {
+      return { success: false, issues: [{ path, message: "Expected a Blob object" }] };
+    }
+
+    if (this._maxSize && value.size > this._maxSize.val) {
+      return {
+        success: false,
+        issues: [
+          {
+            path,
+            message:
+              this._maxSize.msg ||
+              `Blob size (${value.size}B) exceeds maximum allowed (${this._maxSize.val}B)`
+          }
+        ]
+      };
+    }
+
+    if (this._minSize && value.size < this._minSize.val) {
+      return {
+        success: false,
+        issues: [
+          {
+            path,
+            message:
+              this._minSize.msg ||
+              `Blob size (${value.size}B) is below minimum required (${this._minSize.val}B)`
+          }
+        ]
+      };
+    }
+
+    if (this._allowedTypes && !matchesFileType("", value.type, this._allowedTypes.patterns)) {
+      return {
+        success: false,
+        issues: [
+          {
+            path,
+            message:
+              this._allowedTypes.msg ||
+              `Blob type "${value.type}" does not match allowed patterns: ${Array.isArray(this._allowedTypes.patterns) ? this._allowedTypes.patterns.join(", ") : this._allowedTypes.patterns}`
+          }
+        ]
+      };
+    }
+
+    return { success: true, data: value };
+  }
+}
+
+export class FormDataSchema extends Schema<FormData> {
+  private _isOptional = false;
+
+  optional(): Schema<FormData | undefined> {
+    this._isOptional = true;
+    return this as any;
+  }
+
+  validate(value: unknown, path = ""): ValidationResult<FormData> {
+    if (value === undefined || value === null) {
+      if (this._isOptional) return { success: true, data: undefined as any };
+      return { success: false, issues: [{ path, message: "FormData is required" }] };
+    }
+
+    if (value && typeof value === "object" && "__formData" in value) {
+      return { success: true, data: (value as any).__formData };
+    }
+
+    if (!isFormDataLike(value)) {
+      return { success: false, issues: [{ path, message: "Expected a FormData instance" }] };
+    }
+
+    return { success: true, data: value as FormData };
+  }
+}
+
 export function validateWithSchema<T>(
   schema: SchemaLike<T>,
   value: unknown,
@@ -355,6 +618,9 @@ export const v = {
   boolean: () => new BooleanSchema(),
   record: () => new RecordSchema(),
   any: () => new AnySchema(),
+  file: (options?: FileValidationOptions) => new FileSchema(options),
+  blob: (options?: FileValidationOptions) => new BlobSchema(options),
+  formData: () => new FormDataSchema(),
   object: <S extends Record<string, SchemaLike<any>>>(
     shape: S
   ): ObjectSchema<{ [K in keyof S]: InferSchemaType<S[K]> }> => new ObjectSchema(shape as any)

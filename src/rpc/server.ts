@@ -21,7 +21,11 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     rules,
     cache: handlerCache,
     etag: handlerEtag,
-    problemDetails: handlerProblemDetails
+    problemDetails: handlerProblemDetails,
+    maxBatchSize = 50,
+    maxBodySize = 10 * 1024 * 1024,
+    csrfProtection = true,
+    heartbeatInterval = 15000
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -43,6 +47,28 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
       } else {
         baseHeaders.set("X-Content-Type-Options", "nosniff");
       }
+    }
+
+    // Check payload size limits against Content-Length
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (maxBodySize > 0 && contentLength > maxBodySize) {
+      const error = new RPCError({
+        code: "PAYLOAD_TOO_LARGE",
+        message: `Payload too large (${contentLength} bytes exceeds limit of ${maxBodySize} bytes)`
+      });
+      baseHeaders.set("Content-Type", "application/json");
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: error.code,
+            message: error.message
+          }
+        }),
+        {
+          status: 413,
+          headers: baseHeaders
+        }
+      );
     }
 
     const url = new URL(request.url);
@@ -207,9 +233,57 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
       try {
         const body = await request.json();
         if (Array.isArray(body)) {
+          if (body.length > maxBatchSize) {
+            const error = new RPCError({
+              code: "BAD_REQUEST",
+              message: `Batch size (${body.length}) exceeds maximum limit (${maxBatchSize})`
+            });
+            baseHeaders.set("Content-Type", "application/json");
+            return new Response(
+              JSON.stringify({
+                error: {
+                  code: error.code,
+                  message: error.message
+                }
+              }),
+              {
+                status: 400,
+                headers: baseHeaders
+              }
+            );
+          }
+
           const batchResults = await Promise.all(
             body.map(async (item: { id?: string | number; path: string; input?: any }) => {
               try {
+                // Enforce route rules and guards for each item in batch
+                const itemRules = rulesList.filter((r) =>
+                  matchesRulePattern(r.match, url.pathname, item.path)
+                );
+
+                for (const rule of itemRules) {
+                  if (rule.requireHeaders) {
+                    for (const headerName of rule.requireHeaders) {
+                      if (!request.headers.get(headerName)) {
+                        throw new RPCError({
+                          code: "UNAUTHORIZED",
+                          message: `Missing required header '${headerName}' for rule '${rule.match}'`
+                        });
+                      }
+                    }
+                  }
+
+                  if (rule.guard) {
+                    const guardResult = await rule.guard({ req: request, ctx, path: item.path });
+                    if (guardResult === false) {
+                      throw new RPCError({
+                        code: "UNAUTHORIZED",
+                        message: `Access denied by route rule guard for '${rule.match}'`
+                      });
+                    }
+                  }
+                }
+
                 const proc = resolveProcedureFromPath(router, item.path);
                 const data = await executeProcedure(proc, {
                   rawInput: item.input,
@@ -222,12 +296,16 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
                   result: { data }
                 };
               } catch (err: any) {
+                const isDev =
+                  typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
                 const error =
                   err instanceof RPCError
                     ? err
                     : new RPCError({
                         code: "INTERNAL_SERVER_ERROR",
-                        message: err.message ?? "Internal Server Error",
+                        message: isDev
+                          ? (err?.message ?? "Internal Server Error")
+                          : "Internal Server Error",
                         cause: err
                       });
                 onError?.({ error, path: item.path, req: request });
@@ -281,6 +359,27 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           message: "Mutations must use POST method"
         });
       }
+      if (
+        procedure.type === "query" &&
+        request.method !== "GET" &&
+        request.method !== "HEAD" &&
+        request.method !== "POST"
+      ) {
+        throw new RPCError({
+          code: "METHOD_NOT_ALLOWED",
+          message: `Queries must use GET, HEAD, or POST method (received ${request.method})`
+        });
+      }
+      if (
+        procedure.type === "subscription" &&
+        request.method !== "GET" &&
+        request.method !== "HEAD"
+      ) {
+        throw new RPCError({
+          code: "METHOD_NOT_ALLOWED",
+          message: `Subscriptions must use GET method (received ${request.method})`
+        });
+      }
 
       // Parse input
       let rawInput: unknown;
@@ -294,11 +393,94 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           }
         }
       } else if (request.method === "POST") {
-        try {
-          const body = await request.json();
-          rawInput = body && typeof body === "object" && "input" in body ? body.input : body;
-        } catch {
-          rawInput = undefined;
+        const contentType = request.headers.get("content-type") || "";
+
+        // CSRF protection for mutation procedures
+        if (csrfProtection) {
+          const secFetchSite = request.headers.get("sec-fetch-site");
+          const origin = request.headers.get("origin");
+          const hasCustomHeader = Boolean(
+            request.headers.get("x-visage-rpc") ||
+              request.headers.get("authorization") ||
+              request.headers.get("x-requested-with")
+          );
+
+          if (secFetchSite === "cross-site" && !hasCustomHeader) {
+            throw new RPCError({
+              code: "FORBIDDEN",
+              message: "Cross-site request blocked by CSRF protection"
+            });
+          }
+
+          const isSimpleForm =
+            contentType.includes("application/x-www-form-urlencoded") ||
+            contentType.includes("multipart/form-data") ||
+            contentType.includes("text/plain");
+
+          if (isSimpleForm && !hasCustomHeader) {
+            const host = request.headers.get("host") || url.host;
+            if (origin) {
+              let originHost: string | null = null;
+              try {
+                originHost = new URL(origin).host;
+              } catch {
+                // Ignore invalid origin URL format
+              }
+              if (!originHost || (host && originHost !== host)) {
+                throw new RPCError({
+                  code: "FORBIDDEN",
+                  message: "Cross-origin form submission blocked by CSRF protection"
+                });
+              }
+            }
+          }
+        }
+
+        if (
+          contentType.includes("multipart/form-data") ||
+          contentType.includes("application/x-www-form-urlencoded")
+        ) {
+          try {
+            const formData = await request.formData();
+            const parsedObj: Record<string, any> = {};
+            const keys = new Set<string>();
+            formData.forEach((_, k) => {
+              keys.add(k);
+            });
+            for (const k of keys) {
+              const all = formData.getAll(k);
+              if (all.length > 1) {
+                parsedObj[k] = all;
+              } else {
+                const val = all[0];
+                if (typeof val === "string") {
+                  try {
+                    parsedObj[k] = JSON.parse(val);
+                  } catch {
+                    parsedObj[k] = val;
+                  }
+                } else {
+                  parsedObj[k] = val;
+                }
+              }
+            }
+            rawInput = Object.assign(parsedObj, { __formData: formData });
+          } catch {
+            rawInput = undefined;
+          }
+        } else if (contentType.includes("application/octet-stream")) {
+          try {
+            rawInput = await request.arrayBuffer();
+          } catch {
+            rawInput = undefined;
+          }
+        } else {
+          try {
+            const body = await request.json();
+            rawInput = body && typeof body === "object" && "input" in body ? body.input : body;
+          } catch {
+            rawInput = undefined;
+          }
         }
       }
 
@@ -311,7 +493,9 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           signal: request.signal
         })) as AsyncIterable<any>;
 
-        return createSubscriptionResponse(iterable, request.signal, baseHeaders);
+        return createSubscriptionResponse(iterable, request.signal, baseHeaders, {
+          heartbeatInterval
+        });
       }
 
       // Standard Query or Mutation execution
@@ -349,12 +533,13 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
 
       return res;
     } catch (err: any) {
+      const isDev = typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
       const error =
         err instanceof RPCError
           ? err
           : new RPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: err.message ?? "Internal Server Error",
+              message: isDev ? (err?.message ?? "Internal Server Error") : "Internal Server Error",
               cause: err
             });
 

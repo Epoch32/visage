@@ -10,6 +10,7 @@ export {
   parseHeadersFile
 } from "./plugins/headers";
 export { createLucidePlugin, type VisageLucideOptions, visageLucide } from "./plugins/lucide";
+export { createNoScriptPlugin } from "./plugins/noscript";
 export { createPagesPlugin, visagePages } from "./plugins/pages";
 export {
   generateStoragePrebootScript,
@@ -21,6 +22,7 @@ export type {
   CSPOptions,
   ExperimentalOptions,
   HeadersPluginOptions,
+  NoScriptPluginOptions,
   PageRoute,
   PageSpecialFiles,
   PagesOptions,

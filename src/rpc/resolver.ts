@@ -1,6 +1,8 @@
 import { RPCError } from "./error";
 import type { Procedure, Router } from "./types";
 
+const DANGEROUS_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
 export function resolveProcedureFromPath(
   router: Router<any, any>,
   path: string
@@ -10,6 +12,13 @@ export function resolveProcedureFromPath(
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]!;
+    if (DANGEROUS_KEYS.has(part)) {
+      throw new RPCError({
+        code: "NOT_FOUND",
+        message: `Procedure '${path}' not found`
+      });
+    }
+
     if (!current || typeof current !== "object") {
       throw new RPCError({
         code: "NOT_FOUND",
@@ -17,8 +26,15 @@ export function resolveProcedureFromPath(
       });
     }
 
+    if (!Object.hasOwn(current, part)) {
+      throw new RPCError({
+        code: "NOT_FOUND",
+        message: `Procedure '${path}' not found`
+      });
+    }
+
     if (i === parts.length - 1) {
-      if (part in current && "type" in current[part]) {
+      if (typeof current[part] === "object" && current[part] !== null && "type" in current[part]) {
         return current[part];
       }
       throw new RPCError({
@@ -27,9 +43,9 @@ export function resolveProcedureFromPath(
       });
     }
 
-    if (part in current && "_def" in current[part]) {
+    if (typeof current[part] === "object" && current[part] !== null && "_def" in current[part]) {
       current = current[part]._def.record;
-    } else if (part in current && typeof current[part] === "object") {
+    } else if (typeof current[part] === "object" && current[part] !== null) {
       current = current[part];
     } else {
       throw new RPCError({

@@ -3,6 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
+import { NoScript } from "../src/dom";
 import { hydrate, renderToStream, renderToString } from "../src/server";
 import { signal } from "../src/signals";
 
@@ -133,5 +134,23 @@ describe("Visage Server-Side Rendering (SSR)", () => {
 
     unmount();
     document.body.removeChild(container);
+  });
+
+  it("renders NoScript component with message prop or children during SSR", () => {
+    const htmlWithMessage = renderToString(() => (
+      <NoScript message="JavaScript is required to use this application." />
+    ));
+    expect(htmlWithMessage).toBe(
+      "<noscript>JavaScript is required to use this application.</noscript>"
+    );
+
+    const htmlWithChildren = renderToString(() => (
+      <NoScript class="custom-noscript" style="display: block;">
+        <div class="warning">Please turn on JavaScript</div>
+      </NoScript>
+    ));
+    expect(htmlWithChildren).toBe(
+      '<noscript class="custom-noscript" style="display: block;"><div class="warning">Please turn on JavaScript</div></noscript>'
+    );
   });
 });
