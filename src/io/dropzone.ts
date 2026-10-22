@@ -32,6 +32,12 @@ export interface CreateDropZoneOptions {
    */
   maxFiles?: number;
   /**
+   * Whether to recursively scan dropped folders/directories to collect all nested files.
+   * Preserves relative paths on `file.webkitRelativePath` and `(file as any).relativePath`.
+   * Defaults to false.
+   */
+  directory?: boolean;
+  /**
    * Whether the dropzone is currently disabled.
    */
   disabled?: boolean | (() => boolean);
@@ -111,6 +117,99 @@ export function isFileAccepted(file: File, accept?: string[] | string): boolean 
     // Exact MIME match: image/png, application/pdf
     return fileType === pattern;
   });
+}
+
+/**
+ * Recursively scans directory and file entries from a drag-and-drop DataTransfer.
+ * If directory entries are found or allowDirectory is enabled, traverses folders.
+ */
+export async function extractFilesFromDataTransfer(
+  dataTransfer: DataTransfer,
+  allowDirectory = false
+): Promise<File[]> {
+  if (!dataTransfer) return [];
+
+  const items = dataTransfer.items;
+  if (!items || items.length === 0) {
+    return Array.from(dataTransfer.files || []);
+  }
+
+  const entries: any[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item && item.kind === "file") {
+      if (typeof (item as any).webkitGetAsEntry === "function") {
+        const entry = (item as any).webkitGetAsEntry();
+        if (entry) {
+          entries.push(entry);
+        }
+      }
+    }
+  }
+
+  const hasDirectory = entries.some((e) => e?.isDirectory);
+  if (!allowDirectory && !hasDirectory) {
+    return Array.from(dataTransfer.files || []);
+  }
+
+  if (entries.length === 0) {
+    return Array.from(dataTransfer.files || []);
+  }
+
+  const results: File[] = [];
+
+  const scanEntry = async (entry: any, currentPath = ""): Promise<void> => {
+    if (!entry) return;
+
+    if (entry.isFile) {
+      await new Promise<void>((resolve) => {
+        entry.file(
+          (file: File) => {
+            const relPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+            try {
+              Object.defineProperty(file, "webkitRelativePath", {
+                value: relPath,
+                writable: true,
+                configurable: true
+              });
+            } catch {
+              // Ignore if readonly
+            }
+            (file as any).relativePath = relPath;
+            results.push(file);
+            resolve();
+          },
+          () => resolve()
+        );
+      });
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      const nextPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+
+      const readBatch = (): Promise<any[]> => {
+        return new Promise((resolve) => {
+          dirReader.readEntries(
+            (batch: any[]) => resolve(batch || []),
+            () => resolve([])
+          );
+        });
+      };
+
+      let batch: any[] = await readBatch();
+      while (batch.length > 0) {
+        for (const child of batch) {
+          await scanEntry(child, nextPath);
+        }
+        batch = await readBatch();
+      }
+    }
+  };
+
+  for (const entry of entries) {
+    await scanEntry(entry, "");
+  }
+
+  return results.length > 0 ? results : Array.from(dataTransfer.files || []);
 }
 
 /**
@@ -249,8 +348,31 @@ export function createDropZone(
     dragCounter = 0;
     isDraggingOver.set(false);
 
-    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-      processFiles(e.dataTransfer.files);
+    if (e.dataTransfer) {
+      const items = e.dataTransfer.items;
+      const hasDirSupport =
+        Boolean(options.directory) ||
+        (items &&
+          items.length > 0 &&
+          Array.from(items).some((it: any) => {
+            if (it.kind === "file" && typeof it.webkitGetAsEntry === "function") {
+              const entry = it.webkitGetAsEntry();
+              return entry?.isDirectory;
+            }
+            return false;
+          }));
+
+      if (hasDirSupport && items && items.length > 0) {
+        extractFilesFromDataTransfer(e.dataTransfer, Boolean(options.directory)).then(
+          (extracted) => {
+            if (extracted.length > 0) {
+              processFiles(extracted);
+            }
+          }
+        );
+      } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processFiles(e.dataTransfer.files);
+      }
     }
   };
 

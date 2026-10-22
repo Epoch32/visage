@@ -30,6 +30,7 @@ export function DropZone(props: DropZoneComponentProps): Child {
     minSize,
     multiple,
     maxFiles,
+    directory,
     disabled,
     onDrop,
     onDropRejected,
@@ -45,6 +46,7 @@ export function DropZone(props: DropZoneComponentProps): Child {
     minSize,
     multiple,
     maxFiles,
+    directory,
     disabled,
     onDrop,
     onDropRejected,
@@ -55,7 +57,8 @@ export function DropZone(props: DropZoneComponentProps): Child {
 
   const picker = createFilePicker({
     accept,
-    multiple
+    multiple,
+    directory
   });
 
   const openPicker = async () => {

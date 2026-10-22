@@ -294,11 +294,52 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           }
         }
       } else if (request.method === "POST") {
-        try {
-          const body = await request.json();
-          rawInput = body && typeof body === "object" && "input" in body ? body.input : body;
-        } catch {
-          rawInput = undefined;
+        const contentType = request.headers.get("content-type") || "";
+        if (
+          contentType.includes("multipart/form-data") ||
+          contentType.includes("application/x-www-form-urlencoded")
+        ) {
+          try {
+            const formData = await request.formData();
+            const parsedObj: Record<string, any> = {};
+            const keys = new Set<string>();
+            formData.forEach((_, k) => {
+              keys.add(k);
+            });
+            for (const k of keys) {
+              const all = formData.getAll(k);
+              if (all.length > 1) {
+                parsedObj[k] = all;
+              } else {
+                const val = all[0];
+                if (typeof val === "string") {
+                  try {
+                    parsedObj[k] = JSON.parse(val);
+                  } catch {
+                    parsedObj[k] = val;
+                  }
+                } else {
+                  parsedObj[k] = val;
+                }
+              }
+            }
+            rawInput = Object.assign(parsedObj, { __formData: formData });
+          } catch {
+            rawInput = undefined;
+          }
+        } else if (contentType.includes("application/octet-stream")) {
+          try {
+            rawInput = await request.arrayBuffer();
+          } catch {
+            rawInput = undefined;
+          }
+        } else {
+          try {
+            const body = await request.json();
+            rawInput = body && typeof body === "object" && "input" in body ? body.input : body;
+          } catch {
+            rawInput = undefined;
+          }
         }
       }
 

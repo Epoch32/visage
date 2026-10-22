@@ -514,4 +514,60 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(res2.headers.get("etag")).toBe(etag);
     expect(await res2.text()).toBe("");
   });
+
+  it("supports multipart/form-data and binary file uploads via RPC mutations", async () => {
+    const uploadRouter = createRouter()
+      .mutation("uploadRaw", {
+        input: v.formData(),
+        resolve: async ({ input }) => {
+          const file = input.get("bundle") as File;
+          const site = input.get("siteId") as string;
+          return {
+            fileName: file.name,
+            fileSize: file.size,
+            site
+          };
+        }
+      })
+      .mutation("deploySite", {
+        input: v.object({
+          siteId: v.string(),
+          archive: v.file({ maxSize: 1024 * 1024 })
+        }),
+        resolve: async ({ input }) => {
+          return {
+            deployed: true,
+            siteId: input.siteId,
+            archiveName: input.archive.name,
+            bytes: input.archive.size
+          };
+        }
+      });
+
+    const handler = createFetchHandler({ router: uploadRouter, endpoint: "/api/rpc" });
+    const client = createClient<typeof uploadRouter>({
+      baseUrl: "http://localhost/api/rpc",
+      fetch: (url, init) => handler(new Request(url, init))
+    });
+
+    // 1. Direct FormData mutation
+    const fd = new FormData();
+    const mockFile = new File(["console.log('hello')"], "index.js", { type: "text/javascript" });
+    fd.append("siteId", "blog-app");
+    fd.append("bundle", mockFile);
+
+    const res1 = await client.uploadRaw.mutate(fd);
+    expect(res1.fileName).toBe("index.js");
+    expect(res1.site).toBe("blog-app");
+
+    // 2. Object with File payload auto-marshaled into FormData
+    const zipFile = new File(["<html/>"], "site.zip", { type: "application/zip" });
+    const res2 = await client.deploySite.mutate({
+      siteId: "my-site",
+      archive: zipFile
+    });
+    expect(res2.deployed).toBe(true);
+    expect(res2.siteId).toBe("my-site");
+    expect(res2.archiveName).toBe("site.zip");
+  });
 });

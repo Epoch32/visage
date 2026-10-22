@@ -21,6 +21,51 @@ async function resolveHeaders(
   return resolveHttpHeaders(headers, fullPath, matchesRulePattern);
 }
 
+function isBinary(val: unknown): boolean {
+  if (typeof Blob !== "undefined" && val instanceof Blob) return true;
+  if (typeof File !== "undefined" && val instanceof File) return true;
+  if (typeof ArrayBuffer !== "undefined" && (val instanceof ArrayBuffer || ArrayBuffer.isView(val)))
+    return true;
+  return false;
+}
+
+function hasBinaryData(val: unknown): boolean {
+  if (!val || typeof val !== "object") return false;
+  if (typeof FormData !== "undefined" && val instanceof FormData) return true;
+  if (isBinary(val)) return true;
+  if (Array.isArray(val)) return val.some(hasBinaryData);
+  return Object.values(val as Record<string, any>).some(hasBinaryData);
+}
+
+function objectToFormData(obj: Record<string, any>): FormData {
+  const fd = new FormData();
+  for (const [key, val] of Object.entries(obj)) {
+    if (val === undefined || val === null) continue;
+    if (typeof File !== "undefined" && val instanceof File) {
+      fd.append(key, val, val.name);
+    } else if (typeof Blob !== "undefined" && val instanceof Blob) {
+      fd.append(key, val);
+    } else if (Array.isArray(val)) {
+      for (const item of val) {
+        if (typeof File !== "undefined" && item instanceof File) {
+          fd.append(key, item, item.name);
+        } else if (typeof Blob !== "undefined" && item instanceof Blob) {
+          fd.append(key, item);
+        } else if (typeof item === "object" && item !== null) {
+          fd.append(key, JSON.stringify(item));
+        } else {
+          fd.append(key, String(item));
+        }
+      }
+    } else if (typeof val === "object") {
+      fd.append(key, JSON.stringify(val));
+    } else {
+      fd.append(key, String(val));
+    }
+  }
+  return fd;
+}
+
 function createProxyPath(options: ClientOptions, path: string[] = []): any {
   return new Proxy(
     {},
@@ -96,13 +141,39 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
             const fullPath = path.join(".");
             const url = `${baseUrl}/${fullPath}`;
 
+            const isFormData = typeof FormData !== "undefined" && input instanceof FormData;
+            const isRawBinary = isBinary(input);
+            const containsBinary = !isFormData && !isRawBinary && hasBinaryData(input);
+
             const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
-            const headers = {
-              "Content-Type": "application/json",
+            const headers: Record<string, string> = {
               Accept: "application/json",
               ...dynamicHeaders,
               ...callOpts?.headers
             };
+
+            let requestBody: any;
+            if (isFormData) {
+              requestBody = input;
+              delete headers["Content-Type"];
+              delete headers["content-type"];
+            } else if (containsBinary && typeof FormData !== "undefined") {
+              requestBody = objectToFormData(input as Record<string, any>);
+              delete headers["Content-Type"];
+              delete headers["content-type"];
+            } else if (isRawBinary) {
+              requestBody = input;
+              if ((input as any).type) {
+                headers["Content-Type"] = (input as any).type;
+              } else if (!headers["Content-Type"] && !headers["content-type"]) {
+                headers["Content-Type"] = "application/octet-stream";
+              }
+            } else {
+              if (!headers["Content-Type"] && !headers["content-type"]) {
+                headers["Content-Type"] = "application/json";
+              }
+              requestBody = JSON.stringify({ input });
+            }
 
             const devtools =
               typeof window !== "undefined" ? (window as any).__VISAGE_DEVTOOLS__ : null;
@@ -117,7 +188,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
               const res = await fetchFn(url, {
                 method: "POST",
                 headers,
-                body: JSON.stringify({ input }),
+                body: requestBody,
                 signal: callOpts?.signal
               });
 

@@ -14,6 +14,7 @@ export {
   type CreateDropZoneOptions,
   createDropZone,
   type DropZoneReturn,
+  extractFilesFromDataTransfer,
   type FileRejection,
   type FileRejectionReason,
   isFileAccepted

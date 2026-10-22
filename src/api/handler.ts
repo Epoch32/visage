@@ -280,10 +280,49 @@ export function createApiHandler(
           }
         }
       } else {
-        const contentType = req.headers.get("Content-Type") || "";
+        const contentType =
+          req.headers.get("Content-Type") || req.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
           try {
             rawInput = await req.json();
+          } catch {
+            rawInput = {};
+          }
+        } else if (
+          contentType.includes("multipart/form-data") ||
+          contentType.includes("application/x-www-form-urlencoded")
+        ) {
+          try {
+            const formData = await req.formData();
+            const parsedObj: Record<string, any> = {};
+            const keys = new Set<string>();
+            formData.forEach((_, k) => {
+              keys.add(k);
+            });
+            for (const k of keys) {
+              const all = formData.getAll(k);
+              if (all.length > 1) {
+                parsedObj[k] = all;
+              } else {
+                const val = all[0];
+                if (typeof val === "string") {
+                  try {
+                    parsedObj[k] = JSON.parse(val);
+                  } catch {
+                    parsedObj[k] = val;
+                  }
+                } else {
+                  parsedObj[k] = val;
+                }
+              }
+            }
+            rawInput = Object.assign(parsedObj, { __formData: formData });
+          } catch {
+            rawInput = {};
+          }
+        } else if (contentType.includes("application/octet-stream")) {
+          try {
+            rawInput = await req.arrayBuffer();
           } catch {
             rawInput = {};
           }
