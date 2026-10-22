@@ -1,5 +1,71 @@
 # Changelog
 
+## [2.1.0](https://github.com/Epoch32/visage/compare/v2.0.0...v2.1.0) (2026-10-20)
+
+
+### Features
+
+* **compiler:** support standard onClickCapture JSX event handler naming ([6618733](https://github.com/Epoch32/visage/commit/66187332a329557547c4c8b0bd04f5696724e934))
+* **http:** implement RFC 9110 & RFC 9111 conditional requests and caching ([ff188c2](https://github.com/Epoch32/visage/commit/ff188c25cd42b95c9d7a16c505100035bed504d2))
+* **http:** implement RFC 9457 Problem Details for HTTP APIs (application/problem+json) ([a6604cd](https://github.com/Epoch32/visage/commit/a6604cde78b3d27c7f601692e0394d61757c5381))
+* **io:** support minSize validation in dropzone ([212a438](https://github.com/Epoch32/visage/commit/212a43840b0b913dc663c7e131db483a5177a84c))
+* **router:** set aria-current="page" on active Link components ([39a7b9b](https://github.com/Epoch32/visage/commit/39a7b9bcd418ee27483014cdd4af8282a024a692))
+* **vite:** add AOT compiler build summary dashboard and verbose transform diagnostics ([fa660f8](https://github.com/Epoch32/visage/commit/fa660f8d42ee8a2c14b4445efefab699a7641c04))
+* **vite:** add automated build-time _headers generator for RFC 9111 & RFC 8246 ([bad5e26](https://github.com/Epoch32/visage/commit/bad5e26d93850f05479011f881e31696926ad04f))
+
+
+### Bug Fixes
+
+* **charts:** calculate bar geometry from zero-baseline dynamically ([cf63c9e](https://github.com/Epoch32/visage/commit/cf63c9eaf7004a980ad25b1d7cc3cbb62b46c78c))
+* **charts:** prioritize domain value lookup over positional index in band scale ([65954f8](https://github.com/Epoch32/visage/commit/65954f862e3ffdcf87a958a53e42d21931c4e776))
+* **charts:** split full circle 360-degree pie arcs to prevent blank SVG rendering ([445396e](https://github.com/Epoch32/visage/commit/445396eb33f7a41efed345364db5ed109558902e))
+* **compiler:** guard nullish dynamic spread props with fallback empty object ([a9891e8](https://github.com/Epoch32/visage/commit/a9891e8d2609cae28dd25d0f292fd0adb1e58916))
+* **compiler:** preserve JSX fragment children in custom components ([82e12ed](https://github.com/Epoch32/visage/commit/82e12edd427f92f5414d537056a87251d6d9c2a9))
+* **compiler:** preserve raw text in JSX fragments ([372670c](https://github.com/Epoch32/visage/commit/372670c128ba1df79aa0936bc9e0d021c945de20))
+* **devtools:** retain and invoke query client unsubscribe in DevToolsHub ([463dcff](https://github.com/Epoch32/visage/commit/463dcffbf936b2e156595e0040050ae9c3173d89))
+* **dom:** catch InvalidStateError when reading selectionStart on non-text inputs ([a622b77](https://github.com/Epoch32/visage/commit/a622b77fdd48d2ecc6b618602f73e331dc57922b))
+* **dom:** preserve sibling DOM nodes during 100% key replacement in For ([df5285e](https://github.com/Epoch32/visage/commit/df5285e9b322a3566a9fdbe292ec5e214106d528))
+* **dom:** register onCleanup handlers for two-way binding input and change listeners ([2da43b8](https://github.com/Epoch32/visage/commit/2da43b8723d38fa018186a024c0a712cecff6e5b))
+* **dom:** scope and dispose dynamic style object effects and unregister removed keys ([70e7dd0](https://github.com/Epoch32/visage/commit/70e7dd01f806e4a63083bfd46ad8af180a95333c))
+* **form:** standardize ValidationIssue.path as string or array and export normalizeIssuePath ([020172b](https://github.com/Epoch32/visage/commit/020172bb8979a4c866630ef652d7d22e96d8565e))
+* **i18n:** guard against prototype pollution in key traversal and dictionary merging ([447b09b](https://github.com/Epoch32/visage/commit/447b09b14bce291cd7149e30074b70b27d7c584d))
+* **jsx:** expand SVG 2 tag registry for proper SVG namespace instantiation ([00849b5](https://github.com/Epoch32/visage/commit/00849b527125fb042690d98c14d9ba77e7c566fe))
+* **native:** add configurable timeout eviction to pending IPC calls ([6b35a37](https://github.com/Epoch32/visage/commit/6b35a37ea99cc86f7f36ba371ce0dfbc7712d7d5))
+* **native:** escape urgency and icon in platform.zig and add native test ([cd5b80b](https://github.com/Epoch32/visage/commit/cd5b80bfdf6e48c99d1cf614ef4ddad44673ebfb))
+* **router:** strip base path prefix in useSearchParams and navigate to prevent exponential duplication ([9383e41](https://github.com/Epoch32/visage/commit/9383e410fe143da611e25487ea2d732496f2845b))
+* **router:** use DOM-agnostic fallback to prevent document ReferenceError in SSR ([3988ddc](https://github.com/Epoch32/visage/commit/3988ddc4961b86faf60e88881623e42bbd8d0399))
+* **rpc:** emit Access-Control-Allow-Methods and Access-Control-Allow-Headers on preflight ([c806bdb](https://github.com/Epoch32/visage/commit/c806bdb6f3c23e0e3706a2126b401f8d39452951))
+* **security:** patch html-shield regex for slash separators and unquoted URLs ([95c650c](https://github.com/Epoch32/visage/commit/95c650cc1cd3d88e44cd8facf5e6761d9b4f05e1))
+* **security:** return wrapped accessor function in _safeUrl for reactive signals ([422cdd4](https://github.com/Epoch32/visage/commit/422cdd4f74d73b6d7658fc2d0866a4f4e91ec9c5))
+* **style:** ensure request-scoped ssr styles collect reliably in test and mock environments ([f07b1e9](https://github.com/Epoch32/visage/commit/f07b1e991dd71c1f24842e104f61b5ff38e4762f))
+* **style:** scope SSR styles per request context and support clearing ([a68f0cd](https://github.com/Epoch32/visage/commit/a68f0cd495f2537210a8b3633334bc4c76e31035))
+* **style:** use quote and comment aware balanced brace parsing for CSS blocks ([44045d0](https://github.com/Epoch32/visage/commit/44045d0090582c9b910051637fa7d4b77ca68c3b))
+* **ui:** add aria-sort to table headers and accessible labels to DataTable checkboxes ([8cb4098](https://github.com/Epoch32/visage/commit/8cb40980d689c0d837289f7ef6dc7bc90090bc8f))
+* **ui:** eliminate dangling ARIA references in Dialog and Tooltip components ([eda384c](https://github.com/Epoch32/visage/commit/eda384c0613ffb0cfad0f4e06acee15a54abb61d))
+* **ui:** hide CommandEmpty when search results match ([0a5c2cc](https://github.com/Epoch32/visage/commit/0a5c2cc7ca9616aae20da5b8457c58e80138be3e))
+* **ui:** implement accessible combobox semantics on CommandInput, listbox on CommandList, and option on CommandItem ([e4a75ed](https://github.com/Epoch32/visage/commit/e4a75ed5a041042e1394069975e3e66c48db14da))
+* **ui:** implement focus trapping and focus restoration on Dialog and CommandDialog ([adf46c2](https://github.com/Epoch32/visage/commit/adf46c2a1e9042c0346ecc4550f978b201b40809))
+* **ui:** pass row index to getRowId to prevent key collisions in DataTable ([2ae1350](https://github.com/Epoch32/visage/commit/2ae1350ff1e5dcb8e8c6e72d43ac19e404a16560))
+* **ui:** remove native toggle event listener on cleanup in PopoverContent ([ccd1fea](https://github.com/Epoch32/visage/commit/ccd1feac013439bab053fe63ee4fa186a0a1c0b8))
+* **ui:** remove window scroll listener on cleanup in BottomBarRoot ([0d33c82](https://github.com/Epoch32/visage/commit/0d33c82d8a583ce27137c6478df1f5aebfe8c0fa))
+* **ui:** render hidden checkbox in Switch for form submissions ([ddba6ec](https://github.com/Epoch32/visage/commit/ddba6ec3dd71b5cb16e1ea8814a58e771a9256de))
+* **ui:** shift focus into SelectContent on ArrowDown open ([be3df8b](https://github.com/Epoch32/visage/commit/be3df8b759293effae92f14c229405f0ce683c06))
+* **ui:** use role="tablist" on BottomBarRoot to validate child tab roles ([ab4eec5](https://github.com/Epoch32/visage/commit/ab4eec5a92cd9c9c0cff299a892f8acebb26e6de))
+* **vite:** auto-whitelist fonts.gstatic.com for Google Fonts and sync inline script hashes in CSP dev server headers ([81d1928](https://github.com/Epoch32/visage/commit/81d192897be9bf5db37ece86b7939e333e97212b))
+* **vite:** clean up SSE stream reader and generator on client disconnect ([be2a865](https://github.com/Epoch32/visage/commit/be2a865e77239853332fc7c282ff44a392909132))
+* **vite:** halt build on compiler security and syntax errors ([32c7d88](https://github.com/Epoch32/visage/commit/32c7d88815e4aad62178c668ad6be6f17504b8b2))
+* **vite:** normalize Windows paths in MPA pages router and watcher ([dfd4529](https://github.com/Epoch32/visage/commit/dfd452982ded8bc43452406ee8fb80eb6fd17b28))
+* **vite:** safely handle preboot body element targeting during head execution ([67a0da6](https://github.com/Epoch32/visage/commit/67a0da68dbba7d00803f9db55c6dedf99e62e198))
+* **vite:** strip query parameters before matching file extensions in transformHmr ([164ad7a](https://github.com/Epoch32/visage/commit/164ad7a6201174d1a544442186cc01c5d062521c))
+* **vite:** target only /assets/* by default in _headers to prevent Cloudflare header concatenation ([63eb08f](https://github.com/Epoch32/visage/commit/63eb08fcf5918ee26cc7b780fd0dab5278d80f4a))
+
+
+### Performance Improvements
+
+* **i18n:** cache Intl.PluralRules instances by locale ([f39852a](https://github.com/Epoch32/visage/commit/f39852ad5244c1d5dcc9a1ee27a2a75f18b37bc2))
+* **i18n:** cache precompiled regular expressions in interpolate ([ca7aa0a](https://github.com/Epoch32/visage/commit/ca7aa0a0d60fb32403e85316019b992192cb5129))
+* **ui:** disconnect global overlay listeners when closed in useDismiss ([ebb77c3](https://github.com/Epoch32/visage/commit/ebb77c3f662b740230ce85a6abaef3f5d583d1f2))
+
 ## [1.14.1](https://github.com/Epoch32/visage/compare/v1.14.0...v1.14.1) (2026-10-18)
 
 
