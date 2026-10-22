@@ -553,5 +553,22 @@ export const middleware = () => {};
       const subPostBody = await subPostRes.json();
       expect(subPostBody.error.code).toBe("METHOD_NOT_ALLOWED");
     });
+
+    it("handles malformed URI parameters safely and returns 400 Bad Request instead of crashing", async () => {
+      const api = createApi({
+        "routes/users/[id].ts": {
+          get: query({
+            resolve: ({ params }: any) => ({ id: params.id })
+          })
+        }
+      });
+
+      // Malformed URI percent encoding (%E0%A4%A)
+      const res = await api.fetch(new Request("http://localhost/users/%E0%A4%A"));
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error.code).toBe("BAD_REQUEST");
+      expect(body.error.message).toContain("Malformed");
+    });
   });
 });

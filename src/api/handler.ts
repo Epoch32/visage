@@ -156,17 +156,37 @@ export function createApiHandler(
 
     // 2. Route Matching
     let matchedRoute: RouteMatch | null = null;
-    const pathParams: Record<string, string> = {};
+    const pathParams: Record<string, string> = Object.create(null);
 
-    for (const route of routes) {
-      const match = pathname.match(route.pattern);
-      if (match) {
-        matchedRoute = route;
-        route.paramNames.forEach((name, i) => {
-          pathParams[name] = decodeURIComponent(match[i + 1] || "");
-        });
-        break;
+    try {
+      for (const route of routes) {
+        const match = pathname.match(route.pattern);
+        if (match) {
+          matchedRoute = route;
+          route.paramNames.forEach((name, i) => {
+            if (name === "__proto__" || name === "constructor" || name === "prototype") return;
+            pathParams[name] = decodeURIComponent(match[i + 1] || "");
+          });
+          break;
+        }
       }
+    } catch {
+      const problem: ProblemDetails = {
+        type: "about:blank",
+        title: "Bad Request",
+        status: 400,
+        detail: "Malformed percent-encoded URI path parameter",
+        instance: pathname,
+        code: "BAD_REQUEST"
+      };
+      return applyCorsHeaders(
+        formatErrorResponse(req, config, problem, {
+          ok: false,
+          error: { code: "BAD_REQUEST", message: "Malformed percent-encoded URI path parameter" }
+        }),
+        req,
+        config.cors
+      );
     }
 
     if (!matchedRoute) {
