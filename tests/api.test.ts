@@ -720,5 +720,26 @@ export const middleware = () => {};
       expect(text).toContain(": ping\n\n");
       expect(text).toContain('data: {"msg":"end"}');
     });
+
+    it("blocks prototype pollution attempts in query search params and path parameters", async () => {
+      const api = createApi({
+        "routes/echo.ts": {
+          get: query({
+            resolve: ({ input }: any) => ({ ...input })
+          })
+        }
+      });
+
+      // Pass __proto__ and constructor in query string
+      const res = await api.fetch(
+        new Request("http://localhost/echo?__proto__[polluted]=true&constructor=evil&valid=ok")
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data.valid).toBe("ok");
+      expect(Object.hasOwn(body.data, "__proto__")).toBe(false);
+      expect(Object.hasOwn(body.data, "constructor")).toBe(false);
+      expect((Object.prototype as any).polluted).toBeUndefined();
+    });
   });
 });

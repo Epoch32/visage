@@ -54,6 +54,22 @@ function formatErrorResponse(
 }
 
 /**
+ * Guard against prototype pollution keys
+ */
+function isDangerousKey(key: string): boolean {
+  return (
+    key === "__proto__" ||
+    key.startsWith("__proto__") ||
+    key === "constructor" ||
+    key.startsWith("constructor.") ||
+    key.startsWith("constructor[") ||
+    key === "prototype" ||
+    key.startsWith("prototype.") ||
+    key.startsWith("prototype[")
+  );
+}
+
+/**
  * Check whether origin matches configured CORS policy and return allowed origin string or null
  */
 function resolveAllowedOrigin(
@@ -189,7 +205,7 @@ export function createApiHandler(
         if (match) {
           matchedRoute = route;
           route.paramNames.forEach((name, i) => {
-            if (name === "__proto__" || name === "constructor" || name === "prototype") return;
+            if (isDangerousKey(name)) return;
             pathParams[name] = decodeURIComponent(match[i + 1] || "");
           });
           break;
@@ -382,9 +398,11 @@ export function createApiHandler(
           }
         } else {
           // Flatten searchParams
-          const spObj: Record<string, string> = {};
+          const spObj: Record<string, string> = Object.create(null);
           url.searchParams.forEach((val, key) => {
-            spObj[key] = val;
+            if (!isDangerousKey(key)) {
+              spObj[key] = val;
+            }
           });
           if (Object.keys(spObj).length > 0) {
             rawInput = spObj;
@@ -451,7 +469,9 @@ export function createApiHandler(
             const parsedObj: Record<string, any> = {};
             const keys = new Set<string>();
             formData.forEach((_, k) => {
-              keys.add(k);
+              if (!isDangerousKey(k)) {
+                keys.add(k);
+              }
             });
             for (const k of keys) {
               const all = formData.getAll(k);
@@ -483,9 +503,20 @@ export function createApiHandler(
         }
       }
 
-      // Merge Path Params into Input if object
+      // Merge Path Params into Input if object with prototype sanitization
       if (typeof rawInput === "object" && rawInput !== null) {
-        rawInput = { ...pathParams, ...rawInput };
+        const sanitizedInput: Record<string, any> = Object.create(null);
+        for (const [k, v] of Object.entries(pathParams)) {
+          if (!isDangerousKey(k)) {
+            sanitizedInput[k] = v;
+          }
+        }
+        for (const [k, v] of Object.entries(rawInput)) {
+          if (!isDangerousKey(k)) {
+            sanitizedInput[k] = v;
+          }
+        }
+        rawInput = sanitizedInput;
       }
 
       // Validate Input Schema

@@ -140,7 +140,7 @@ export function buildFileRouter(
     );
 
     const { pattern, paramNames } = compileRoutePattern(raw.routePath);
-    const procedures: Record<string, ApiProcedure> = {};
+    const procedures: Record<string, ApiProcedure> = Object.create(null);
 
     // Extract procedures or standard export
     const mod = raw.module;
@@ -149,6 +149,7 @@ export function buildFileRouter(
     }
 
     for (const [key, val] of Object.entries(mod)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
       if (val && typeof val === "object" && "type" in val && "options" in val) {
         procedures[key] = val as ApiProcedure;
       }
