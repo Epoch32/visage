@@ -250,12 +250,16 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
                   result: { data }
                 };
               } catch (err: any) {
+                const isDev =
+                  typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
                 const error =
                   err instanceof RPCError
                     ? err
                     : new RPCError({
                         code: "INTERNAL_SERVER_ERROR",
-                        message: err.message ?? "Internal Server Error",
+                        message: isDev
+                          ? (err?.message ?? "Internal Server Error")
+                          : "Internal Server Error",
                         cause: err
                       });
                 onError?.({ error, path: item.path, req: request });
@@ -418,12 +422,13 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
 
       return res;
     } catch (err: any) {
+      const isDev = typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
       const error =
         err instanceof RPCError
           ? err
           : new RPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: err.message ?? "Internal Server Error",
+              message: isDev ? (err?.message ?? "Internal Server Error") : "Internal Server Error",
               cause: err
             });
 

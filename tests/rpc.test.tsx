@@ -617,4 +617,27 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     const res2 = await handler(req2);
     expect(res2.status).toBe(404);
   });
+
+  it("masks raw internal exception messages in production mode to prevent information disclosure", async () => {
+    const errorRouter = createRouter().query("crash", {
+      resolve: () => {
+        throw new Error("Sensitive database table user_credentials failed at 10.0.1.5:5432");
+      }
+    });
+
+    const origEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = "production";
+      const handler = createFetchHandler({ router: errorRouter, endpoint: "/api/rpc" });
+
+      const res = await handler(new Request("http://localhost/api/rpc/crash"));
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data.error.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(data.error.message).toBe("Internal Server Error");
+      expect(data.error.message).not.toContain("Sensitive database table");
+    } finally {
+      process.env.NODE_ENV = origEnv;
+    }
+  });
 });
