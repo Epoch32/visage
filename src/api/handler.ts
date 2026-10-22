@@ -530,17 +530,63 @@ export function createApiHandler(
           params: pathParams
         }) as AsyncGenerator<any, void, unknown>;
 
+        const heartbeatInterval = config.heartbeatInterval ?? 15000;
+        let heartbeatTimer: any = null;
+        const encoder = new TextEncoder();
+
         const stream = new ReadableStream({
           async start(controller) {
-            const encoder = new TextEncoder();
+            const cleanup = () => {
+              if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+              }
+            };
+
+            if (heartbeatInterval > 0) {
+              heartbeatTimer = setInterval(() => {
+                if (req.signal?.aborted) {
+                  cleanup();
+                  return;
+                }
+                try {
+                  controller.enqueue(encoder.encode(": ping\n\n"));
+                } catch {
+                  cleanup();
+                }
+              }, heartbeatInterval);
+            }
+
+            const abortHandler = () => {
+              cleanup();
+            };
+            req.signal?.addEventListener?.("abort", abortHandler, { once: true });
+
             try {
               for await (const chunk of generator) {
+                if (req.signal?.aborted) break;
                 const payload = `data: ${JSON.stringify(chunk)}\n\n`;
                 controller.enqueue(encoder.encode(payload));
               }
+              cleanup();
               controller.close();
             } catch (err: any) {
-              controller.error(err);
+              cleanup();
+              const errorMessage = `event: error\ndata: ${JSON.stringify({ message: err.message ?? "Stream error" })}\n\n`;
+              controller.enqueue(encoder.encode(errorMessage));
+              controller.close();
+            } finally {
+              cleanup();
+              req.signal?.removeEventListener?.("abort", abortHandler);
+            }
+          },
+          async cancel() {
+            if (heartbeatTimer) {
+              clearInterval(heartbeatTimer);
+              heartbeatTimer = null;
+            }
+            if (typeof (generator as any)?.return === "function") {
+              await (generator as any).return();
             }
           }
         });
@@ -548,7 +594,7 @@ export function createApiHandler(
         const sseRes = new Response(stream, {
           headers: {
             "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive"
           }
         });
@@ -683,7 +729,8 @@ function isApiRouterConfig(val: unknown): val is ApiRouterConfig {
       "problemDetails",
       "onError",
       "csrfProtection",
-      "maxBodySize"
+      "maxBodySize",
+      "heartbeatInterval"
     ].includes(k)
   );
 }

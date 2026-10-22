@@ -125,6 +125,13 @@ export interface ApiRouterConfig {
    */
   maxBodySize?: number;
 
+  /**
+   * Interval in milliseconds for Server-Sent Events (SSE) keep-alive heartbeat pings.
+   * When > 0, periodically sends SSE comment ': ping\n\n' to prevent proxy timeouts.
+   * Defaults to 15000 (15s). Set to 0 to disable.
+   */
+  heartbeatInterval?: number;
+
   cors?: {
     origin?: string | string[] | ((origin: string) => boolean);
     methods?: string[];

@@ -681,5 +681,44 @@ export const middleware = () => {};
       expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
       expect(body.error.message).toContain("exceeds limit");
     });
+
+    it("emits SSE keep-alive heartbeat pings and cleans up timers on stream close", async () => {
+      const api = createApi(
+        {
+          "routes/ticker.ts": {
+            default: subscription({
+              resolve: async function* () {
+                yield { msg: "start" };
+                // Wait longer than heartbeat interval
+                await new Promise((resolve) => setTimeout(resolve, 60));
+                yield { msg: "end" };
+              }
+            })
+          }
+        },
+        {},
+        {
+          heartbeatInterval: 25 // 25ms heartbeat
+        }
+      );
+
+      const res = await api.fetch(new Request("http://localhost/ticker"));
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("text/event-stream");
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value);
+      }
+
+      expect(text).toContain('data: {"msg":"start"}');
+      expect(text).toContain(": ping\n\n");
+      expect(text).toContain('data: {"msg":"end"}');
+    });
   });
 });
