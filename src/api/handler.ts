@@ -185,26 +185,43 @@ export function createApiHandler(
 
     try {
       const method = req.method.toUpperCase();
-      let procedure: ApiProcedure | undefined = matchedRoute.procedures.default;
+      let procedure: ApiProcedure | undefined;
 
-      if (!procedure) {
-        if (method === "GET" || method === "HEAD") {
-          procedure =
-            matchedRoute.procedures.HEAD ||
-            matchedRoute.procedures.head ||
-            matchedRoute.procedures.GET ||
-            matchedRoute.procedures.get;
-        } else if (method === "POST") {
-          procedure = matchedRoute.procedures.POST || matchedRoute.procedures.post;
-        } else if (method === "PUT") {
-          procedure = matchedRoute.procedures.PUT || matchedRoute.procedures.put;
-        } else if (method === "DELETE") {
-          procedure =
-            matchedRoute.procedures.DELETE ||
-            matchedRoute.procedures.del ||
-            matchedRoute.procedures.delete;
-        } else if (method === "PATCH") {
-          procedure = matchedRoute.procedures.PATCH || matchedRoute.procedures.patch;
+      if (method === "GET" || method === "HEAD") {
+        procedure =
+          matchedRoute.procedures.HEAD ||
+          matchedRoute.procedures.head ||
+          matchedRoute.procedures.GET ||
+          matchedRoute.procedures.get;
+      } else if (method === "POST") {
+        procedure = matchedRoute.procedures.POST || matchedRoute.procedures.post;
+      } else if (method === "PUT") {
+        procedure = matchedRoute.procedures.PUT || matchedRoute.procedures.put;
+      } else if (method === "DELETE") {
+        procedure =
+          matchedRoute.procedures.DELETE ||
+          matchedRoute.procedures.del ||
+          matchedRoute.procedures.delete;
+      } else if (method === "PATCH") {
+        procedure = matchedRoute.procedures.PATCH || matchedRoute.procedures.patch;
+      }
+
+      if (!procedure && matchedRoute.procedures.default) {
+        const defaultProc = matchedRoute.procedures.default;
+        if (defaultProc.type === "mutation") {
+          if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+            procedure = defaultProc;
+          }
+        } else if (defaultProc.type === "subscription") {
+          if (method === "GET" || method === "HEAD") {
+            procedure = defaultProc;
+          }
+        } else if (defaultProc.type === "query") {
+          if (method === "GET" || method === "HEAD") {
+            procedure = defaultProc;
+          }
+        } else {
+          procedure = defaultProc;
         }
       }
 
@@ -252,6 +269,50 @@ export function createApiHandler(
             error: {
               code: "METHOD_NOT_ALLOWED",
               message: `Method ${method} not allowed on ${pathname}`
+            }
+          }),
+          req,
+          config.cors
+        );
+      }
+
+      if (procedure.type === "mutation" && (method === "GET" || method === "HEAD")) {
+        const problem: ProblemDetails = {
+          type: "about:blank",
+          title: "Method Not Allowed",
+          status: 405,
+          detail: `Method ${method} not allowed for mutation procedure on ${pathname}`,
+          instance: pathname,
+          code: "METHOD_NOT_ALLOWED"
+        };
+        return applyCorsHeaders(
+          formatErrorResponse(req, config, problem, {
+            ok: false,
+            error: {
+              code: "METHOD_NOT_ALLOWED",
+              message: `Method ${method} not allowed for mutation procedure on ${pathname}`
+            }
+          }),
+          req,
+          config.cors
+        );
+      }
+
+      if (procedure.type === "subscription" && method !== "GET" && method !== "HEAD") {
+        const problem: ProblemDetails = {
+          type: "about:blank",
+          title: "Method Not Allowed",
+          status: 405,
+          detail: `Method ${method} not allowed for subscription procedure on ${pathname}`,
+          instance: pathname,
+          code: "METHOD_NOT_ALLOWED"
+        };
+        return applyCorsHeaders(
+          formatErrorResponse(req, config, problem, {
+            ok: false,
+            error: {
+              code: "METHOD_NOT_ALLOWED",
+              message: `Method ${method} not allowed for subscription procedure on ${pathname}`
             }
           }),
           req,

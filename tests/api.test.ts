@@ -481,4 +481,57 @@ export const middleware = () => {};
       expect(await headRes.text()).toBe("");
     });
   });
+
+  describe("Security & Hardening", () => {
+    it("enforces valid HTTP methods on query, mutation, and subscription procedures (405 Method Not Allowed)", async () => {
+      const api = createApi({
+        "routes/danger.ts": {
+          default: mutation({
+            resolve: () => ({ deleted: true })
+          })
+        },
+        "routes/events.ts": {
+          default: subscription({
+            resolve: async function* () {
+              yield { ping: true };
+            }
+          })
+        }
+      });
+
+      // 1. GET on a mutation procedure must be rejected with 405
+      const getRes = await api.fetch(new Request("http://localhost/danger", { method: "GET" }));
+      expect(getRes.status).toBe(405);
+      const getBody = await getRes.json();
+      expect(getBody.error.code).toBe("METHOD_NOT_ALLOWED");
+
+      // 2. HEAD on a mutation procedure must be rejected with 405
+      const headRes = await api.fetch(new Request("http://localhost/danger", { method: "HEAD" }));
+      expect(headRes.status).toBe(405);
+
+      // 3. POST on a mutation procedure is allowed
+      const postRes = await api.fetch(
+        new Request("http://localhost/danger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        })
+      );
+      expect(postRes.status).toBe(200);
+      const postBody = await postRes.json();
+      expect(postBody.data.deleted).toBe(true);
+
+      // 4. POST on a subscription procedure must be rejected with 405
+      const subPostRes = await api.fetch(
+        new Request("http://localhost/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        })
+      );
+      expect(subPostRes.status).toBe(405);
+      const subPostBody = await subPostRes.json();
+      expect(subPostBody.error.code).toBe("METHOD_NOT_ALLOWED");
+    });
+  });
 });
