@@ -115,7 +115,7 @@ export const middleware = () => {};
 
     const api = createApi(apiFiles, sourceMap, {
       cors: {
-        origin: "*",
+        origin: "https://my-frontend.com",
         credentials: true
       }
     });
@@ -407,6 +407,26 @@ export const middleware = () => {};
       const preflightRes = await api.fetch(preflight);
       expect(preflightRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
       expect(preflightRes.headers.get("Access-Control-Allow-Credentials")).toBeNull();
+    });
+
+    it("disallows wildcard CORS origin reflection when credentials are enabled", async () => {
+      const api = createApi(
+        corsFiles,
+        {},
+        {
+          cors: {
+            origin: "*",
+            credentials: true
+          }
+        }
+      );
+
+      const req = new Request("http://localhost/health", {
+        headers: { Origin: "https://evil-attacker.com" }
+      });
+      const res = await api.fetch(req);
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+      expect(res.headers.get("Access-Control-Allow-Credentials")).toBeNull();
     });
   });
 

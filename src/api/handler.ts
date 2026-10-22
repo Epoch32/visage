@@ -58,9 +58,14 @@ function formatErrorResponse(
  */
 function resolveAllowedOrigin(
   reqOrigin: string | null,
-  configOrigin?: NonNullable<ApiRouterConfig["cors"]>["origin"]
+  configOrigin?: NonNullable<ApiRouterConfig["cors"]>["origin"],
+  credentials?: boolean
 ): string | null {
   if (!configOrigin || configOrigin === "*") {
+    // If credentials are enabled, wildcard or blind reflection is unsafe
+    if (credentials) {
+      return null;
+    }
     return reqOrigin || "*";
   }
   if (!reqOrigin) {
@@ -85,7 +90,7 @@ function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | 
   if (!config) return null;
 
   const reqOrigin = req.headers.get("Origin");
-  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin);
+  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin, config.credentials);
 
   if (req.method === "OPTIONS") {
     const headers = new Headers();
@@ -116,7 +121,7 @@ function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | 
 function applyCorsHeaders(res: Response, req: Request, config?: ApiRouterConfig["cors"]): Response {
   if (!config) return res;
   const reqOrigin = req.headers.get("Origin");
-  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin);
+  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin, config.credentials);
 
   if (allowedOrigin) {
     res.headers.set("Access-Control-Allow-Origin", allowedOrigin);
