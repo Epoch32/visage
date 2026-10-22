@@ -148,6 +148,7 @@ function createProxyPath(options: ClientOptions, path: string[] = []): any {
             const dynamicHeaders = await resolveHeaders(options.headers, fullPath);
             const headers: Record<string, string> = {
               Accept: "application/json",
+              "x-visage-rpc": "1",
               ...dynamicHeaders,
               ...callOpts?.headers
             };

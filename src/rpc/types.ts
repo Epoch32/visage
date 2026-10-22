@@ -223,6 +223,13 @@ export interface FetchHandlerOptions<
   maxBodySize?: number;
 
   /**
+   * Anti-CSRF protection for mutation procedures.
+   * When true (default), blocks cross-site form submissions and simple cross-origin mutations.
+   * Defaults to true.
+   */
+  csrfProtection?: boolean;
+
+  /**
    * Declarative pattern rules matching URL paths or procedure names (e.g. "*", "/api/*", "admin.*").
    * Supports wildcard matching with '*'.
    */

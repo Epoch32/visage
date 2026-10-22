@@ -723,4 +723,55 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     const body2 = await res2.json();
     expect(body2.error.code).toBe("METHOD_NOT_ALLOWED");
   });
+
+  it("blocks unauthorized cross-site and cross-origin form submissions with anti-CSRF protection", async () => {
+    const actionRouter = createRouter().mutation("deleteAccount", {
+      resolve: () => ({ deleted: true })
+    });
+
+    const handler = createFetchHandler({ router: actionRouter, endpoint: "/api/rpc" });
+
+    // 1. Cross-site request without custom header
+    const crossSiteReq = new Request("http://localhost/api/rpc/deleteAccount", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Sec-Fetch-Site": "cross-site"
+      },
+      body: "confirm=true"
+    });
+    const res1 = await handler(crossSiteReq);
+    expect(res1.status).toBe(403);
+    const body1 = await res1.json();
+    expect(body1.error.code).toBe("FORBIDDEN");
+    expect(body1.error.message).toContain("CSRF");
+
+    // 2. Cross-origin form submission from another host without custom header
+    const crossOriginFormReq = new Request("http://victim.com/api/rpc/deleteAccount", {
+      method: "POST",
+      headers: {
+        Host: "victim.com",
+        Origin: "https://evil-attacker.com",
+        "Content-Type": "multipart/form-data; boundary=----boundary"
+      },
+      body: '------boundary\r\nContent-Disposition: form-data; name="confirm"\r\n\r\ntrue\r\n------boundary--\r\n'
+    });
+    const res2 = await handler(crossOriginFormReq);
+    expect(res2.status).toBe(403);
+
+    // 3. Legitimate mutation with custom x-visage-rpc header is allowed
+    const legitReq = new Request("http://victim.com/api/rpc/deleteAccount", {
+      method: "POST",
+      headers: {
+        Host: "victim.com",
+        "Content-Type": "application/json",
+        "x-visage-rpc": "1"
+      },
+      body: JSON.stringify({ input: {} })
+    });
+    const res3 = await handler(legitReq);
+    expect(res3.status).toBe(200);
+    const body3 = await res3.json();
+    expect(body3.result.data.deleted).toBe(true);
+  });
 });

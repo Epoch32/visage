@@ -23,7 +23,8 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     etag: handlerEtag,
     problemDetails: handlerProblemDetails,
     maxBatchSize = 50,
-    maxBodySize = 10 * 1024 * 1024
+    maxBodySize = 10 * 1024 * 1024,
+    csrfProtection = true
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -392,6 +393,48 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
         }
       } else if (request.method === "POST") {
         const contentType = request.headers.get("content-type") || "";
+
+        // CSRF protection for mutation procedures
+        if (csrfProtection) {
+          const secFetchSite = request.headers.get("sec-fetch-site");
+          const origin = request.headers.get("origin");
+          const hasCustomHeader = Boolean(
+            request.headers.get("x-visage-rpc") ||
+              request.headers.get("authorization") ||
+              request.headers.get("x-requested-with")
+          );
+
+          if (secFetchSite === "cross-site" && !hasCustomHeader) {
+            throw new RPCError({
+              code: "FORBIDDEN",
+              message: "Cross-site request blocked by CSRF protection"
+            });
+          }
+
+          const isSimpleForm =
+            contentType.includes("application/x-www-form-urlencoded") ||
+            contentType.includes("multipart/form-data") ||
+            contentType.includes("text/plain");
+
+          if (isSimpleForm && !hasCustomHeader) {
+            const host = request.headers.get("host") || url.host;
+            if (origin) {
+              let originHost: string | null = null;
+              try {
+                originHost = new URL(origin).host;
+              } catch {
+                // Ignore invalid origin URL format
+              }
+              if (!originHost || (host && originHost !== host)) {
+                throw new RPCError({
+                  code: "FORBIDDEN",
+                  message: "Cross-origin form submission blocked by CSRF protection"
+                });
+              }
+            }
+          }
+        }
+
         if (
           contentType.includes("multipart/form-data") ||
           contentType.includes("application/x-www-form-urlencoded")
