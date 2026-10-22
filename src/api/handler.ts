@@ -134,18 +134,36 @@ function handleCors(req: Request, config?: ApiRouterConfig["cors"]): Response | 
   return null;
 }
 
-function applyCorsHeaders(res: Response, req: Request, config?: ApiRouterConfig["cors"]): Response {
-  if (!config) return res;
-  const reqOrigin = req.headers.get("Origin");
-  const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin, config.credentials);
+function applyCorsHeaders(
+  res: Response,
+  req: Request,
+  config?: ApiRouterConfig["cors"],
+  securityHeadersConfig?: ApiRouterConfig["securityHeaders"]
+): Response {
+  if (config) {
+    const reqOrigin = req.headers.get("Origin");
+    const allowedOrigin = resolveAllowedOrigin(reqOrigin, config.origin, config.credentials);
 
-  if (allowedOrigin) {
-    res.headers.set("Access-Control-Allow-Origin", allowedOrigin);
-    if (config.credentials) {
-      res.headers.set("Access-Control-Allow-Credentials", "true");
+    if (allowedOrigin) {
+      res.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+      if (config.credentials) {
+        res.headers.set("Access-Control-Allow-Credentials", "true");
+      }
+      res.headers.append("Vary", "Origin");
     }
-    res.headers.append("Vary", "Origin");
   }
+
+  const security = securityHeadersConfig ?? true;
+  if (security) {
+    if (typeof security === "object") {
+      for (const [k, v] of Object.entries(security)) {
+        res.headers.set(k, v);
+      }
+    } else if (!res.headers.has("X-Content-Type-Options")) {
+      res.headers.set("X-Content-Type-Options", "nosniff");
+    }
+  }
+
   return res;
 }
 
@@ -159,6 +177,9 @@ export function createApiHandler(
   const prefix = config.prefix ? `/${config.prefix.replace(/^\/+|\/+$/g, "")}` : "";
 
   return async (req: Request): Promise<Response> => {
+    const applyHeaders = (res: Response): Response =>
+      applyCorsHeaders(res, req, config.cors, config.securityHeaders);
+
     // 1. CORS Preflight Check
     const corsPreflight = handleCors(req, config.cors);
     if (corsPreflight) return corsPreflight;
@@ -182,16 +203,14 @@ export function createApiHandler(
         instance: pathname,
         code: "PAYLOAD_TOO_LARGE"
       };
-      return applyCorsHeaders(
+      return applyHeaders(
         formatErrorResponse(req, config, problem, {
           ok: false,
           error: {
             code: "PAYLOAD_TOO_LARGE",
             message: `Payload too large (${contentLength} bytes exceeds limit of ${maxBodySize} bytes)`
           }
-        }),
-        req,
-        config.cors
+        })
       );
     }
 
@@ -220,13 +239,11 @@ export function createApiHandler(
         instance: pathname,
         code: "BAD_REQUEST"
       };
-      return applyCorsHeaders(
+      return applyHeaders(
         formatErrorResponse(req, config, problem, {
           ok: false,
           error: { code: "BAD_REQUEST", message: "Malformed percent-encoded URI path parameter" }
-        }),
-        req,
-        config.cors
+        })
       );
     }
 
@@ -239,13 +256,11 @@ export function createApiHandler(
         instance: pathname,
         code: "NOT_FOUND"
       };
-      return applyCorsHeaders(
+      return applyHeaders(
         formatErrorResponse(req, config, problem, {
           ok: false,
           error: { code: "NOT_FOUND", message: `Route not found: ${pathname}` }
-        }),
-        req,
-        config.cors
+        })
       );
     }
 
@@ -305,7 +320,7 @@ export function createApiHandler(
       );
 
       if (earlyResponse) {
-        return applyCorsHeaders(earlyResponse, req, config.cors);
+        return applyHeaders(earlyResponse);
       }
 
       // 4. Custom Raw Handler
@@ -315,9 +330,9 @@ export function createApiHandler(
           const conditionalRes = await handleConditionalResponse(req, res, {
             cacheControl: config.cache
           });
-          return applyCorsHeaders(conditionalRes, req, config.cors);
+          return applyHeaders(conditionalRes);
         }
-        return applyCorsHeaders(res, req, config.cors);
+        return applyHeaders(res);
       }
 
       if (!procedure) {
@@ -329,16 +344,14 @@ export function createApiHandler(
           instance: pathname,
           code: "METHOD_NOT_ALLOWED"
         };
-        return applyCorsHeaders(
+        return applyHeaders(
           formatErrorResponse(req, config, problem, {
             ok: false,
             error: {
               code: "METHOD_NOT_ALLOWED",
               message: `Method ${method} not allowed on ${pathname}`
             }
-          }),
-          req,
-          config.cors
+          })
         );
       }
 
@@ -351,16 +364,14 @@ export function createApiHandler(
           instance: pathname,
           code: "METHOD_NOT_ALLOWED"
         };
-        return applyCorsHeaders(
+        return applyHeaders(
           formatErrorResponse(req, config, problem, {
             ok: false,
             error: {
               code: "METHOD_NOT_ALLOWED",
               message: `Method ${method} not allowed for mutation procedure on ${pathname}`
             }
-          }),
-          req,
-          config.cors
+          })
         );
       }
 
@@ -373,16 +384,14 @@ export function createApiHandler(
           instance: pathname,
           code: "METHOD_NOT_ALLOWED"
         };
-        return applyCorsHeaders(
+        return applyHeaders(
           formatErrorResponse(req, config, problem, {
             ok: false,
             error: {
               code: "METHOD_NOT_ALLOWED",
               message: `Method ${method} not allowed for subscription procedure on ${pathname}`
             }
-          }),
-          req,
-          config.cors
+          })
         );
       }
 
@@ -535,7 +544,7 @@ export function createApiHandler(
             invalidParams,
             issues: validation.issues
           };
-          return applyCorsHeaders(
+          return applyHeaders(
             formatErrorResponse(req, config, problem, {
               ok: false,
               error: {
@@ -543,9 +552,7 @@ export function createApiHandler(
                 message: "Validation Error",
                 issues: validation.issues
               }
-            }),
-            req,
-            config.cors
+            })
           );
         }
         validatedInput = validation.data;
@@ -629,7 +636,7 @@ export function createApiHandler(
             Connection: "keep-alive"
           }
         });
-        return applyCorsHeaders(sseRes, req, config.cors);
+        return applyHeaders(sseRes);
       }
 
       const result = await procedure.options.resolve({
@@ -648,7 +655,7 @@ export function createApiHandler(
         const conditionalRes = await handleConditionalResponse(req, successRes, {
           cacheControl: procedure.options.cache ?? config.cache
         });
-        return applyCorsHeaders(conditionalRes, req, config.cors);
+        return applyHeaders(conditionalRes);
       }
 
       if (procedure.options.cache ?? config.cache) {
@@ -659,22 +666,20 @@ export function createApiHandler(
       }
 
       if (method === "HEAD") {
-        return applyCorsHeaders(
+        return applyHeaders(
           new Response(null, {
             status: successRes.status,
             statusText: successRes.statusText,
             headers: successRes.headers
-          }),
-          req,
-          config.cors
+          })
         );
       }
 
-      return applyCorsHeaders(successRes, req, config.cors);
+      return applyHeaders(successRes);
     } catch (err: any) {
       if (config.onError) {
         const customRes = await config.onError(err, req);
-        return applyCorsHeaders(customRes, req, config.cors);
+        return applyHeaders(customRes);
       }
 
       if (err instanceof ProblemError) {
@@ -689,15 +694,13 @@ export function createApiHandler(
             message: err.message
           }
         };
-        return applyCorsHeaders(
+        return applyHeaders(
           formatErrorResponse(
             req,
             config,
             { ...problem, instance: problem.instance ?? pathname },
             legacyPayload
-          ),
-          req,
-          config.cors
+          )
         );
       }
 
@@ -711,11 +714,7 @@ export function createApiHandler(
             issues: err.issues
           }
         };
-        return applyCorsHeaders(
-          formatErrorResponse(req, config, problem, legacyPayload),
-          req,
-          config.cors
-        );
+        return applyHeaders(formatErrorResponse(req, config, problem, legacyPayload));
       }
 
       const isDev = typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
@@ -739,11 +738,7 @@ export function createApiHandler(
         error: { code, message }
       };
 
-      return applyCorsHeaders(
-        formatErrorResponse(req, config, problem, legacyPayload),
-        req,
-        config.cors
-      );
+      return applyHeaders(formatErrorResponse(req, config, problem, legacyPayload));
     }
   };
 }
@@ -761,7 +756,8 @@ function isApiRouterConfig(val: unknown): val is ApiRouterConfig {
       "onError",
       "csrfProtection",
       "maxBodySize",
-      "heartbeatInterval"
+      "heartbeatInterval",
+      "securityHeaders"
     ].includes(k)
   );
 }

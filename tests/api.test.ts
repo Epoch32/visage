@@ -741,5 +741,51 @@ export const middleware = () => {};
       expect(Object.hasOwn(body.data, "constructor")).toBe(false);
       expect((Object.prototype as any).polluted).toBeUndefined();
     });
+
+    it("applies default X-Content-Type-Options: nosniff security header and supports custom security headers", async () => {
+      // 1. Default security headers enabled
+      const defaultApi = createApi({
+        "routes/info.ts": {
+          get: query({ resolve: () => ({ version: "2.0" }) })
+        }
+      });
+      const res1 = await defaultApi.fetch(new Request("http://localhost/info"));
+      expect(res1.status).toBe(200);
+      expect(res1.headers.get("x-content-type-options")).toBe("nosniff");
+
+      // 2. Custom security headers
+      const customApi = createApi(
+        {
+          "routes/info.ts": {
+            get: query({ resolve: () => ({ version: "2.0" }) })
+          }
+        },
+        {},
+        {
+          securityHeaders: {
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff"
+          }
+        }
+      );
+      const res2 = await customApi.fetch(new Request("http://localhost/info"));
+      expect(res2.headers.get("x-frame-options")).toBe("DENY");
+      expect(res2.headers.get("x-content-type-options")).toBe("nosniff");
+
+      // 3. Explicitly disabled security headers
+      const disabledApi = createApi(
+        {
+          "routes/info.ts": {
+            get: query({ resolve: () => ({ version: "2.0" }) })
+          }
+        },
+        {},
+        {
+          securityHeaders: false
+        }
+      );
+      const res3 = await disabledApi.fetch(new Request("http://localhost/info"));
+      expect(res3.headers.get("x-content-type-options")).toBeNull();
+    });
   });
 });

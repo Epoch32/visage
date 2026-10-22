@@ -132,6 +132,12 @@ export interface ApiRouterConfig {
    */
   heartbeatInterval?: number;
 
+  /**
+   * Automatically apply secure HTTP response headers (e.g. X-Content-Type-Options: nosniff).
+   * Defaults to true. Pass an object to customize or false to disable.
+   */
+  securityHeaders?: boolean | Record<string, string>;
+
   cors?: {
     origin?: string | string[] | ((origin: string) => boolean);
     methods?: string[];
