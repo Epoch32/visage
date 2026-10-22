@@ -648,5 +648,38 @@ export const middleware = () => {};
       const body3 = await res3.json();
       expect(body3.data.deleted).toBe(true);
     });
+
+    it("enforces maxBodySize limit and returns 413 Payload Too Large when exceeded", async () => {
+      const api = createApi(
+        {
+          "routes/upload.ts": {
+            post: mutation({
+              resolve: () => ({ success: true })
+            })
+          }
+        },
+        {},
+        {
+          maxBodySize: 100 // 100 bytes limit
+        }
+      );
+
+      // Oversized request (200 bytes Content-Length)
+      const oversizedReq = new Request("http://localhost/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": "200",
+          "x-visage-api": "1"
+        },
+        body: JSON.stringify({ data: "x".repeat(150) })
+      });
+
+      const res = await api.fetch(oversizedReq);
+      expect(res.status).toBe(413);
+      const body = await res.json();
+      expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
+      expect(body.error.message).toContain("exceeds limit");
+    });
   });
 });

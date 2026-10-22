@@ -119,6 +119,12 @@ export interface ApiRouterConfig {
    */
   csrfProtection?: boolean;
 
+  /**
+   * Maximum allowed request body size in bytes to prevent memory exhaustion DoS.
+   * Defaults to 10MB (10 * 1024 * 1024). Set to 0 or Infinity to disable.
+   */
+  maxBodySize?: number;
+
   cors?: {
     origin?: string | string[] | ((origin: string) => boolean);
     methods?: string[];

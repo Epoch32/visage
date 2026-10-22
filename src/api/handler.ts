@@ -154,6 +154,31 @@ export function createApiHandler(
       pathname = pathname.slice(prefix.length) || "/";
     }
 
+    // Check payload size limits against Content-Length
+    const maxBodySize = config.maxBodySize ?? 10 * 1024 * 1024;
+    const contentLength = Number(req.headers.get("content-length") || 0);
+    if (maxBodySize > 0 && contentLength > maxBodySize) {
+      const problem: ProblemDetails = {
+        type: "about:blank",
+        title: "Payload Too Large",
+        status: 413,
+        detail: `Payload too large (${contentLength} bytes exceeds limit of ${maxBodySize} bytes)`,
+        instance: pathname,
+        code: "PAYLOAD_TOO_LARGE"
+      };
+      return applyCorsHeaders(
+        formatErrorResponse(req, config, problem, {
+          ok: false,
+          error: {
+            code: "PAYLOAD_TOO_LARGE",
+            message: `Payload too large (${contentLength} bytes exceeds limit of ${maxBodySize} bytes)`
+          }
+        }),
+        req,
+        config.cors
+      );
+    }
+
     // 2. Route Matching
     let matchedRoute: RouteMatch | null = null;
     const pathParams: Record<string, string> = Object.create(null);
@@ -650,7 +675,16 @@ function isApiRouterConfig(val: unknown): val is ApiRouterConfig {
   if (!val || typeof val !== "object") return false;
   const keys = Object.keys(val);
   return keys.some((k) =>
-    ["prefix", "cors", "cache", "etag", "problemDetails", "onError", "csrfProtection"].includes(k)
+    [
+      "prefix",
+      "cors",
+      "cache",
+      "etag",
+      "problemDetails",
+      "onError",
+      "csrfProtection",
+      "maxBodySize"
+    ].includes(k)
   );
 }
 
