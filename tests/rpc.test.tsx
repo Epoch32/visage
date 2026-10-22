@@ -570,4 +570,21 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(res2.siteId).toBe("my-site");
     expect(res2.archiveName).toBe("site.zip");
   });
+
+  it("blocks prototype traversal and prototype pollution attempts in procedure resolution", async () => {
+    const testRouter = createRouter().query("hello", {
+      resolve: () => "world"
+    });
+
+    const handler = createFetchHandler({ router: testRouter, endpoint: "/api/rpc" });
+
+    // Try accessing __proto__, constructor, prototype
+    const req1 = new Request("http://localhost/api/rpc/__proto__", { method: "GET" });
+    const res1 = await handler(req1);
+    expect(res1.status).toBe(404);
+
+    const req2 = new Request("http://localhost/api/rpc/constructor/prototype", { method: "GET" });
+    const res2 = await handler(req2);
+    expect(res2.status).toBe(404);
+  });
 });
