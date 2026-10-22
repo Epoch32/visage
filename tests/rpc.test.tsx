@@ -697,4 +697,30 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
     expect(body.error.message).toContain("Payload too large");
   });
+
+  it("enforces allowed HTTP methods for queries and subscriptions (405 Method Not Allowed)", async () => {
+    const testRouter = createRouter()
+      .query("getInfo", { resolve: () => ({ info: "ok" }) })
+      .subscription("events", {
+        resolve: async function* () {
+          yield 1;
+        }
+      });
+
+    const handler = createFetchHandler({ router: testRouter, endpoint: "/api/rpc" });
+
+    // DELETE on a query procedure
+    const res1 = await handler(
+      new Request("http://localhost/api/rpc/getInfo", { method: "DELETE" })
+    );
+    expect(res1.status).toBe(405);
+    const body1 = await res1.json();
+    expect(body1.error.code).toBe("METHOD_NOT_ALLOWED");
+
+    // POST on a subscription procedure
+    const res2 = await handler(new Request("http://localhost/api/rpc/events", { method: "POST" }));
+    expect(res2.status).toBe(405);
+    const body2 = await res2.json();
+    expect(body2.error.code).toBe("METHOD_NOT_ALLOWED");
+  });
 });

@@ -357,6 +357,27 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           message: "Mutations must use POST method"
         });
       }
+      if (
+        procedure.type === "query" &&
+        request.method !== "GET" &&
+        request.method !== "HEAD" &&
+        request.method !== "POST"
+      ) {
+        throw new RPCError({
+          code: "METHOD_NOT_ALLOWED",
+          message: `Queries must use GET, HEAD, or POST method (received ${request.method})`
+        });
+      }
+      if (
+        procedure.type === "subscription" &&
+        request.method !== "GET" &&
+        request.method !== "HEAD"
+      ) {
+        throw new RPCError({
+          code: "METHOD_NOT_ALLOWED",
+          message: `Subscriptions must use GET method (received ${request.method})`
+        });
+      }
 
       // Parse input
       let rawInput: unknown;
