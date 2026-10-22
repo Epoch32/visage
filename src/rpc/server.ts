@@ -210,6 +210,34 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           const batchResults = await Promise.all(
             body.map(async (item: { id?: string | number; path: string; input?: any }) => {
               try {
+                // Enforce route rules and guards for each item in batch
+                const itemRules = rulesList.filter((r) =>
+                  matchesRulePattern(r.match, url.pathname, item.path)
+                );
+
+                for (const rule of itemRules) {
+                  if (rule.requireHeaders) {
+                    for (const headerName of rule.requireHeaders) {
+                      if (!request.headers.get(headerName)) {
+                        throw new RPCError({
+                          code: "UNAUTHORIZED",
+                          message: `Missing required header '${headerName}' for rule '${rule.match}'`
+                        });
+                      }
+                    }
+                  }
+
+                  if (rule.guard) {
+                    const guardResult = await rule.guard({ req: request, ctx, path: item.path });
+                    if (guardResult === false) {
+                      throw new RPCError({
+                        code: "UNAUTHORIZED",
+                        message: `Access denied by route rule guard for '${rule.match}'`
+                      });
+                    }
+                  }
+                }
+
                 const proc = resolveProcedureFromPath(router, item.path);
                 const data = await executeProcedure(proc, {
                   rawInput: item.input,

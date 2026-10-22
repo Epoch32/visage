@@ -450,6 +450,22 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
       )
     );
     expect(res4.status).toBe(401);
+
+    // 5. Test route rules enforcement inside batch requests
+    const batchReq = new Request("http://localhost/api/rpc/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([
+        { id: 1, path: "greeting", input: { name: "Alice" } },
+        { id: 2, path: "secretData" } // missing required x-admin-token
+      ])
+    });
+    const batchRes = await handler(batchReq);
+    expect(batchRes.status).toBe(200);
+    const batchData = await batchRes.json();
+    expect(batchData[0].result.data.message).toBe("Hello, Alice!");
+    expect(batchData[1].error.code).toBe("UNAUTHORIZED");
+    expect(batchData[1].error.message).toContain("Missing required header 'x-admin-token'");
   });
 
   it("supports pattern-based client headers in createClient", async () => {
