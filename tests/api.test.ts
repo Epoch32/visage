@@ -570,5 +570,30 @@ export const middleware = () => {};
       expect(body.error.code).toBe("BAD_REQUEST");
       expect(body.error.message).toContain("Malformed");
     });
+
+    it("masks raw internal exception messages in production mode to prevent information disclosure", async () => {
+      const origEnv = process.env.NODE_ENV;
+      try {
+        process.env.NODE_ENV = "production";
+
+        const api = createApi({
+          "routes/failing.ts": {
+            get: query({
+              resolve: () => {
+                throw new Error("Secret database credentials leak in PostgreSQL error");
+              }
+            })
+          }
+        });
+
+        const res = await api.fetch(new Request("http://localhost/failing"));
+        expect(res.status).toBe(500);
+        const body = await res.json();
+        expect(body.error.message).toBe("Internal Server Error");
+        expect(body.error.message).not.toContain("Secret database credentials");
+      } finally {
+        process.env.NODE_ENV = origEnv;
+      }
+    });
   });
 });

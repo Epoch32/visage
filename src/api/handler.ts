@@ -573,10 +573,12 @@ export function createApiHandler(
         );
       }
 
+      const isDev = typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
       const statusCode =
         ERROR_CODE_TO_STATUS[err?.code as keyof typeof ERROR_CODE_TO_STATUS] || 500;
       const code = (err?.code as RPCErrorCode) || "INTERNAL_SERVER_ERROR";
-      const message = err?.message || "Internal Server Error";
+      const rawMessage = err?.message || "Internal Server Error";
+      const message = statusCode === 500 && !isDev ? "Internal Server Error" : rawMessage;
 
       const problem: ProblemDetails = {
         type: "about:blank",
