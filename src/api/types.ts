@@ -112,6 +112,13 @@ export interface ApiRouterConfig {
    */
   problemDetails?: boolean;
 
+  /**
+   * Anti-CSRF protection for state-changing mutation procedures.
+   * When true (default), blocks cross-site form submissions and simple cross-origin mutations.
+   * Defaults to true.
+   */
+  csrfProtection?: boolean;
+
   cors?: {
     origin?: string | string[] | ((origin: string) => boolean);
     methods?: string[];

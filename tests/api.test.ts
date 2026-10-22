@@ -595,5 +595,58 @@ export const middleware = () => {};
         process.env.NODE_ENV = origEnv;
       }
     });
+
+    it("blocks unauthorized cross-site and cross-origin form submissions with anti-CSRF protection", async () => {
+      const api = createApi({
+        "routes/account.ts": {
+          post: mutation({
+            resolve: () => ({ deleted: true })
+          })
+        }
+      });
+
+      // 1. Cross-site request without custom header
+      const crossSiteReq = new Request("http://localhost/account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Sec-Fetch-Site": "cross-site"
+        },
+        body: "confirm=true"
+      });
+      const res1 = await api.fetch(crossSiteReq);
+      expect(res1.status).toBe(403);
+      const body1 = await res1.json();
+      expect(body1.error.code).toBe("FORBIDDEN");
+      expect(body1.error.message).toContain("CSRF");
+
+      // 2. Cross-origin form submission from another host without custom header
+      const crossOriginFormReq = new Request("http://victim.com/account", {
+        method: "POST",
+        headers: {
+          Host: "victim.com",
+          Origin: "https://evil-attacker.com",
+          "Content-Type": "multipart/form-data; boundary=----boundary"
+        },
+        body: '------boundary\r\nContent-Disposition: form-data; name="confirm"\r\n\r\ntrue\r\n------boundary--\r\n'
+      });
+      const res2 = await api.fetch(crossOriginFormReq);
+      expect(res2.status).toBe(403);
+
+      // 3. Legitimate mutation with custom x-visage-api header is allowed
+      const legitReq = new Request("http://victim.com/account", {
+        method: "POST",
+        headers: {
+          Host: "victim.com",
+          "Content-Type": "application/json",
+          "x-visage-api": "1"
+        },
+        body: JSON.stringify({})
+      });
+      const res3 = await api.fetch(legitReq);
+      expect(res3.status).toBe(200);
+      const body3 = await res3.json();
+      expect(body3.data.deleted).toBe(true);
+    });
   });
 });

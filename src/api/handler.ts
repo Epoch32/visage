@@ -368,6 +368,49 @@ export function createApiHandler(
       } else {
         const contentType =
           req.headers.get("Content-Type") || req.headers.get("content-type") || "";
+
+        // Anti-CSRF protection for state-changing mutation procedures
+        if (config.csrfProtection !== false) {
+          const secFetchSite = req.headers.get("sec-fetch-site");
+          const origin = req.headers.get("origin");
+          const hasCustomHeader = Boolean(
+            req.headers.get("x-visage-api") ||
+              req.headers.get("x-visage-rpc") ||
+              req.headers.get("authorization") ||
+              req.headers.get("x-requested-with")
+          );
+
+          if (secFetchSite === "cross-site" && !hasCustomHeader) {
+            throw new RPCError({
+              code: "FORBIDDEN",
+              message: "Cross-site request blocked by CSRF protection"
+            });
+          }
+
+          const isSimpleForm =
+            contentType.includes("application/x-www-form-urlencoded") ||
+            contentType.includes("multipart/form-data") ||
+            contentType.includes("text/plain");
+
+          if (isSimpleForm && !hasCustomHeader) {
+            const host = req.headers.get("host") || url.host;
+            if (origin) {
+              let originHost: string | null = null;
+              try {
+                originHost = new URL(origin).host;
+              } catch {
+                // Ignore invalid origin URL format
+              }
+              if (!originHost || (host && originHost !== host)) {
+                throw new RPCError({
+                  code: "FORBIDDEN",
+                  message: "Cross-origin form submission blocked by CSRF protection"
+                });
+              }
+            }
+          }
+        }
+
         if (contentType.includes("application/json")) {
           try {
             rawInput = await req.json();
@@ -607,7 +650,7 @@ function isApiRouterConfig(val: unknown): val is ApiRouterConfig {
   if (!val || typeof val !== "object") return false;
   const keys = Object.keys(val);
   return keys.some((k) =>
-    ["prefix", "cors", "cache", "etag", "problemDetails", "onError"].includes(k)
+    ["prefix", "cors", "cache", "etag", "problemDetails", "onError", "csrfProtection"].includes(k)
   );
 }
 
