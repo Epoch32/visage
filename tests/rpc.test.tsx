@@ -669,4 +669,32 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(body.error.code).toBe("BAD_REQUEST");
     expect(body.error.message).toContain("exceeds maximum limit");
   });
+
+  it("enforces maxBodySize limit and returns 413 Payload Too Large when exceeded", async () => {
+    const pingRouter = createRouter().mutation("submit", {
+      resolve: () => ({ success: true })
+    });
+
+    const handler = createFetchHandler({
+      router: pingRouter,
+      endpoint: "/api/rpc",
+      maxBodySize: 50 // Limit to 50 bytes
+    });
+
+    const res = await handler(
+      new Request("http://localhost/api/rpc/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": "500" // Exceeds 50
+        },
+        body: JSON.stringify({ data: "x".repeat(500) })
+      })
+    );
+
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
+    expect(body.error.message).toContain("Payload too large");
+  });
 });

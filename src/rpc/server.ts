@@ -22,7 +22,8 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
     cache: handlerCache,
     etag: handlerEtag,
     problemDetails: handlerProblemDetails,
-    maxBatchSize = 50
+    maxBatchSize = 50,
+    maxBodySize = 10 * 1024 * 1024
   } = options;
 
   return async (request: Request, ...extra: any[]): Promise<Response> => {
@@ -44,6 +45,28 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
       } else {
         baseHeaders.set("X-Content-Type-Options", "nosniff");
       }
+    }
+
+    // Check payload size limits against Content-Length
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (maxBodySize > 0 && contentLength > maxBodySize) {
+      const error = new RPCError({
+        code: "PAYLOAD_TOO_LARGE",
+        message: `Payload too large (${contentLength} bytes exceeds limit of ${maxBodySize} bytes)`
+      });
+      baseHeaders.set("Content-Type", "application/json");
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: error.code,
+            message: error.message
+          }
+        }),
+        {
+          status: 413,
+          headers: baseHeaders
+        }
+      );
     }
 
     const url = new URL(request.url);

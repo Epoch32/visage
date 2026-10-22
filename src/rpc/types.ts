@@ -15,6 +15,7 @@ export type RPCErrorCode =
   | "METHOD_NOT_ALLOWED"
   | "TIMEOUT"
   | "CONFLICT"
+  | "PAYLOAD_TOO_LARGE"
   | "UNPROCESSABLE_CONTENT"
   | "INTERNAL_SERVER_ERROR";
 
@@ -214,6 +215,12 @@ export interface FetchHandlerOptions<
    * Defaults to 50.
    */
   maxBatchSize?: number;
+
+  /**
+   * Maximum allowed request body size in bytes to prevent memory exhaustion DoS.
+   * Defaults to 10MB (10 * 1024 * 1024). Set to 0 or Infinity to disable.
+   */
+  maxBodySize?: number;
 
   /**
    * Declarative pattern rules matching URL paths or procedure names (e.g. "*", "/api/*", "admin.*").
