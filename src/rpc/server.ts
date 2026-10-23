@@ -515,6 +515,17 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
         result: { data }
       };
 
+      if (
+        ctx &&
+        typeof ctx === "object" &&
+        "resHeaders" in ctx &&
+        ctx.resHeaders instanceof Headers
+      ) {
+        for (const [k, v] of ctx.resHeaders.entries()) {
+          baseHeaders.append(k, v);
+        }
+      }
+
       baseHeaders.set("Content-Type", "application/json");
 
       const cacheDirective = procedure.cache ?? handlerCache;
@@ -571,6 +582,17 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
               issues: error.issues
             }
           };
+
+      if (
+        ctx &&
+        typeof ctx === "object" &&
+        "resHeaders" in ctx &&
+        ctx.resHeaders instanceof Headers
+      ) {
+        for (const [k, v] of ctx.resHeaders.entries()) {
+          baseHeaders.append(k, v);
+        }
+      }
 
       baseHeaders.set(
         "Content-Type",

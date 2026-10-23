@@ -17,6 +17,7 @@ export type RPCErrorCode =
   | "CONFLICT"
   | "PAYLOAD_TOO_LARGE"
   | "UNPROCESSABLE_CONTENT"
+  | "TOO_MANY_REQUESTS"
   | "INTERNAL_SERVER_ERROR";
 
 export type ProcedureType = "query" | "mutation" | "subscription";
