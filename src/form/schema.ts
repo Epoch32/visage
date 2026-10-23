@@ -235,7 +235,26 @@ export class ObjectSchema<T extends Record<string, any>> extends Schema<T> {
   validate(value: unknown, basePath = ""): ValidationResult<T> {
     if (value === undefined || value === null) {
       if (this._isOptional) return { success: true, data: undefined };
-      return { success: false, issues: [{ path: basePath, message: "This field is required" }] };
+
+      // If all fields in the shape are optional, treat undefined as an empty object
+      let allOptional = true;
+      for (const k in this.shape) {
+        const testRes = validateWithSchema(this.shape[k]!, undefined);
+        if (!testRes.success) {
+          allOptional = false;
+          break;
+        }
+      }
+
+      if (allOptional) {
+        value = {};
+      } else {
+        const path = basePath || "input";
+        return {
+          success: false,
+          issues: [{ path, message: "Input object is required, received " + String(value) }]
+        };
+      }
     }
 
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
