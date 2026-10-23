@@ -813,4 +813,42 @@ describe("Visage Type-Safe RPC & Full-Stack Wire Protocol (visage/rpc)", () => {
     expect(text).toContain(": ping\n\n");
     expect(text).toContain('data: {"msg":"end"}');
   });
+
+  it("formats validation errors cleanly without problem details duplication unless negotiated", async () => {
+    const inputRouter = createRouter().mutation("submitForm", {
+      input: v.object({
+        password: v.string().min(8)
+      }),
+      resolve: () => ({ success: true })
+    });
+
+    const handler = createFetchHandler({ router: inputRouter, endpoint: "/api/rpc" });
+
+    // Standard JSON request without problem details negotiation
+    const res = await handler(
+      new Request("http://localhost/api/rpc/submitForm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "short" })
+      })
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.headers.get("content-type")).toBe("application/json");
+
+    const body = await res.json();
+    expect(body).toEqual({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Invalid procedure input",
+        issues: [{ path: "password", message: "Must be at least 8 characters" }]
+      }
+    });
+
+    // Ensure problem details fields are NOT duplicated at the root
+    expect(body.type).toBeUndefined();
+    expect(body.title).toBeUndefined();
+    expect(body.detail).toBeUndefined();
+    expect(body.invalidParams).toBeUndefined();
+  });
 });

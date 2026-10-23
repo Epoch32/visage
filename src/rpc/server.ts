@@ -545,20 +545,27 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
 
       onError?.({ error, path: procedurePath, req: request });
 
-      const problem = error.toProblemDetails(procedurePath);
       const isProblemNegotiated =
         handlerProblemDetails === true ||
         (handlerProblemDetails !== false &&
           Boolean(request.headers.get("Accept")?.includes("application/problem+json")));
 
-      const responsePayload = {
-        ...problem,
-        error: {
-          code: error.code,
-          message: error.message,
-          issues: error.issues
-        }
-      };
+      const responsePayload = isProblemNegotiated
+        ? {
+            ...error.toProblemDetails(procedurePath),
+            error: {
+              code: error.code,
+              message: error.message,
+              issues: error.issues
+            }
+          }
+        : {
+            error: {
+              code: error.code,
+              message: error.message,
+              issues: error.issues
+            }
+          };
 
       baseHeaders.set(
         "Content-Type",
