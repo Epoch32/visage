@@ -476,8 +476,13 @@ export function createFetchHandler<TRouter extends Router<any, any>, TContext = 
           }
         } else {
           try {
-            const body = await request.json();
-            rawInput = body && typeof body === "object" && "input" in body ? body.input : body;
+            const text = await request.text();
+            if (!text || text.trim() === "") {
+              rawInput = undefined;
+            } else {
+              const body = JSON.parse(text);
+              rawInput = body && typeof body === "object" && "input" in body ? body.input : body;
+            }
           } catch {
             rawInput = undefined;
           }
