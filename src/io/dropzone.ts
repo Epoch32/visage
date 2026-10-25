@@ -217,9 +217,31 @@ export async function extractFilesFromDataTransfer(
  * Handles nested DOM dragenter/dragleave event counter flickering.
  */
 export function createDropZone(
-  target?: HTMLElement | (() => HTMLElement | null | undefined) | null,
-  options: CreateDropZoneOptions = {}
+  targetOrOptions?:
+    | HTMLElement
+    | Window
+    | (() => HTMLElement | Window | null | undefined)
+    | CreateDropZoneOptions
+    | null,
+  maybeOptions: CreateDropZoneOptions = {}
 ): DropZoneReturn {
+  let target: HTMLElement | Window | (() => HTMLElement | Window | null | undefined) | null = null;
+  let options: CreateDropZoneOptions = maybeOptions;
+
+  if (
+    targetOrOptions &&
+    typeof targetOrOptions === "object" &&
+    !("addEventListener" in targetOrOptions) &&
+    !("nodeType" in targetOrOptions)
+  ) {
+    options = targetOrOptions as CreateDropZoneOptions;
+    target = null;
+  } else {
+    target =
+      (targetOrOptions as HTMLElement | Window | (() => HTMLElement | Window | null | undefined)) ??
+      null;
+  }
+
   const isDraggingOver = signal<boolean>(false);
   const files = signal<File[]>([]);
   const rejectedFiles = signal<FileRejection[]>([]);

@@ -140,14 +140,32 @@ export interface OnPasteOptions {
  * Listen for paste events on a target element or global window to capture pasted files & text.
  */
 export function onPaste(
-  target: HTMLElement | Window | (() => HTMLElement | Window | null | undefined) = typeof window !==
-  "undefined"
-    ? window
-    : (null as any),
-  options: OnPasteOptions = {}
+  targetOrOptions?:
+    | HTMLElement
+    | Window
+    | (() => HTMLElement | Window | null | undefined)
+    | OnPasteOptions,
+  maybeOptions: OnPasteOptions = {}
 ): () => void {
   if (typeof document === "undefined") {
     return () => {};
+  }
+
+  let target: HTMLElement | Window | (() => HTMLElement | Window | null | undefined);
+  let options: OnPasteOptions;
+
+  if (
+    targetOrOptions &&
+    typeof targetOrOptions === "object" &&
+    !("addEventListener" in targetOrOptions)
+  ) {
+    target = typeof window !== "undefined" ? window : (null as any);
+    options = targetOrOptions as OnPasteOptions;
+  } else {
+    target =
+      (targetOrOptions as HTMLElement | Window | (() => HTMLElement | Window | null | undefined)) ??
+      (typeof window !== "undefined" ? window : (null as any));
+    options = maybeOptions;
   }
 
   const handler = (event: ClipboardEvent) => {
