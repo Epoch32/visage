@@ -1,6 +1,6 @@
 import { Portal } from "@dom/control-flow";
 import type { Child } from "@dom/render";
-import { effect, onCleanup, type ReadonlySignal, signal, type WritableSignal } from "@signals";
+import { effect, onCleanup, type ReadonlySignal, signal, untrack, type WritableSignal } from "@signals";
 import { createContext, useContext } from "@signals/context";
 import { useDismiss } from "./overlay";
 import { createControllableSignal, createId } from "./utils";
@@ -333,9 +333,11 @@ export interface DialogTitleProps {
 export function DialogTitle(props: DialogTitleProps): Child {
   const ctx = useContext(DialogContext);
   if (ctx) {
-    ctx.hasTitle.set(true);
+    untrack(() => {
+      if (!ctx.hasTitle()) ctx.hasTitle.set(true);
+    });
     onCleanup(() => {
-      ctx.hasTitle.set(false);
+      untrack(() => ctx.hasTitle.set(false));
     });
   }
   const { as: Tag = "h2", children, class: className, style, ...rest } = props;
@@ -358,9 +360,11 @@ export interface DialogDescriptionProps {
 export function DialogDescription(props: DialogDescriptionProps): Child {
   const ctx = useContext(DialogContext);
   if (ctx) {
-    ctx.hasDescription.set(true);
+    untrack(() => {
+      if (!ctx.hasDescription()) ctx.hasDescription.set(true);
+    });
     onCleanup(() => {
-      ctx.hasDescription.set(false);
+      untrack(() => ctx.hasDescription.set(false));
     });
   }
   const { as: Tag = "p", children, class: className, style, ...rest } = props;
