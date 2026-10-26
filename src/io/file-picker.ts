@@ -80,25 +80,13 @@ export function createFilePicker(options: CreateFilePickerOptions = {}): FilePic
       const cleanup = () => {
         input.removeEventListener("change", handleChange);
         input.removeEventListener("cancel", handleCancel);
-        window.removeEventListener("focus", handleWindowFocus);
         if (input.parentNode) {
           input.parentNode.removeChild(input);
         }
       };
 
-      // Fallback for browsers that don't emit 'cancel' on native picker abort
-      const handleWindowFocus = () => {
-        setTimeout(() => {
-          if (input.parentNode && (!input.files || input.files.length === 0)) {
-            cleanup();
-            resolve([]);
-          }
-        }, 300);
-      };
-
       input.addEventListener("change", handleChange);
       input.addEventListener("cancel", handleCancel);
-      window.addEventListener("focus", handleWindowFocus, { once: true });
 
       document.body.appendChild(input);
       input.click();
