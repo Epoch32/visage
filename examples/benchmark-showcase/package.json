@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@epoch32/visage": "^1.13.0",
-    "lucide": "^1.54.0"
+    "lucide": "^1.63.0"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   }
 }
