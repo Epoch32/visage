@@ -1,6 +1,13 @@
 import { Portal } from "@dom/control-flow";
 import type { Child } from "@dom/render";
-import { effect, onCleanup, type ReadonlySignal, signal, untrack, type WritableSignal } from "@signals";
+import {
+  effect,
+  onCleanup,
+  type ReadonlySignal,
+  signal,
+  untrack,
+  type WritableSignal
+} from "@signals";
 import { createContext, useContext } from "@signals/context";
 import { useDismiss } from "./overlay";
 import { createControllableSignal, createId } from "./utils";

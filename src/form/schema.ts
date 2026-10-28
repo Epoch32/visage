@@ -202,7 +202,17 @@ class NumberSchema extends Schema<number> {
 }
 
 class BooleanSchema extends Schema<boolean> {
+  private _isOptional = false;
+
+  optional(): Schema<boolean | undefined> {
+    this._isOptional = true;
+    return this as any;
+  }
+
   validate(value: unknown, _path = ""): ValidationResult<boolean> {
+    if (value === undefined || value === null) {
+      if (this._isOptional) return { success: true, data: undefined };
+    }
     return { success: true, data: Boolean(value) };
   }
 }
