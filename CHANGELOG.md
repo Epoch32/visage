@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.3.0](https://github.com/Epoch32/visage/compare/v2.2.0...v2.3.0) (2026-10-28)
+
+
+### Features
+
+* **rpc:** add TOO_MANY_REQUESTS (429) error code and allow procedure response headers ([e2b7072](https://github.com/Epoch32/visage/commit/e2b7072ec5717b916f5b2e30d81cb4c11c363141))
+
+
+### Bug Fixes
+
+* **io:** remove premature 300ms window blur/focus self-destruction from createFilePicker ([2005905](https://github.com/Epoch32/visage/commit/2005905b9a2978da4b37208d8f1153c9e3a1e949))
+* **io:** support polymorphic options parameter in onPaste and createDropZone ([dbb6551](https://github.com/Epoch32/visage/commit/dbb6551f8a312f47aaff1717b3fba276b6b1ffd7))
+* **rpc:** do not leak problem details fields into standard error payload unless negotiated ([cf7628a](https://github.com/Epoch32/visage/commit/cf7628ae1b12bc4e87102b32b97373915d7b7b58))
+* **schema:** add optional() method to BooleanSchema ([cd0d627](https://github.com/Epoch32/visage/commit/cd0d62776c0989540bb152120b9e9fd6bc51c207))
+* **schema:** allow object schemas with all optional fields to accept undefined input and improve error messages ([d0d2832](https://github.com/Epoch32/visage/commit/d0d28327a243065cdecb3eb9d8637c5bc33484de))
+* **ui:** untrack hasTitle and hasDescription updates in Dialog to avoid reactive loops ([2b52d56](https://github.com/Epoch32/visage/commit/2b52d5675bb1278fac054d8a7036d323114c88d9))
+
 ## [2.2.0](https://github.com/Epoch32/visage/compare/v2.1.0...v2.2.0) (2026-10-22)
 
 
