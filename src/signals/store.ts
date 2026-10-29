@@ -83,6 +83,7 @@ function createStoreProxy<T extends object>(target: T): T {
 
     set(target, prop, value, receiver) {
       const hadProp = Reflect.has(target, prop);
+      const prevLength = Array.isArray(target) ? target.length : 0;
       const prevValue = Reflect.get(target, prop, receiver);
       if (hadProp && Object.is(prevValue, value)) {
         return true;
@@ -93,18 +94,20 @@ function createStoreProxy<T extends object>(target: T): T {
         const sig = getOrCreatePropertySignal(target, prop);
         sig.set(value);
 
-        // If a new property was added, notify key iteration
-        if (!hadProp) {
+        // If a new property was added, notify key iteration (for objects; arrays handled below)
+        if (!hadProp && !Array.isArray(target)) {
           const iterSig = getOrCreatePropertySignal(target, STORE_ITERATE);
           iterSig.update((prev: number = 0) => prev + 1);
         }
 
         // If array length or property keys changed, notify length/keys
         if (Array.isArray(target) && prop !== "length") {
-          const lenSig = getOrCreatePropertySignal(target, "length");
-          lenSig.set(target.length);
-          const iterSig = getOrCreatePropertySignal(target, STORE_ITERATE);
-          iterSig.update((prev: number = 0) => prev + 1);
+          if (!hadProp || target.length !== prevLength) {
+            const lenSig = getOrCreatePropertySignal(target, "length");
+            lenSig.set(target.length);
+            const iterSig = getOrCreatePropertySignal(target, STORE_ITERATE);
+            iterSig.update((prev: number = 0) => prev + 1);
+          }
         }
       }
       return success;

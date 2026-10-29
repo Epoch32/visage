@@ -575,4 +575,149 @@ describe("Visage Signals", () => {
       expect(newsRuns).toBe(2);
     });
   });
+
+  describe("createStore - Array Reactivity & Mutation Optimization", () => {
+    it("modifying existing array index updates element subscriber without triggering length or iteration effects", () => {
+      const state = createStore({
+        items: ["A", "B", "C"]
+      });
+
+      let item0Runs = 0;
+      let item1Runs = 0;
+      let lengthRuns = 0;
+      let iterRuns = 0;
+
+      effect(() => {
+        item0Runs++;
+        const _ = state.items[0];
+      });
+
+      effect(() => {
+        item1Runs++;
+        const _ = state.items[1];
+      });
+
+      effect(() => {
+        lengthRuns++;
+        const _ = state.items.length;
+      });
+
+      effect(() => {
+        iterRuns++;
+        const _ = Object.keys(state.items);
+      });
+
+      expect(item0Runs).toBe(1);
+      expect(item1Runs).toBe(1);
+      expect(lengthRuns).toBe(1);
+      expect(iterRuns).toBe(1);
+
+      // Mutate existing index 0: ONLY item0Runs should increment!
+      // lengthRuns and iterRuns MUST NOT run (avoids O(N) cascade)
+      state.items[0] = "Alpha";
+      expect(state.items[0]).toBe("Alpha");
+      expect(item0Runs).toBe(2);
+      expect(item1Runs).toBe(1);
+      expect(lengthRuns).toBe(1); // Length unchanged
+      expect(iterRuns).toBe(1); // Iteration unchanged
+    });
+
+    it("adding new index beyond length triggers length and iteration subscribers", () => {
+      const state = createStore({
+        items: [1, 2, 3]
+      });
+
+      let lengthRuns = 0;
+      let iterRuns = 0;
+
+      effect(() => {
+        lengthRuns++;
+        const _ = state.items.length;
+      });
+
+      effect(() => {
+        iterRuns++;
+        const _ = Object.keys(state.items);
+      });
+
+      expect(lengthRuns).toBe(1);
+      expect(iterRuns).toBe(1);
+
+      // Add index 3
+      state.items[3] = 4;
+      expect(state.items.length).toBe(4);
+      expect(lengthRuns).toBe(2);
+      expect(iterRuns).toBe(2);
+    });
+
+    it("handles push, pop, shift, unshift, splice correctly with reactive length", () => {
+      const state = createStore({
+        items: [10, 20, 30]
+      });
+
+      let currentLength = 0;
+      let lengthRuns = 0;
+
+      effect(() => {
+        lengthRuns++;
+        currentLength = state.items.length;
+      });
+
+      expect(currentLength).toBe(3);
+      expect(lengthRuns).toBe(1);
+
+      // 1. push
+      state.items.push(40);
+      expect(currentLength).toBe(4);
+      expect(lengthRuns).toBe(2);
+      expect(state.items[3]).toBe(40);
+
+      // 2. pop
+      const popped = state.items.pop();
+      expect(popped).toBe(40);
+      expect(currentLength).toBe(3);
+      expect(lengthRuns).toBe(3);
+
+      // 3. shift
+      const shifted = state.items.shift();
+      expect(shifted).toBe(10);
+      expect(currentLength).toBe(2);
+      expect(lengthRuns).toBe(4);
+      expect(state.items[0]).toBe(20);
+
+      // 4. unshift
+      state.items.unshift(5);
+      expect(currentLength).toBe(3);
+      expect(lengthRuns).toBe(5);
+      expect(state.items[0]).toBe(5);
+
+      // 5. splice
+      state.items.splice(1, 1, 99);
+      expect(currentLength).toBe(3);
+      expect(state.items[1]).toBe(99);
+    });
+
+    it("batches array mutations inside mutateStore", () => {
+      const state = createStore({
+        items: [1, 2, 3]
+      });
+
+      let lengthRuns = 0;
+      effect(() => {
+        lengthRuns++;
+        const _ = state.items.length;
+      });
+
+      expect(lengthRuns).toBe(1);
+
+      mutateStore(state, (draft) => {
+        draft.items.push(4);
+        draft.items.push(5);
+        draft.items.push(6);
+      });
+
+      expect(state.items.length).toBe(6);
+      expect(lengthRuns).toBe(2); // Batched into 1 run
+    });
+  });
 });

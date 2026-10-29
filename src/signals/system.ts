@@ -26,16 +26,10 @@ if (!g[REACTIVITY_KEY]) {
 }
 const ctx = g[REACTIVITY_KEY]!;
 
-export let currentSubscriber: ISubscriber | null = ctx.currentSubscriber;
-export let currentScope: any = ctx.currentScope;
-export let batchDepth = ctx.batchDepth;
-export const pendingEffects: Set<any> = ctx.pendingEffects;
 export const warnedCyclicSubscribers: WeakSet<ISubscriber> = ctx.warnedCyclicSubscribers;
-export let isFlushing = ctx.isFlushing;
 
 export function setCurrentSubscriber(sub: ISubscriber | null): void {
   ctx.currentSubscriber = sub;
-  currentSubscriber = sub;
 }
 
 export function getCurrentSubscriber(): ISubscriber | null {
@@ -44,7 +38,6 @@ export function getCurrentSubscriber(): ISubscriber | null {
 
 export function setCurrentScope(scope: any): void {
   ctx.currentScope = scope;
-  currentScope = scope;
 }
 
 export function getCurrentScope(): any {
@@ -63,39 +56,41 @@ export function getBatchDepth(): number {
   return ctx.batchDepth;
 }
 
-export function getIsFlushing(): boolean {
-  return ctx.isFlushing;
-}
-
 const MAX_FLUSH_COUNT = 100;
+
+const effectsToRun: any[] = [];
 
 export function flushEffects(): void {
   if (ctx.isFlushing || ctx.batchDepth > 0) return;
   ctx.isFlushing = true;
-  isFlushing = true;
   let iterations = 0;
   try {
     while (ctx.pendingEffects.size > 0) {
       if (++iterations > MAX_FLUSH_COUNT) {
         ctx.pendingEffects.clear();
+        effectsToRun.length = 0;
         throw new Error(
           `[Visage Reactivity] Maximum update depth exceeded (${MAX_FLUSH_COUNT} cycles). ` +
             `An effect continuously triggered state mutations (infinite loop detected). ` +
             `Ensure effects that modify signals do not unconditionally depend on them, or use untrack() to read state.`
         );
       }
-      const effectsToRun = Array.from(ctx.pendingEffects);
+      for (const eff of ctx.pendingEffects) {
+        effectsToRun.push(eff);
+      }
       ctx.pendingEffects.clear();
 
-      for (const eff of effectsToRun) {
+      for (let i = 0; i < effectsToRun.length; i++) {
+        const eff = effectsToRun[i];
         if (eff.state === SubscriberState.DIRTY || eff.state === SubscriberState.CHECK_DIRTY) {
           eff.run();
         }
       }
+      effectsToRun.length = 0;
     }
   } finally {
     ctx.isFlushing = false;
-    isFlushing = false;
+    effectsToRun.length = 0;
   }
 }
 
@@ -121,12 +116,10 @@ export function flushEffects(): void {
  */
 export function batch<T>(fn: () => T): T {
   ctx.batchDepth++;
-  batchDepth = ctx.batchDepth;
   try {
     return fn();
   } finally {
     ctx.batchDepth--;
-    batchDepth = ctx.batchDepth;
     if (ctx.batchDepth === 0) {
       flushEffects();
     }

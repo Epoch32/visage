@@ -14,14 +14,6 @@ class SelectorDependency implements IDependency {
   private _sub1: ISubscriber | null = null;
   private _subs: Set<ISubscriber> | null = null;
 
-  get subscribers(): Set<ISubscriber> {
-    if (this._subs !== null) return this._subs;
-    const s = new Set<ISubscriber>();
-    if (this._sub0 !== null) s.add(this._sub0);
-    if (this._sub1 !== null) s.add(this._sub1);
-    return s;
-  }
-
   get size(): number {
     if (this._subs !== null) return this._subs.size;
     let count = 0;

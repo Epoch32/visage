@@ -69,7 +69,9 @@ export class Signal<T> implements IDependency {
 
   private hasSubscriber(sub: ISubscriber): boolean {
     if (this._subs !== null) return this._subs.has(sub);
-    return this._sub0 === sub || this._sub1 === sub;
+    return (
+      (this._sub0 !== null && this._sub0 === sub) || (this._sub1 !== null && this._sub1 === sub)
+    );
   }
 
   getSubscribersCount(): number {
@@ -228,9 +230,8 @@ function resolveStorage(storageOption?: "local" | "session" | Storage): Storage 
   return null;
 }
 
-const SignalAccessorPrototype = {
-  __proto__: Function.prototype,
-  [SIGNAL_BRAND]: true,
+const signalAccessorProperties = {
+  [SIGNAL_BRAND]: true as const,
   get(this: any) {
     return this._s.get();
   },
@@ -242,13 +243,18 @@ const SignalAccessorPrototype = {
   },
   update(this: any, fn: any) {
     return this._s.update(fn);
-  },
-  get value() {
+  }
+};
+
+const signalValueDescriptor: PropertyDescriptor = {
+  get(this: any) {
     return (this as any)._s.get();
   },
-  set value(v: any) {
+  set(this: any, v: any) {
     (this as any)._s.set(v);
-  }
+  },
+  configurable: true,
+  enumerable: true
 };
 
 export function signal<T>(
@@ -328,16 +334,18 @@ export function signal<T>(
     }
   }
 
-  const accessor = ((...args: [value?: T]): T => {
-    if (args.length === 0) {
+  const accessor = function (value?: T): T {
+    // biome-ignore lint/complexity/noArguments: Zero-allocation argument count check
+    if (arguments.length === 0) {
       return s.get();
     }
-    s.set(args[0] as T);
-    return args[0] as T;
-  }) as WritableSignal<T>;
+    s.set(value as T);
+    return value as T;
+  } as WritableSignal<T>;
 
   (accessor as any)._s = s;
-  Object.setPrototypeOf(accessor, SignalAccessorPrototype);
+  Object.assign(accessor, signalAccessorProperties);
+  Object.defineProperty(accessor, "value", signalValueDescriptor);
 
   if (!isInternal && typeof window !== "undefined" && (window as any).__VISAGE_DEVTOOLS__) {
     const devtools = (window as any).__VISAGE_DEVTOOLS__;

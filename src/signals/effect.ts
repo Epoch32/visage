@@ -3,6 +3,7 @@
  */
 import { Computed } from "./computed";
 import type { Scope } from "./scope";
+import { DependencyTracker } from "./sources";
 import {
   addPendingEffect,
   flushEffects,
@@ -13,85 +14,25 @@ import {
   setCurrentScope,
   setCurrentSubscriber
 } from "./system";
-import { type CleanupFn, type IDependency, type ISubscriber, SubscriberState } from "./types";
+import { type CleanupFn, type ISubscriber, SubscriberState } from "./types";
 
 /**
  * Side-effect runner with automatic dependency tracking and disposal
  */
-export class Effect implements ISubscriber {
+export class Effect extends DependencyTracker implements ISubscriber {
   private _fn: () => void | CleanupFn;
-  private _source0: IDependency | null = null;
-  private _version0 = 0;
-  private _source1: IDependency | null = null;
-  private _version1 = 0;
-  private _sources: Set<IDependency> | null = null;
-  private _sourceVersions: Map<IDependency, number> | null = null;
   cleanups: CleanupFn[] | null = null;
   state: SubscriberState = SubscriberState.DIRTY;
   scope: Scope | null;
 
-  get sources(): Set<IDependency> {
-    if (this._sources !== null) return this._sources;
-    const s = new Set<IDependency>();
-    if (this._source0 !== null) s.add(this._source0);
-    if (this._source1 !== null) s.add(this._source1);
-    return s;
-  }
-
-  get sourceVersions(): Map<IDependency, number> {
-    if (this._sourceVersions !== null) return this._sourceVersions;
-    const m = new Map<IDependency, number>();
-    if (this._source0 !== null) m.set(this._source0, this._version0);
-    if (this._source1 !== null) m.set(this._source1, this._version1);
-    return m;
-  }
-
   constructor(fn: () => void | CleanupFn) {
+    super();
     this._fn = fn;
     this.scope = getCurrentScope();
     if (this.scope) {
       this.scope.addSubscriber(this);
     }
     this.run();
-  }
-
-  addSource(source: IDependency, version: number): void {
-    if (this._sources !== null) {
-      this._sources.add(source);
-      this._sourceVersions!.set(source, version);
-      return;
-    }
-    if (this._source0 === null) {
-      this._source0 = source;
-      this._version0 = version;
-      return;
-    }
-    if (this._source0 === source) {
-      this._version0 = version;
-      return;
-    }
-    if (this._source1 === null) {
-      this._source1 = source;
-      this._version1 = version;
-      return;
-    }
-    if (this._source1 === source) {
-      this._version1 = version;
-      return;
-    }
-
-    const s = new Set<IDependency>();
-    const m = new Map<IDependency, number>();
-    s.add(this._source0);
-    m.set(this._source0, this._version0);
-    s.add(this._source1);
-    m.set(this._source1, this._version1);
-    s.add(source);
-    m.set(source, version);
-    this._sources = s;
-    this._sourceVersions = m;
-    this._source0 = null;
-    this._source1 = null;
   }
 
   addCleanup(fn: CleanupFn): void {
@@ -184,30 +125,11 @@ export class Effect implements ISubscriber {
     }
   }
 
-  private cleanupSources(): void {
-    if (this._sources !== null) {
-      for (const source of this._sources) {
-        source.removeSubscriber(this);
-      }
-      this._sources = null;
-      this._sourceVersions = null;
-      return;
-    }
-    if (this._source0 !== null) {
-      this._source0.removeSubscriber(this);
-      this._source0 = null;
-    }
-    if (this._source1 !== null) {
-      this._source1.removeSubscriber(this);
-      this._source1 = null;
-    }
-  }
-
   dispose(): void {
     if (this.state === SubscriberState.DISPOSED) return;
     this.state = SubscriberState.DISPOSED;
     this.runCleanups();
-    this.cleanupSources();
+    this.clearSourcesOnDispose();
     removePendingEffect(this);
   }
 }

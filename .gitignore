@@ -23,3 +23,5 @@ src-native/
 
 # Preserve template files
 !src/vite/templates/*.zig
+
+.agents/teamwork/
