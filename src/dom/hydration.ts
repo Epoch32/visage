@@ -17,11 +17,11 @@ export function isHydrating(): boolean {
 
 export function getNextHydrationElement(tagName: string): Element | null {
   if (!hydrationActive) return null;
-  const targetTag = tagName.toLowerCase();
+  const targetTag = tagName.toUpperCase();
 
   for (let i = postOrderIndex; i < postOrderElements.length; i++) {
     const el = postOrderElements[i];
-    if (el && el.tagName.toLowerCase() === targetTag) {
+    if (el && (el.tagName === targetTag || el.tagName.toLowerCase() === tagName.toLowerCase())) {
       postOrderIndex = i + 1;
       return el;
     }

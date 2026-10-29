@@ -1,5 +1,5 @@
 import { effect, getActiveScope, onCleanup, runInScope, Scope, signal, untrack } from "@signals";
-import { type Child, insertChild, type ReactiveValue, resolveValue } from "../render";
+import { type Child, insertChild, type ReactiveValue, removeNodes, resolveValue } from "../render";
 import { reconcileKeyedList } from "./for/reconcile";
 import { ItemRecord } from "./for/record";
 
@@ -12,6 +12,9 @@ export interface ForProps<T> {
 
 export { reconcileKeyedList } from "./for/reconcile";
 export { ItemRecord } from "./for/record";
+
+const defaultGetKey = <T>(it: T): any => it;
+const dummyIndex = () => 0;
 
 /**
  * Keyed / referential list renderer with fine-grained item reconciliation.
@@ -47,6 +50,9 @@ export function For<T>(props: ForProps<T>): any {
   let fallbackScope: Scope | null = null;
   let fallbackNodes: Node[] = [];
   let isMounted = false;
+
+  const getKey = props.by ?? defaultGetKey;
+  const needsIndex = props.children.length > 1;
 
   effect(() => {
     const list = resolveValue(props.each) ?? [];
@@ -99,20 +105,15 @@ export function For<T>(props: ForProps<T>): any {
         fallbackScope.dispose();
         fallbackScope = null;
       }
-      for (const node of fallbackNodes) {
-        if (node.parentNode) node.parentNode.removeChild(node);
-      }
+      removeNodes(fallbackNodes);
       fallbackNodes = [];
     }
 
     if (!parent) return;
 
-    const getKey = (it: T) => (props.by ? props.by(it) : it);
-    const needsIndex = props.children.length > 1;
-
     const createRecord = (item: T, index: number): ItemRecord<T> => {
       const indexSignal = needsIndex ? signal(index, { internal: true }) : undefined;
-      const indexGetter = indexSignal ?? (() => index);
+      const indexGetter = indexSignal ?? dummyIndex;
       const itemScope = new Scope(getActiveScope(), true);
       let child: any = null;
 
@@ -127,11 +128,21 @@ export function For<T>(props: ForProps<T>): any {
       if (child instanceof Node) {
         primaryNode = child;
       } else if (Array.isArray(child)) {
-        const filtered = child.filter((n): n is Node => n instanceof Node);
-        primaryNode = filtered[0] ?? document.createTextNode("");
-        if (filtered.length > 1) {
-          extraNodes = filtered.slice(1);
+        let first: Node | undefined;
+        let extras: Node[] | null = null;
+        for (let i = 0; i < child.length; i++) {
+          const n = child[i];
+          if (n instanceof Node) {
+            if (first === undefined) {
+              first = n;
+            } else {
+              if (extras === null) extras = [];
+              extras.push(n);
+            }
+          }
         }
+        primaryNode = first ?? document.createTextNode("");
+        extraNodes = extras;
       } else if (child !== null && child !== undefined && child !== false && child !== true) {
         primaryNode = document.createTextNode(String(child));
       } else {

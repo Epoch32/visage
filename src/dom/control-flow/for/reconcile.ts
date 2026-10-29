@@ -1,5 +1,11 @@
-import { untrack } from "@signals";
+import { untrack, type WritableSignal } from "@signals";
 import type { ItemRecord } from "./record";
+
+function updateIndexSignal(signal: WritableSignal<number> | undefined, newIndex: number): void {
+  if (signal && signal.peek() !== newIndex) {
+    untrack(() => signal.set(newIndex));
+  }
+}
 
 export interface ReconcileContext<T> {
   parent: Node;
@@ -44,10 +50,7 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
   while (start < minLen && items[start]!.key === getKey(list[start]!)) {
     const rec = items[start]!;
     rec.item = list[start]!;
-    if (rec.indexSignal) {
-      const idx = start;
-      untrack(() => rec.indexSignal!.set(idx));
-    }
+    updateIndexSignal(rec.indexSignal, start);
     start++;
   }
 
@@ -58,10 +61,7 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
   while (oldEnd >= start && newEnd >= start && items[oldEnd]!.key === getKey(list[newEnd]!)) {
     const rec = items[oldEnd]!;
     rec.item = list[newEnd]!;
-    if (rec.indexSignal) {
-      const idx = newEnd;
-      untrack(() => rec.indexSignal!.set(idx));
-    }
+    updateIndexSignal(rec.indexSignal, newEnd);
     oldEnd--;
     newEnd--;
   }
@@ -96,11 +96,7 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
 
     if (needsIndex) {
       for (let i = start; i < items.length; i++) {
-        const rec = items[i]!;
-        if (rec.indexSignal) {
-          const idx = i;
-          untrack(() => rec.indexSignal!.set(idx));
-        }
+        updateIndexSignal(items[i]!.indexSignal, i);
       }
     }
     return items;
@@ -146,12 +142,8 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
       items[oldEnd] = recA;
 
       if (needsIndex) {
-        if (recB.indexSignal) {
-          untrack(() => recB.indexSignal!.set(start));
-        }
-        if (recA.indexSignal) {
-          untrack(() => recA.indexSignal!.set(oldEnd));
-        }
+        updateIndexSignal(recB.indexSignal, start);
+        updateIndexSignal(recA.indexSignal, oldEnd);
       }
 
       return items;
@@ -172,38 +164,43 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
     }
   }
 
-  let overlapCount = 0;
-  for (let i = start; i <= newEnd; i++) {
-    if (prevMap.has(getKey(list[i]!))) overlapCount++;
-  }
-
-  if (overlapCount === 0 && start === 0 && oldEnd === oldLen - 1 && newEnd === newLen - 1) {
-    // 100% replacement: bulk container clear + single fragment insertion
-    for (const rec of items) rec.dispose();
-
-    const newItems: ItemRecord<T>[] = new Array(list.length);
-    const frag = document.createDocumentFragment();
-
-    for (let i = 0; i < list.length; i++) {
-      const rec = createRecord(list[i]!, i);
-      newItems[i] = rec;
-      rec.append(frag);
-    }
-
-    if (marker.parentNode) {
-      const parentEl = marker.parentNode;
-      const firstNode = items[0]?.firstNode;
-      if (firstNode && parentEl.firstChild === firstNode && parentEl.lastChild === marker) {
-        parentEl.textContent = "";
-        parentEl.appendChild(marker);
-      } else {
-        for (const rec of items) {
-          rec.remove();
-        }
+  if (start === 0 && oldEnd === oldLen - 1 && newEnd === newLen - 1) {
+    let hasOverlap = false;
+    for (let i = 0; i <= newEnd; i++) {
+      if (prevMap.has(getKey(list[i]!))) {
+        hasOverlap = true;
+        break;
       }
-      parentEl.insertBefore(frag, marker);
     }
-    return newItems;
+
+    if (!hasOverlap) {
+      // 100% replacement: bulk container clear + single fragment insertion
+      for (const rec of items) rec.dispose();
+
+      const newItems: ItemRecord<T>[] = new Array(list.length);
+      const frag = document.createDocumentFragment();
+
+      for (let i = 0; i < list.length; i++) {
+        const rec = createRecord(list[i]!, i);
+        newItems[i] = rec;
+        rec.append(frag);
+      }
+
+      if (marker.parentNode) {
+        const parentEl = marker.parentNode;
+        const firstNode = items[0]?.firstNode;
+        if (firstNode && parentEl.firstChild === firstNode && parentEl.lastChild === marker) {
+          parentEl.textContent = "";
+          parentEl.appendChild(marker);
+        } else {
+          for (const rec of items) {
+            rec.remove();
+          }
+        }
+        parentEl.insertBefore(frag, marker);
+      }
+      return newItems;
+    }
   }
 
   // Step 5: Middle Map reconciliation (e.g. complex permutations)
@@ -227,10 +224,7 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
 
     if (existing) {
       existing.item = item;
-      if (existing.indexSignal) {
-        const idx = i;
-        untrack(() => existing!.indexSignal!.set(idx));
-      }
+      updateIndexSignal(existing.indexSignal, i);
       result.push(existing);
     } else {
       result.push(createRecord(item, i));
@@ -262,16 +256,24 @@ export function reconcileKeyedList<T>(ctx: ReconcileContext<T>): ItemRecord<T>[]
       }
       currentMarker = node;
     } else {
-      for (let j = rec.nodes.length - 1; j >= 0; j--) {
-        const node = rec.nodes[j]!;
+      const extra = rec.extraNodes;
+      for (let j = extra.length - 1; j >= 0; j--) {
+        const node = extra[j]!;
         if (node.nextSibling !== currentMarker) {
           marker.parentNode?.insertBefore(node, currentMarker);
         }
         currentMarker = node;
       }
+      const node = rec.node;
+      if (node.nextSibling !== currentMarker) {
+        marker.parentNode?.insertBefore(node, currentMarker);
+      }
+      currentMarker = node;
     }
   }
 
-  result.push(...items.slice(oldEnd + 1));
+  for (let i = oldEnd + 1; i < oldLen; i++) {
+    result.push(items[i]!);
+  }
   return result;
 }

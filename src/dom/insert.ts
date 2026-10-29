@@ -38,6 +38,18 @@ export function resolveValue<T>(val: ReactiveValue<T>): T {
   return val;
 }
 
+/**
+ * Detach an array or collection of DOM nodes from their parent containers
+ */
+export function removeNodes(nodes: ArrayLike<Node>): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node?.parentNode) {
+      node.parentNode.removeChild(node);
+    }
+  }
+}
+
 function getSinglePlaceholderWhitespaceNode(parent: Node, before: Node | null): Text | null {
   if (
     before === null &&
@@ -153,11 +165,7 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
 
       runInScope(childScope, () => {
         // Clean up previous rendered nodes from DOM
-        for (const node of currentNodes) {
-          if (node.parentNode) {
-            node.parentNode.removeChild(node);
-          }
-        }
+        removeNodes(currentNodes);
         currentNodes = [];
 
         if (resolved === null || resolved === undefined || resolved === false) {
@@ -186,11 +194,7 @@ export function insertChild(parent: Node, child: Child, before: Node | null = nu
       if (childScope) {
         childScope.dispose();
       }
-      for (const node of currentNodes) {
-        if (node.parentNode) {
-          node.parentNode.removeChild(node);
-        }
-      }
+      removeNodes(currentNodes);
       if (marker.parentNode) {
         marker.parentNode.removeChild(marker);
       }

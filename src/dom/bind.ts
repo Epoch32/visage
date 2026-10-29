@@ -22,7 +22,7 @@ export function applyTwoWayBinding(
   let set: (val: any) => void;
 
   if (isSignal(value) && typeof (value as any).set === "function") {
-    get = () => (value as any)();
+    get = value as () => any;
     set = (v: any) => (value as any).set(v);
   } else if (
     Array.isArray(value) &&

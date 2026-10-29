@@ -74,11 +74,14 @@ export const SVG_TAGS = new Set([
   "view"
 ]);
 
+const UPPERCASE_RE = /[A-Z]/;
+
 let ssrDepth = 0;
 
 export function isSSR(): boolean {
-  const gDepth = (globalThis as any).__visage_ssr || 0;
-  return gDepth > 0 || ssrDepth > 0 || typeof document === "undefined";
+  return (
+    ssrDepth > 0 || typeof document === "undefined" || ((globalThis as any).__visage_ssr || 0) > 0
+  );
 }
 
 export function runInSSRMode<T>(fn: () => T): T {
@@ -94,13 +97,29 @@ export function runInSSRMode<T>(fn: () => T): T {
 
 export function Fragment(props: { children?: Child }): any {
   if (isSSR()) {
-    return props.children !== undefined ? props.children : [];
+    return props?.children !== undefined ? props.children : [];
   }
   const fragment = document.createDocumentFragment();
-  if (props.children !== undefined) {
+  if (props?.children !== undefined) {
     insertChild(fragment, props.children);
   }
   return fragment;
+}
+
+/**
+ * Resolves the unwrapped value of a two-way binding target (signal, getter tuple, or getter object).
+ */
+export function resolveBoundValue(val: any): any {
+  if (typeof val === "function") {
+    return val();
+  }
+  if (Array.isArray(val)) {
+    return typeof val[0] === "function" ? val[0]() : val[0];
+  }
+  if (typeof val?.get === "function") {
+    return val.get();
+  }
+  return val;
 }
 
 export function jsx(type: any, props: Record<string, any> = {}, key?: any): any {
@@ -111,55 +130,42 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
 
   // If it's a DOM element tag
   if (typeof type === "string") {
-    const { children, ...restProps } = props;
+    const p = props || {};
+    const children = p.children;
 
     // SSR Server Environment (Node / Bun / Cloudflare Workers without DOM, or explicit SSR render)
     if (isSSR()) {
       const attributes = new Map<string, any>();
-      for (const propName in restProps) {
-        const val = restProps[propName];
+      for (const propName in p) {
+        if (propName === "children" || propName === "key") continue;
+        const val = p[propName];
+
         if (propName === "className" || propName === "class") {
           const resolved = typeof val === "function" ? val() : val;
           if (resolved) attributes.set("class", resolved);
         } else if (propName === "style") {
-          const val = restProps[propName];
           const resolved = resolveValue(val);
           if (typeof resolved === "string") {
             attributes.set("style", resolved);
           } else if (typeof resolved === "object" && resolved !== null) {
-            const styleStr = Object.entries(resolved)
-              .map(([k, v]) => {
-                const finalVal = resolveValue(v);
-                const formatted = formatStyleProp(k, finalVal);
-                if (!formatted) return "";
-                const kebab = k.startsWith("--") ? k : k.replace(/([A-Z])/g, "-$1").toLowerCase();
-                return `${kebab}: ${formatted}`;
-              })
-              .filter(Boolean)
-              .join("; ");
+            let styleStr = "";
+            for (const k in resolved) {
+              const finalVal = resolveValue(resolved[k]);
+              const formatted = formatStyleProp(k, finalVal);
+              if (!formatted) continue;
+              const kebab = k.startsWith("--") ? k : k.replace(/([A-Z])/g, "-$1").toLowerCase();
+              if (styleStr) styleStr += "; ";
+              styleStr += `${kebab}: ${formatted}`;
+            }
             if (styleStr) attributes.set("style", styleStr);
           }
         } else if (propName === "bind:value" || propName === "bind") {
-          const resolved =
-            typeof val === "function"
-              ? val()
-              : Array.isArray(val)
-                ? val[0]()
-                : typeof val?.get === "function"
-                  ? val.get()
-                  : val;
+          const resolved = resolveBoundValue(val);
           if (resolved !== null && resolved !== undefined) {
             attributes.set("value", resolved);
           }
         } else if (propName === "bind:checked") {
-          const resolved =
-            typeof val === "function"
-              ? val()
-              : Array.isArray(val)
-                ? val[0]()
-                : typeof val?.get === "function"
-                  ? val.get()
-                  : val;
+          const resolved = resolveBoundValue(val);
           if (resolved) {
             attributes.set("checked", "checked");
           }
@@ -173,9 +179,19 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
         }
       }
 
-      const rawChildren =
-        children !== undefined ? (Array.isArray(children) ? children : [children]) : [];
-      const childNodes = rawChildren.map((c) => (typeof c === "function" ? c() : c));
+      let childNodes: any[];
+      if (children === undefined) {
+        childNodes = [];
+      } else if (Array.isArray(children)) {
+        const len = children.length;
+        childNodes = new Array(len);
+        for (let i = 0; i < len; i++) {
+          const c = children[i];
+          childNodes[i] = typeof c === "function" ? c() : c;
+        }
+      } else {
+        childNodes = [typeof children === "function" ? children() : children];
+      }
 
       return {
         tagName: type,
@@ -185,7 +201,8 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
     }
 
     // Browser / JSDOM Environment
-    const isSvg = SVG_TAGS.has(type) || SVG_TAGS.has(type.toLowerCase());
+    const isSvg =
+      SVG_TAGS.has(type) || (UPPERCASE_RE.test(type) && SVG_TAGS.has(type.toLowerCase()));
     let element: HTMLElement | SVGElement | null = null;
     if (isHydrating()) {
       element = getNextHydrationElement(type) as HTMLElement | SVGElement | null;
@@ -196,17 +213,14 @@ export function jsx(type: any, props: Record<string, any> = {}, key?: any): any 
     }
 
     // Apply attributes and event listeners
-    for (const propName in restProps) {
-      setAttribute(element as HTMLElement, propName, restProps[propName]);
+    for (const propName in p) {
+      if (propName === "children" || propName === "key") continue;
+      setAttribute(element, propName, p[propName]);
     }
 
     // Insert children
-    if (children !== undefined) {
-      if (!isAdopted) {
-        insertChild(element, children);
-      } else if (isReactive(children)) {
-        insertChild(element, children);
-      }
+    if (children !== undefined && (!isAdopted || isReactive(children))) {
+      insertChild(element, children);
     }
 
     return element;

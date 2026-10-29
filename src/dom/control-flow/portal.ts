@@ -1,5 +1,5 @@
 import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "@signals";
-import { type Child, insertChild } from "../render";
+import { type Child, insertChild, removeNodes } from "../render";
 
 export interface PortalProps {
   mount?: HTMLElement | null;
@@ -19,18 +19,14 @@ export function Portal(props: PortalProps): any {
   let nodes: Node[] = [];
 
   effect(() => {
-    const target = props.mount ?? (typeof document !== "undefined" ? document.body : null);
+    const target = props.mount ?? document.body;
     if (!target) return;
 
     if (currentScope) {
       currentScope.dispose();
       currentScope = null;
     }
-    for (const node of nodes) {
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
-      }
-    }
+    removeNodes(nodes);
     nodes = [];
 
     currentScope = new Scope(getActiveScope());
@@ -51,11 +47,7 @@ export function Portal(props: PortalProps): any {
       currentScope.dispose();
       currentScope = null;
     }
-    for (const node of nodes) {
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
-      }
-    }
+    removeNodes(nodes);
     nodes = [];
   });
 

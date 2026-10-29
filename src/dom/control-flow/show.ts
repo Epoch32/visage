@@ -1,5 +1,5 @@
 import { effect, getActiveScope, onCleanup, runInScope, Scope, untrack } from "@signals";
-import { type Child, insertChild, type ReactiveValue, resolveValue } from "../render";
+import { type Child, insertChild, type ReactiveValue, removeNodes, resolveValue } from "../render";
 
 export interface ShowProps<T> {
   when: ReactiveValue<T | false | null | undefined>;
@@ -25,7 +25,7 @@ export function Show<T>(props: ShowProps<T>): any {
     const condition = resolveValue(props.when);
     if (condition) {
       return typeof props.children === "function" && props.children.length > 0
-        ? (props.children as (item: () => T) => Child)(() => resolveValue(props.when) as T)
+        ? (props.children as (item: () => T) => Child)(() => condition as T)
         : typeof props.children === "function"
           ? (props.children as () => Child)()
           : props.children;
@@ -49,11 +49,7 @@ export function Show<T>(props: ShowProps<T>): any {
     }
 
     // Clean up old nodes from DOM
-    for (const node of currentContent) {
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
-      }
-    }
+    removeNodes(currentContent);
     currentContent = [];
 
     const frag = document.createDocumentFragment();
@@ -97,11 +93,7 @@ export function Show<T>(props: ShowProps<T>): any {
     if (currentScope) {
       currentScope.dispose();
     }
-    for (const node of currentContent) {
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
-      }
-    }
+    removeNodes(currentContent);
     if (marker.parentNode) {
       marker.parentNode.removeChild(marker);
     }

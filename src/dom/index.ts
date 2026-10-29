@@ -40,6 +40,7 @@ export {
   insertChild,
   isReactive,
   type ReactiveValue,
+  removeNodes,
   render,
   resolveValue,
   setAttribute

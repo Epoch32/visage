@@ -8,7 +8,7 @@ import {
   untrack,
   type WritableSignal
 } from "@signals";
-import { type Child, insertChild, type ReactiveValue, resolveValue } from "../render";
+import { type Child, insertChild, type ReactiveValue, removeNodes, resolveValue } from "../render";
 
 export interface IndexProps<T> {
   each: ReactiveValue<readonly T[] | undefined | null>;
@@ -59,16 +59,18 @@ export function Index<T>(props: IndexProps<T>): any {
 
   effect(() => {
     const rawList = resolveValue(props.each);
-    const list = rawList ? Array.from(rawList) : [];
+    const list: readonly T[] = Array.isArray(rawList)
+      ? rawList
+      : rawList
+        ? Array.from(rawList)
+        : [];
     const parent = marker.parentNode;
 
     // Handle empty list -> render fallback
     if (list.length === 0) {
       for (const rec of items) {
         rec.scope.dispose();
-        for (const node of rec.nodes) {
-          if (node.parentNode) node.parentNode.removeChild(node);
-        }
+        removeNodes(rec.nodes);
       }
       items = [];
 
@@ -96,9 +98,7 @@ export function Index<T>(props: IndexProps<T>): any {
         fallbackScope.dispose();
         fallbackScope = null;
       }
-      for (const node of fallbackNodes) {
-        if (node.parentNode) node.parentNode.removeChild(node);
-      }
+      removeNodes(fallbackNodes);
       fallbackNodes = [];
     }
 
@@ -111,9 +111,12 @@ export function Index<T>(props: IndexProps<T>): any {
     const commonLength = Math.min(prevLength, newLength);
     for (let i = 0; i < commonLength; i++) {
       const nextItem = list[i] as T;
-      untrack(() => {
-        items[i]!.itemSignal.set(nextItem);
-      });
+      const sig = items[i]!.itemSignal;
+      if (sig.peek() !== nextItem) {
+        untrack(() => {
+          sig.set(nextItem);
+        });
+      }
     }
 
     // 2. Add new items if list expanded
@@ -150,9 +153,7 @@ export function Index<T>(props: IndexProps<T>): any {
       for (let i = newLength; i < prevLength; i++) {
         const removed = items[i]!;
         removed.scope.dispose();
-        for (const node of removed.nodes) {
-          if (node.parentNode) node.parentNode.removeChild(node);
-        }
+        removeNodes(removed.nodes);
       }
       items.length = newLength;
     }

@@ -28,10 +28,34 @@ export const DELEGATED_EVENTS = new Set([
 
 const registeredEventsForDoc = new WeakMap<Document, Set<string>>();
 
+function attachDelegatedListener(doc: Document, name: string): void {
+  const propKey = `__${name}`;
+  const dataKey = `__${name}Data`;
+
+  doc.addEventListener(name, (event: Event) => {
+    let node: any = event.target;
+    while (node && node !== doc) {
+      const handler = node[propKey];
+      if (handler) {
+        const data = node[dataKey];
+        if (data !== undefined) {
+          handler(data, event);
+        } else if (typeof handler === "function") {
+          handler(event);
+        } else if (Array.isArray(handler) && typeof handler[0] === "function") {
+          handler[0](handler[1], event);
+        }
+        if (event.cancelBubble) break;
+      }
+      node = node.parentNode;
+    }
+  });
+}
+
 /**
  * Register global delegated event listeners on the document
  */
-export function delegateEvents(eventNames: string[], doc?: Document): void {
+export function delegateEvents(eventNames: string[] | string, doc?: Document): void {
   const targetDoc = doc || (typeof document !== "undefined" ? document : null);
   if (!targetDoc) return;
 
@@ -41,30 +65,18 @@ export function delegateEvents(eventNames: string[], doc?: Document): void {
     registeredEventsForDoc.set(targetDoc, docEvents);
   }
 
-  for (const name of eventNames) {
+  if (typeof eventNames === "string") {
+    if (!docEvents.has(eventNames)) {
+      docEvents.add(eventNames);
+      attachDelegatedListener(targetDoc, eventNames);
+    }
+    return;
+  }
+
+  for (let i = 0; i < eventNames.length; i++) {
+    const name = eventNames[i]!;
     if (docEvents.has(name)) continue;
     docEvents.add(name);
-
-    targetDoc.addEventListener(name, (event: Event) => {
-      let node: any = event.target;
-      const propKey = `__${name}`;
-      const dataKey = `__${name}Data`;
-
-      while (node && node !== targetDoc) {
-        const handler = node[propKey];
-        if (handler) {
-          const data = node[dataKey];
-          if (data !== undefined) {
-            handler(data, event);
-          } else if (typeof handler === "function") {
-            handler(event);
-          } else if (Array.isArray(handler) && typeof handler[0] === "function") {
-            handler[0](handler[1], event);
-          }
-          if (event.cancelBubble) break;
-        }
-        node = node.parentNode;
-      }
-    });
+    attachDelegatedListener(targetDoc, name);
   }
 }

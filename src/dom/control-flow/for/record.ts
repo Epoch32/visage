@@ -43,21 +43,24 @@ export class ItemRecord<T> {
   }
 
   remove(): void {
-    if (this.extraNodes === null) {
-      if (this.node.parentNode) this.node.parentNode.removeChild(this.node);
-    } else {
-      for (const n of this.nodes) {
-        if (n.parentNode) n.parentNode.removeChild(n);
+    if (this.node.parentNode) {
+      this.node.parentNode.removeChild(this.node);
+    }
+    if (this.extraNodes !== null) {
+      for (let j = 0; j < this.extraNodes.length; j++) {
+        const extra = this.extraNodes[j]!;
+        if (extra.parentNode) {
+          extra.parentNode.removeChild(extra);
+        }
       }
     }
   }
 
   insertBefore(parent: Node, before: Node | null): void {
-    if (this.extraNodes === null) {
-      parent.insertBefore(this.node, before);
-    } else {
-      for (const n of this.nodes) {
-        parent.insertBefore(n, before);
+    parent.insertBefore(this.node, before);
+    if (this.extraNodes !== null) {
+      for (let j = 0; j < this.extraNodes.length; j++) {
+        parent.insertBefore(this.extraNodes[j]!, before);
       }
     }
   }

@@ -1,5 +1,5 @@
 import { effect, getActiveScope, onCleanup, runInScope, Scope, signal } from "@signals";
-import { type Child, insertChild } from "./render";
+import { type Child, insertChild, removeNodes } from "./render";
 import {
   createResource,
   type Resource,
@@ -20,6 +20,31 @@ export {
   SuspenseContext,
   type SuspenseContextValue
 };
+
+function renderAsyncBoundary(
+  marker: Text,
+  initialFrag: DocumentFragment,
+  isMounted: boolean,
+  currentNodes: Node[],
+  content: Child
+): Node[] {
+  const parent = marker.parentNode ?? (!isMounted ? initialFrag : null);
+  if (!parent) return currentNodes;
+
+  removeNodes(currentNodes);
+
+  const frag = document.createDocumentFragment();
+  insertChild(frag, content);
+  const nextNodes = Array.from(frag.childNodes);
+
+  if (marker.parentNode) {
+    marker.parentNode.insertBefore(frag, marker);
+  } else if (!isMounted) {
+    initialFrag.appendChild(frag);
+  }
+
+  return nextNodes;
+}
 
 export interface SuspenseProps {
   fallback: Child;
@@ -61,23 +86,7 @@ export function Suspense(props: SuspenseProps): any {
   };
 
   const renderContent = (content: Child) => {
-    const parent = marker.parentNode ?? (!isMounted ? initialFrag : null);
-    if (!parent) return;
-
-    for (const n of currentNodes) {
-      if (n.parentNode) n.parentNode.removeChild(n);
-    }
-    currentNodes = [];
-
-    const frag = document.createDocumentFragment();
-    insertChild(frag, content);
-    currentNodes = Array.from(frag.childNodes);
-
-    if (marker.parentNode) {
-      marker.parentNode.insertBefore(frag, marker);
-    } else if (!isMounted) {
-      initialFrag.appendChild(frag);
-    }
+    currentNodes = renderAsyncBoundary(marker, initialFrag, isMounted, currentNodes, content);
   };
 
   effect(() => {
@@ -171,23 +180,7 @@ export function ErrorBoundary(props: ErrorBoundaryProps): any {
   };
 
   const renderNodes = (child: Child) => {
-    const parent = marker.parentNode ?? (!isMounted ? initialFrag : null);
-    if (!parent) return;
-
-    for (const n of currentNodes) {
-      if (n.parentNode) n.parentNode.removeChild(n);
-    }
-    currentNodes = [];
-
-    const frag = document.createDocumentFragment();
-    insertChild(frag, child);
-    currentNodes = Array.from(frag.childNodes);
-
-    if (marker.parentNode) {
-      marker.parentNode.insertBefore(frag, marker);
-    } else if (!isMounted) {
-      initialFrag.appendChild(frag);
-    }
+    currentNodes = renderAsyncBoundary(marker, initialFrag, isMounted, currentNodes, child);
   };
 
   effect(() => {

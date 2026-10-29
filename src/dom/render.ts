@@ -42,6 +42,7 @@ export {
   insertChild,
   isReactive,
   type ReactiveValue,
+  removeNodes,
   resolveValue
 } from "./insert";
 export {

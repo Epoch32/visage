@@ -18,6 +18,26 @@ export function setStyleProperty(el: HTMLElement | SVGElement, prop: string, val
   }
 }
 
+/**
+ * Set or remove class attribute on HTML or SVG elements with single DOM mutation
+ */
+export function setElementClass(el: HTMLElement | SVGElement, cls: string): void {
+  const isSvg = typeof SVGElement !== "undefined" && el instanceof SVGElement;
+  if (isSvg) {
+    if (cls) {
+      el.setAttribute("class", cls);
+    } else {
+      el.removeAttribute("class");
+    }
+  } else {
+    if (cls) {
+      (el as HTMLElement).className = cls;
+    } else {
+      el.removeAttribute("class");
+    }
+  }
+}
+
 export function applyProp(el: HTMLElement | SVGElement, key: string, value: any): void {
   if (
     value === null ||
@@ -41,15 +61,8 @@ export function applyProp(el: HTMLElement | SVGElement, key: string, value: any)
   }
 
   if (key === "className" || key === "class") {
-    const cls = normalizeClass(value);
-    const isSvg = typeof SVGElement !== "undefined" && el instanceof SVGElement;
-    if (cls) {
-      el.setAttribute("class", cls);
-      if (!isSvg) (el as HTMLElement).className = cls;
-    } else {
-      el.removeAttribute("class");
-      if (!isSvg) (el as HTMLElement).className = "";
-    }
+    setElementClass(el, normalizeClass(value));
+    return;
   } else if (key === "style") {
     if ((el as any).__styleScope) {
       (el as any).__styleScope.dispose();
@@ -151,55 +164,55 @@ export function applyProp(el: HTMLElement | SVGElement, key: string, value: any)
  */
 export function setAttribute(el: HTMLElement | SVGElement, key: string, value: any): void {
   // Event listeners (e.g. onClick, onInput, onScroll, onCaptureClick)
-  const isCapture = key.startsWith("onCapture") && key.length > 9;
-  const eventName = isCapture ? key.slice(9).toLowerCase() : key.slice(2).toLowerCase();
-  const isFn =
-    typeof value === "function" || (Array.isArray(value) && typeof value[0] === "function");
-  const isEventProp =
-    key.startsWith("on") &&
-    key.length > 2 &&
-    (isFn ||
+  if (key.startsWith("on") && key.length > 2) {
+    const isCapture = key.startsWith("onCapture") && key.length > 9;
+    const eventName = isCapture ? key.slice(9).toLowerCase() : key.slice(2).toLowerCase();
+    const isFn =
+      typeof value === "function" || (Array.isArray(value) && typeof value[0] === "function");
+    const isEventProp =
+      isFn ||
       (el as any)[`__${eventName}`] !== undefined ||
       (el as any)[`__on_${eventName}`] !== undefined ||
       (el as any)[`__onCapture_${eventName}`] !== undefined ||
       (key.charAt(2) >= "A" && key.charAt(2) <= "Z") ||
-      DELEGATED_EVENTS.has(eventName));
+      DELEGATED_EVENTS.has(eventName);
 
-  if (isEventProp) {
-    if (!isCapture && DELEGATED_EVENTS.has(eventName)) {
+    if (isEventProp) {
+      if (!isCapture && DELEGATED_EVENTS.has(eventName)) {
+        if (isFn) {
+          delegateEvents(eventName);
+          (el as any)[`__${eventName}`] = value;
+        } else {
+          (el as any)[`__${eventName}`] = null;
+        }
+        return;
+      }
+
+      // Non-delegated or capture event
+      const propKey = isCapture ? `__onCapture_${eventName}` : `__on_${eventName}`;
+      const listenerKey = isCapture ? `__onCapture_l_${eventName}` : `__on_l_${eventName}`;
+
+      (el as any)[propKey] = isFn ? value : null;
+
       if (isFn) {
-        delegateEvents([eventName]);
-        (el as any)[`__${eventName}`] = value;
-      } else {
-        (el as any)[`__${eventName}`] = null;
+        if (!(el as any)[listenerKey]) {
+          const listener: EventListener = (e: Event) => {
+            const handler = (el as any)[propKey];
+            if (typeof handler === "function") {
+              handler(e);
+            } else if (Array.isArray(handler) && typeof handler[0] === "function") {
+              handler[0](handler[1], e);
+            }
+          };
+          (el as any)[listenerKey] = listener;
+          el.addEventListener(eventName, listener, isCapture);
+        }
+      } else if ((el as any)[listenerKey]) {
+        el.removeEventListener(eventName, (el as any)[listenerKey], isCapture);
+        (el as any)[listenerKey] = null;
       }
       return;
     }
-
-    // Non-delegated or capture event
-    const propKey = isCapture ? `__onCapture_${eventName}` : `__on_${eventName}`;
-    const listenerKey = isCapture ? `__onCapture_l_${eventName}` : `__on_l_${eventName}`;
-
-    (el as any)[propKey] = isFn ? value : null;
-
-    if (isFn) {
-      if (!(el as any)[listenerKey]) {
-        const listener: EventListener = (e: Event) => {
-          const handler = (el as any)[propKey];
-          if (typeof handler === "function") {
-            handler(e);
-          } else if (Array.isArray(handler) && typeof handler[0] === "function") {
-            handler[0](handler[1], e);
-          }
-        };
-        (el as any)[listenerKey] = listener;
-        el.addEventListener(eventName, listener, isCapture);
-      }
-    } else if ((el as any)[listenerKey]) {
-      el.removeEventListener(eventName, (el as any)[listenerKey], isCapture);
-      (el as any)[listenerKey] = null;
-    }
-    return;
   }
 
   // Ref callback
@@ -215,27 +228,12 @@ export function setAttribute(el: HTMLElement | SVGElement, key: string, value: a
 
   // Reactive class / className with array or object support
   if (key === "class" || key === "className") {
-    const isSvg = typeof SVGElement !== "undefined" && el instanceof SVGElement;
     if (hasReactiveClass(value)) {
       effect(() => {
-        const cls = normalizeClass(value);
-        if (cls) {
-          el.setAttribute("class", cls);
-          if (!isSvg) (el as HTMLElement).className = cls;
-        } else {
-          el.removeAttribute("class");
-          if (!isSvg) (el as HTMLElement).className = "";
-        }
+        setElementClass(el, normalizeClass(value));
       });
     } else {
-      const cls = normalizeClass(value);
-      if (cls) {
-        el.setAttribute("class", cls);
-        if (!isSvg) (el as HTMLElement).className = cls;
-      } else {
-        el.removeAttribute("class");
-        if (!isSvg) (el as HTMLElement).className = "";
-      }
+      setElementClass(el, normalizeClass(value));
     }
     return;
   }
