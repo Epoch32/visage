@@ -48,5 +48,6 @@ export {
 export {
   applyProp,
   setAttribute,
+  setElementClass,
   setStyleProperty
 } from "./props";

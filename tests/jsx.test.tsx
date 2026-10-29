@@ -3,7 +3,7 @@ import { setupDOM } from "./dom-mock";
 
 setupDOM();
 
-import { For, Index, render, Show, setAttribute } from "../src";
+import { For, Index, removeNodes, render, Show, setAttribute } from "../src";
 import { signal } from "../src/signals";
 
 describe("Visage JSX & Direct DOM", () => {
@@ -492,6 +492,52 @@ describe("Visage JSX & Direct DOM", () => {
 
     const foreignObject = container.querySelector("foreignObject")!;
     expect(foreignObject.namespaceURI).toBe("http://www.w3.org/2000/svg");
+
+    unmount();
+  });
+
+  it("removes all nodes from a live NodeList using removeNodes", () => {
+    container.innerHTML = "<span>1</span><span>2</span><span>3</span><span>4</span>";
+    expect(container.childNodes.length).toBe(4);
+    removeNodes(container.childNodes);
+    expect(container.childNodes.length).toBe(0);
+  });
+
+  it("supports multi-node JSX Fragments in <For> during removals and reordering", () => {
+    const list = signal(["A", "B", "C"]);
+    const unmount = render(
+      () => (
+        <div id="frag-container">
+          <For each={list}>
+            {(item) => (
+              <>
+                <dt class={`frag-key-${item}`}>Term {item}</dt>
+                <dd class={`frag-desc-${item}`}>Desc {item}</dd>
+              </>
+            )}
+          </For>
+        </div>
+      ),
+      container
+    );
+
+    const fc = container.querySelector("#frag-container")!;
+    expect(fc.querySelectorAll("dt").length).toBe(3);
+    expect(fc.querySelectorAll("dd").length).toBe(3);
+
+    // Remove middle item B
+    list.set(["A", "C"]);
+
+    expect(fc.querySelectorAll("dt").length).toBe(2);
+    expect(fc.querySelectorAll("dd").length).toBe(2);
+    expect(fc.querySelector(".frag-key-B")).toBeNull();
+    expect(fc.querySelector(".frag-desc-B")).toBeNull();
+
+    // Reorder items
+    list.set(["C", "A"]);
+    const dts = fc.querySelectorAll("dt");
+    expect(dts[0]?.textContent).toBe("Term C");
+    expect(dts[1]?.textContent).toBe("Term A");
 
     unmount();
   });

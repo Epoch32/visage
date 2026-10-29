@@ -42,7 +42,7 @@ export function resolveValue<T>(val: ReactiveValue<T>): T {
  * Detach an array or collection of DOM nodes from their parent containers
  */
 export function removeNodes(nodes: ArrayLike<Node>): void {
-  for (let i = 0; i < nodes.length; i++) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
     const node = nodes[i];
     if (node?.parentNode) {
       node.parentNode.removeChild(node);

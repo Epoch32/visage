@@ -114,6 +114,7 @@ export {
   type ReactiveValue,
   type Resource,
   type ResourceActions,
+  removeNodes,
   render,
   resolveValue,
   Show,

@@ -43,5 +43,6 @@ export {
   removeNodes,
   render,
   resolveValue,
-  setAttribute
+  setAttribute,
+  setElementClass
 } from "./render";

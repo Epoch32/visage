@@ -125,14 +125,29 @@ export function For<T>(props: ForProps<T>): any {
 
       let primaryNode: Node;
       let extraNodes: Node[] | null = null;
-      if (child instanceof Node) {
+      if (child instanceof DocumentFragment) {
+        const rawNodes = Array.from(child.childNodes);
+        primaryNode = rawNodes[0] ?? document.createTextNode("");
+        extraNodes = rawNodes.length > 1 ? rawNodes.slice(1) : null;
+      } else if (child instanceof Node) {
         primaryNode = child;
       } else if (Array.isArray(child)) {
         let first: Node | undefined;
         let extras: Node[] | null = null;
         for (let i = 0; i < child.length; i++) {
           const n = child[i];
-          if (n instanceof Node) {
+          if (n instanceof DocumentFragment) {
+            const rawNodes = Array.from(n.childNodes);
+            for (let j = 0; j < rawNodes.length; j++) {
+              const fragChild = rawNodes[j]!;
+              if (first === undefined) {
+                first = fragChild;
+              } else {
+                if (extras === null) extras = [];
+                extras.push(fragChild);
+              }
+            }
+          } else if (n instanceof Node) {
             if (first === undefined) {
               first = n;
             } else {

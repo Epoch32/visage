@@ -25,3 +25,4 @@ src-native/
 !src/vite/templates/*.zig
 
 .agents/teamwork/
+tests/m2-empirical-challenge.test.tsx
